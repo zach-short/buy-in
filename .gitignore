@@ -13,6 +13,7 @@ vendor/
 out/
 build/
 dist/
+tsconfig.tsbuildinfo
 
 # Go
 *.exe
