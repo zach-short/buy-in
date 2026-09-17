@@ -2,7 +2,7 @@
 
 **Status: `RATIFIED` 2026-09-16.**
 
-**The decisions are §7 (`D1`–`D14`), amended by §10 (`D15`–`D17`). Everything before §7 is
+**The decisions are §7 (`D1`–`D14`), amended by §10 (`D15`–`D18`). Everything before §7 is
 the evidence they were made on** —
 §1 what was verified, §2 the boundary, §3 the options with their counter-arguments, §4 the
 dials, §5 the hazards, §6 the questions and the owner's answers. Read §7 and §8 before any
@@ -864,5 +864,44 @@ cutover.
 originally worded. Alive and unchanged: the big-bang shape, the import running after the last
 Mongo session, `backend/` deleted in the commit after cutover, and the pessimistic auto-deploy
 assumption.
+
+*2026-09-16.*
+
+### D18 — The ledger restricts deletion; only empty things can be deleted
+
+**Decision.** Taken 2026-09-16, after phase 1 measured the alternative. `orders`, `buy_ins`,
+`cashouts` and `payments` reference their session and their player with **`on delete restrict`**,
+and `bars.owner_id` references `auth.users` with `restrict` too. A session, a player or a bar can
+be deleted only once nothing in the ledger points at it. Pure children — `session_players`,
+`drink_ingredients`, `player_share_links`, `player_claim_links` — still cascade, because they
+carry no money.
+
+**Defense.** The behaviour this replaces was measured, not theorised: deleting one session
+removed 2 of its 3 orders and **kept the payment**, orphaned with a null `session_id`, so that
+player's charges vanished while their credit survived and their balance flipped from "owes the
+house" to "is owed by the house". The Go API does the same thing
+(`backend/handlers/sessions.go:138-146` deletes children with every error ignored, and Mongo
+payments carry no session id), so this is not a regression — it is a behaviour nobody would
+choose on purpose for a record of real debts between friends, inherited rather than decided.
+
+Against `restrict`: it makes deletion harder, and a host who wants a night gone now has to remove
+its rows first. Answered: the ordinary case is unaffected, because the session a host actually
+wants to delete is one created by mistake, which is empty and still deletes cleanly — verified on
+PostgreSQL 17, 2026-09-16. The case that now fails is deleting a night that has money in it,
+which is precisely the case that should require a second thought.
+
+Soft-delete was the third option and was rejected on cost: a `deleted_at` column means a filter
+on every read path, every RLS policy and every RPC, which is an enormous change to a port whose
+premise is that it changes nothing else (§8.2).
+
+**Consequences, recorded because they are surprising.** A **bar** can only be deleted once it is
+empty, since its sessions and players are themselves protected. And deleting the owner's
+`auth.users` row now **fails** rather than silently taking the bar and every debt in it — which
+matters whenever account deletion is built, and is why that is not a quiet default.
+
+**Supersedes.** §1.4's third "fix" — "session deletion cascades by FK (`on delete cascade` on
+every child)" — **partially**. The cascade dies for the four ledger tables and survives for the
+pure children. The Go bug it was fixing (a partial, error-swallowing cascade) is still fixed, by
+a stronger means: the delete does not half-happen because it does not happen at all.
 
 *2026-09-16.*

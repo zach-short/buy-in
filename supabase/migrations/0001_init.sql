@@ -37,7 +37,9 @@ create extension if not exists pgcrypto;
 create table bars (
   id         uuid primary key default gen_random_uuid(),
   name       text not null,
-  owner_id   uuid not null references auth.users(id) on delete cascade,
+  -- restrict, not cascade: deleting the owner's auth user must fail loudly rather
+  -- than take the bar and every debt in it with them.
+  owner_id   uuid not null references auth.users(id) on delete restrict,
   -- D6: the settle-up recipient is a property of the bar, not of the host's player
   -- row — a host who stops playing still gets paid. Pre-migration this was the
   -- NEXT_PUBLIC_VENMO_HANDLE env var, read by two receipt screens.
@@ -162,29 +164,40 @@ create index session_players_bar_idx on session_players (bar_id);
 -- bar's session or player — the column every RLS policy filters on would otherwise
 -- be one the writer chooses freely.
 --
--- THREE COLUMNS ARE NOT COVERED, and this is a known bounded gap rather than an
--- oversight: orders.drink_id, payments.session_id and payments.counterparty_player_id
--- are nullable with ON DELETE SET NULL, and a composite SET NULL would try to null
--- bar_id with them. create_order validates its own drink against the session's bar,
--- but NOTHING validates the two payments columns — payments are written by direct
--- staff DML, so a mis-tagged payment is possible. It is keyed to the right player
--- either way, so it cannot cross a tenancy boundary; it could only mis-attribute a
--- payment to the wrong session within one bar.
+-- EVERY foreign key here is composite, including the nullable ones, using PG15's
+-- `ON DELETE SET NULL (column_list)` — which nulls only the listed column and leaves
+-- bar_id alone. The PG15 manual's own example of that syntax is a tenant-scoped
+-- diamond identical in shape to this schema. **This file therefore requires
+-- PostgreSQL 15 or later and is a hard syntax error on 14.** Supabase runs 15+; the
+-- local validation harness was moved to PostgreSQL 17 on 2026-09-16 for the same
+-- reason, because a schema that cannot be exercised locally before it freezes is
+-- worse than almost anything it might contain.
 --
--- PostgreSQL 15 removes the reason for the gap: `ON DELETE SET NULL (column_list)`
--- nulls only the listed columns, and the PG15 manual's own example is a
--- tenant-scoped diamond identical in shape to this schema. Supabase runs 15 or
--- later, so this SHOULD become a composite FK — it is left PG14-compatible only
--- because the local validation harness is PostgreSQL 14.18 and a schema that cannot
--- be exercised locally before it freezes is worse than one small documented gap.
--- See PLAN.md phase 3: close this at apply time, on the real version.
+-- ── ON DELETE, decided by the owner 2026-09-16 (GATE 2 follow-up) ────────────────
+-- The ledger tables RESTRICT rather than cascade. Deleting a session used to remove
+-- its orders, buy-ins and cashouts while the payments for that night survived with a
+-- null session_id — measured, not theorised: 2 of 3 orders gone, the payment kept,
+-- and that player's balance flipped from "owes the house" to "is owed by the house".
+-- The Go API behaves the same way, so this is not a regression; it is a behaviour
+-- nobody would choose on purpose for a record of real debts between friends.
+--
+-- What RESTRICT buys: the ordinary case still works, because a session created by
+-- mistake is empty and deletes fine. The dangerous case — deleting a night that has
+-- money in it — now fails until those rows are removed deliberately. Soft-delete was
+-- considered and rejected: it would put a `deleted_at` filter on every read path,
+-- every policy and every RPC, which is an enormous change to a port whose whole
+-- premise is that it changes nothing else.
+--
+-- A consequence worth knowing: because the ledger restricts, **a bar can only be
+-- deleted once it is empty**, and deleting the owner's auth.users row fails instead
+-- of silently destroying the ledger. Both are deliberate.
 
 create table orders (
   id                  uuid primary key default gen_random_uuid(),
   bar_id              uuid not null references bars(id) on delete cascade,
   session_id          uuid not null,
   player_id           uuid not null,
-  drink_id            uuid references drinks(id) on delete set null,
+  drink_id            uuid,
   drink_name          text not null,
   price_cents         integer not null check (price_cents >= 0),
   cost_estimate_cents integer not null default 0 check (cost_estimate_cents >= 0),
@@ -195,8 +208,11 @@ create table orders (
                         check (jsonb_typeof(ingredients) = 'array'),
   paid                boolean not null default false,
   created_at          timestamptz not null default now(),
-  foreign key (session_id, bar_id) references sessions(id, bar_id) on delete cascade,
-  foreign key (player_id, bar_id)  references players(id, bar_id)  on delete cascade
+  foreign key (session_id, bar_id) references sessions(id, bar_id) on delete restrict,
+  foreign key (player_id, bar_id)  references players(id, bar_id)  on delete restrict,
+  -- PG15: nulls drink_id only, leaving bar_id intact, so deleting a drink keeps the
+  -- order and its recorded drink_name and price.
+  foreign key (drink_id, bar_id)   references drinks(id, bar_id)   on delete set null (drink_id)
 );
 create index orders_session_idx on orders (session_id, created_at desc);
 create index orders_player_idx on orders (player_id);
@@ -209,8 +225,8 @@ create table buy_ins (
   player_id    uuid not null,
   amount_cents integer not null check (amount_cents > 0),
   created_at   timestamptz not null default now(),
-  foreign key (session_id, bar_id) references sessions(id, bar_id) on delete cascade,
-  foreign key (player_id, bar_id)  references players(id, bar_id)  on delete cascade
+  foreign key (session_id, bar_id) references sessions(id, bar_id) on delete restrict,
+  foreign key (player_id, bar_id)  references players(id, bar_id)  on delete restrict
 );
 create index buy_ins_session_idx on buy_ins (session_id, created_at);
 create index buy_ins_bar_idx on buy_ins (bar_id);
@@ -222,8 +238,8 @@ create table cashouts (
   player_id    uuid not null,
   amount_cents integer not null check (amount_cents >= 0),
   created_at   timestamptz not null default now(),
-  foreign key (session_id, bar_id) references sessions(id, bar_id) on delete cascade,
-  foreign key (player_id, bar_id)  references players(id, bar_id)  on delete cascade
+  foreign key (session_id, bar_id) references sessions(id, bar_id) on delete restrict,
+  foreign key (player_id, bar_id)  references players(id, bar_id)  on delete restrict
 );
 create index cashouts_session_idx on cashouts (session_id, created_at);
 create index cashouts_bar_idx on cashouts (bar_id);
@@ -234,15 +250,22 @@ create unique index cashouts_session_player_uniq on cashouts (session_id, player
 create table payments (
   id           uuid primary key default gen_random_uuid(),
   bar_id       uuid not null references bars(id) on delete cascade,
-  session_id   uuid references sessions(id) on delete set null,
+  session_id   uuid,
   player_id    uuid not null,
   -- peer settlement: who this payment went to. NULL means the house/host.
-  counterparty_player_id uuid references players(id) on delete set null,
+  counterparty_player_id uuid,
   amount_cents integer not null check (amount_cents > 0),
   note         text not null default '',
   direction    text not null check (direction in ('received', 'sent')),
   created_at   timestamptz not null default now(),
-  foreign key (player_id, bar_id) references players(id, bar_id) on delete cascade
+  foreign key (player_id, bar_id) references players(id, bar_id) on delete restrict,
+  -- restrict, not set null: a session holding only payments used to delete and leave
+  -- them orphaned, which is half of how a balance flipped.
+  foreign key (session_id, bar_id) references sessions(id, bar_id) on delete restrict,
+  -- PG15 column-list SET NULL: losing a counterparty must not block the delete, and
+  -- must not null bar_id.
+  foreign key (counterparty_player_id, bar_id)
+    references players(id, bar_id) on delete set null (counterparty_player_id)
 );
 create index payments_player_idx on payments (player_id, created_at desc);
 create index payments_bar_idx on payments (bar_id);

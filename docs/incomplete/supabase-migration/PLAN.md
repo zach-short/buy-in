@@ -163,28 +163,23 @@ imports what phase 2 produces**, so Lane B must be merged before phase 5 starts.
 
 ### Phase 1 — Amend `0001_init.sql` to the ratified design
 
-**Status:** `BUILT` 2026-09-16 (HANDOFF step 12). 360 → ~780 lines. Applies cleanly to a scratch
-PostgreSQL 14.18 (exit 0, repeated on a fresh database), and all three done-when proofs pass —
-see the step for the numbers. The required Fable 5.1 review ran and found six must-fix defects,
-four of which were fixed and re-proved in this phase; **two are carried into phase 3 and must be
-settled before the file is applied**, because applying it freezes it (`D4`):
+**Status:** `BUILT` 2026-09-16 (HANDOFF steps 12 and 13). 360 → ~840 lines. Applies cleanly to
+**PostgreSQL 17.11** — the target major version, since Supabase runs 15+ — and every done-when
+proof passes there; see the steps for the numbers. The required Fable 5.1 review found six
+must-fix defects; four were fixed and re-proved in step 12, and **both of the two that were
+carried are now closed** (step 13):
 
-1. **The `on delete` semantics for a ledger are unresolved and measured wrong.** Deleting one
-   session removed 2 of 3 orders and **kept the payment**, orphaned with `session_id` null — so
-   that player's charges vanish while their credit remains and the balance flips to "the house
-   owes them". This reproduces what the Go API does as of 2026-09-16 (`DeleteSession` cascades
-   children, and Mongo payments carry no session id), so it is not a regression — but it is a
-   decision, it is the owner's, and a schema that eats money on a delete should not freeze
-   unexamined. Options: leave it (matches current behaviour), `restrict` (a session can only be
-   deleted once it is empty), or soft-delete.
-2. **The validation harness is PostgreSQL 14 and the target is 15+.** PG15's
-   `on delete set null (column_list)` — its manual's own example is a tenant diamond identical to
-   this schema — would let the three nullable columns (`orders.drink_id`,
-   `payments.session_id`, `payments.counterparty_player_id`) take composite foreign keys too,
-   closing the last of G5. The syntax is a hard error on PG14, so adopting it means the file can
-   no longer be exercised locally before it freezes. Closing this needs `postgresql@17`
-   installed (available in brew, not installed as of 2026-09-16) — the owner's machine, the
-   owner's call.
+1. **`on delete` is decided and implemented** — `restrict` on the four ledger tables and on
+   `bars.owner_id`, ratified as `DESIGN.md` `D18` after the owner chose it. Proved on PG17: a
+   session holding orders refuses to delete, an empty session still deletes cleanly, a player who
+   owes money cannot be erased, and deleting the owner's auth user fails instead of taking the
+   ledger with it.
+2. **The harness moved to the target version.** `postgresql@17` was installed at the owner's
+   direction, and all three nullable foreign keys now use PG15's
+   `on delete set null (column_list)` — so **every** foreign key in the file is composite and G5
+   is complete. Proved: deleting a drink leaves the order standing with `drink_id` null,
+   `bar_id` intact and `drink_name` preserved. The file is consequently a **hard syntax error on
+   PostgreSQL 14**, which was verified rather than assumed.
 
 Lane A. Files: `supabase/migrations/0001_init.sql` only.
 
@@ -299,12 +294,16 @@ point of GATE 0 was that an unread ref costs a database. Confirm before writing.
 pause after 7 days of low activity (`D3`) — a paused `dev` between sessions is expected, not a
 failure.
 
-**Two things phase 1 left for this phase, both of which must be settled BEFORE the apply**,
-because the apply is what freezes the file (`D4`): the `on delete` semantics for sessions,
-players and `bars.owner_id` (phase 1's status block states the measured consequence), and
-whether to adopt PG15's `on delete set null (column_list)` for the three nullable foreign keys —
-which is only safe to do once the validation harness is on the target major version. Do not
-apply while either is open.
+**Both things phase 1 carried into this phase are now closed** (`D18`, and the PG17 harness) —
+this phase waits only on the owner's `dev` project ref. What it must still do before the apply:
+re-run the validation suite against the amended file, because the apply is what freezes it
+(`D4`).
+
+**The local harness exists and is on the target version.** PostgreSQL 17.11 at
+`/opt/homebrew/opt/postgresql@17/bin`, a cluster in the session scratchpad, plus a prelude
+stubbing `auth.users`, `auth.uid()` and the realtime publication, a seed, and proof scripts.
+**It needs `LC_ALL` set** — PG17 on macOS refuses to start without it, with a misleading
+"postmaster became multithreaded during startup".
 
 ---
 
