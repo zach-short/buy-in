@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "poker-bar-monorepo",
+      "name": "buy-in-monorepo",
       "devDependencies": {
         "vitest": "^4.1.10",
       },

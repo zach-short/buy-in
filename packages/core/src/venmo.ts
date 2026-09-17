@@ -11,7 +11,7 @@
 
 import { formatCents } from './money';
 
-export const VENMO_NOTE_PREFIX = 'Poker Bar';
+export const VENMO_NOTE_PREFIX = 'Buy-In';
 
 export type VenmoTxn = 'pay' | 'charge';
 
@@ -20,7 +20,7 @@ export interface VenmoUrls {
   webUrl: string;
 }
 
-/** `Poker Bar — Friday Night`. The plain register, chosen at GATE 1 (DESIGN.md D12). */
+/** `Buy-In — Friday Night`. The plain register, chosen at GATE 1 (DESIGN.md D12). */
 export function venmoNote(sessionName: string): string {
   return `${VENMO_NOTE_PREFIX} — ${sessionName}`;
 }

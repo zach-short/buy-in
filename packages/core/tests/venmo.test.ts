@@ -39,13 +39,13 @@ describe('venmoUrls preserves the URL shapes that shipped', () => {
 
   it('encodes the note, which now contains a space and an em dash', () => {
     const { deepLink } = venmoUrls('zach', 100, venmoNote('Friday Night'));
-    expect(deepLink).toContain('note=Poker%20Bar%20%E2%80%94%20Friday%20Night');
+    expect(deepLink).toContain('note=Buy-In%20%E2%80%94%20Friday%20Night');
   });
 });
 
 describe('venmoNote and venmoTxnFor', () => {
   it('uses the plain register chosen at GATE 1', () => {
-    expect(venmoNote('Friday Night')).toBe('Poker Bar — Friday Night');
+    expect(venmoNote('Friday Night')).toBe('Buy-In — Friday Night');
   });
 
   it('pays when the player owes and charges when the house owes', () => {
