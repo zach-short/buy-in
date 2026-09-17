@@ -1,9 +1,15 @@
 {
+  // DOM is deliberately absent from "lib". @pb/core is shared with native/ and may not
+  // touch window or document (src/index.ts:1-4); with DOM present that rule was
+  // enforced by review only, and `window.location.href` type-checked here. Removing it
+  // made the rule a gate: a window reference now fails `npx tsc --noEmit` with
+  // TS2304, verified 2026-09-16. Do not add DOM back to make a stray reference compile
+  // — move the platform-specific half to web/ instead, as openVenmo's navigation was.
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ESNext", "DOM"],
+    "lib": ["ESNext"],
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
