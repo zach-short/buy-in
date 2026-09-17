@@ -235,7 +235,7 @@ export default function PlayerReceiptPage({
 
       <div className='pr-wrap'>
         <div className='pr-header'>
-          <p className='pr-venue'>Poker Bar</p>
+          <p className='pr-venue'>Buy-In</p>
           <p className='pr-name'>{player.name}</p>
         </div>
 

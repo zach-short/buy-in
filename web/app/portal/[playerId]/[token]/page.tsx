@@ -98,7 +98,7 @@ export default function PortalPage({
 
       <main className='min-h-screen max-w-sm mx-auto pb-16'>
         <div className='px-6 py-10'>
-          <p className='text-xs tracking-widest uppercase text-muted-foreground mb-1'>Poker Bar</p>
+          <p className='text-xs tracking-widest uppercase text-muted-foreground mb-1'>Buy-In</p>
           <h1 className='text-xl font-semibold tracking-widest uppercase text-primary'>{player.name}</h1>
         </div>
 

@@ -232,7 +232,7 @@ export default function PublicReceiptPage({
 
       <div className='receipt-wrap'>
         <div className='receipt-card'>
-          <p className='r-venue'>Poker Bar</p>
+          <p className='r-venue'>Buy-In</p>
           <p className='r-name'>{player.name}</p>
           <p className='r-date'>
             {formatDate(session.date)} · {session.name}

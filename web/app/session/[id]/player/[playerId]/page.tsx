@@ -252,7 +252,7 @@ export default function PlayerReceiptPage({
         </div>
 
         <div className='receipt-card'>
-          <p className='receipt-venue'>Poker Bar</p>
+          <p className='receipt-venue'>Buy-In</p>
           <p className='receipt-title'>{player.name}</p>
           <p className='receipt-date'>
             {formatDate(session.date)} · {session.name}

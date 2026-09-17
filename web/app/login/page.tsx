@@ -32,7 +32,7 @@ export default function LoginPage() {
     <main className='min-h-screen flex flex-col items-center justify-center px-6'>
       <div className='w-full max-w-xs space-y-8'>
         <div className='text-center space-y-1'>
-          <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Poker Bar</h1>
+          <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
           <p className='text-xs text-muted-foreground tracking-widest uppercase'>Members only</p>
         </div>
 

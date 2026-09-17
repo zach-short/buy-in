@@ -36,7 +36,7 @@ export default async function OgImage({
   if (!session || !player) {
     return new ImageResponse(
       <div style={{ background: '#0d0d0d', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b6560', fontSize: 18, fontFamily: 'monospace' }}>
-        Poker Bar
+        Buy-In
       </div>,
       { width: 600, height: 420 },
     );
@@ -51,7 +51,7 @@ export default async function OgImage({
     <div style={{ background: '#0d0d0d', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', fontFamily: 'monospace' }}>
       <div style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '32px 40px', width: '100%', display: 'flex', flexDirection: 'column' }}>
 
-        <div style={{ color: '#6b6560', fontSize: 10, letterSpacing: '0.3em', textAlign: 'center', marginBottom: '6px' }}>P O K E R   B A R</div>
+        <div style={{ color: '#6b6560', fontSize: 10, letterSpacing: '0.3em', textAlign: 'center', marginBottom: '6px' }}>B U Y - I N</div>
         <div style={{ color: '#c9a84c', fontSize: 26, fontWeight: 700, letterSpacing: '0.08em', textAlign: 'center', marginBottom: '4px' }}>{player.name.toUpperCase()}</div>
         <div style={{ color: '#6b6560', fontSize: 11, textAlign: 'center', marginBottom: '20px' }}>{date}  ·  {session.name}</div>
 
