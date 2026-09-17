@@ -2,7 +2,7 @@
 
 **Status: `RATIFIED` 2026-09-16.**
 
-**The decisions are §7 (`D1`–`D14`), amended by §10 (`D15`, `D16`). Everything before §7 is
+**The decisions are §7 (`D1`–`D14`), amended by §10 (`D15`–`D17`). Everything before §7 is
 the evidence they were made on** —
 §1 what was verified, §2 the boundary, §3 the options with their counter-arguments, §4 the
 dials, §5 the hazards, §6 the questions and the owner's answers. Read §7 and §8 before any
@@ -557,6 +557,9 @@ owner answers, the pessimistic half binds.
 **Owner's action at cutover**, recorded not done: suspend or delete the Render service and the
 Mongo Atlas cluster.
 
+**Amended 2026-09-16 by `D17`** — the "Mongo is kept readable" clause is superseded; the rest of
+this decision stands.
+
 *2026-09-16.*
 
 ### D12 — The Venmo note is `Poker Bar — <session name>`
@@ -743,7 +746,7 @@ the first one load-bearing, so the plan should say which governs.
 
 ---
 
-## 10. Amendments — 2026-09-16, from the D8 RLS review
+## 10. Amendments — 2026-09-16, from the D8 RLS review and GATE 2
 
 `PASSOFF.md` item 7 required a narrow Fable 5.1 review in its own worktree of any ratified
 answer touching RLS. `D8` does, so one ran on 2026-09-16 against `0001_init.sql` at `d814583`.
@@ -823,5 +826,43 @@ adds a concept — a staff role the database enforces — rather than closing a 
 already exists.
 
 **Supersedes.** `0001_init.sql:209-217`, amended in place under `D4`.
+
+*2026-09-16.*
+
+### D17 — `prod` runs free; Mongo is dumped, then decommissioned at cutover
+
+**Decision.** Taken at GATE 2, 2026-09-16. `prod` runs on the Supabase Free plan, which has **no
+downloadable backups**, and the Mongo Atlas cluster is **decommissioned at cutover** rather than
+kept running. Before it is, the owner takes a `mongodump` and keeps it off-repo — and takes it
+**immediately after the last session played on Mongo and before the import runs**, so the
+archived copy is provably the exact state that was imported.
+
+`D11`'s rollback therefore changes shape rather than disappearing: it becomes **restore the dump
+to a reachable MongoDB, re-point the env, redeploy the previous commit.** Slower, and it still
+exists.
+
+**Defense.** The owner chose free-plus-decommission over paying for Pro and over leaving Atlas
+running (G3). The objection this document raised was not about cost but about `D11`: its rollback
+is "redeploy the previous commit and re-point the env", which needs Mongo to still be there — so
+decommissioning at cutover would have deleted the rollback target and left a ledger of real debts
+with no second copy from the day it became authoritative. The owner's answer to that was the
+dump, which is the cheap half of what keeping the cluster bought: one command, no running
+service, a cold copy of every balance.
+
+Against the dump: it is a file containing phone numbers and Venmo handles, and `SCOPE.md` §3 O5b
+named exactly that hazard when it argued against a `mongoexport`-based import. Answered — the
+hazard is real and the mitigation is the same one: it never enters git, never goes on a shared
+drive, and lives on the owner's machine. The difference from O5b is that this file is not a
+working input to a script that could be re-run; it is an archive that exists to be restored once,
+if ever.
+
+**Binds.** Phase 9's scope gains the dump, in that order. Phase 10's owner action becomes
+"decommission Atlas" rather than "keep it readable". No phase may plan around a live Mongo after
+cutover.
+
+**Supersedes.** `D11` — **partially**. Dead: "Mongo is kept readable" and the rollback as
+originally worded. Alive and unchanged: the big-bang shape, the import running after the last
+Mongo session, `backend/` deleted in the commit after cutover, and the pessimistic auto-deploy
+assumption.
 
 *2026-09-16.*

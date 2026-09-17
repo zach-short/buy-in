@@ -1,6 +1,8 @@
 # Supabase migration — PLAN
 
-**Status: `PLANNED` 2026-09-16.** Awaiting GATE 2. Driver: Opus 5, `PASSOFF.md` item 8.
+**Status: `PLANNED` 2026-09-16 — approved at GATE 2 the same day.** Driver: Opus 5,
+`PASSOFF.md` item 8. The plan authorizes the whole run; phases do not each come back for
+approval. Phase 2 is already `BUILT`.
 
 `DESIGN.md` is *what and why*, and it is frozen. This is *in what order, by whom, done when*.
 Every phase cites the decision it implements; no phase reopens one. Where a phase would have to
@@ -50,7 +52,7 @@ example carries placeholder values only.
 
 ---
 
-## 1. Decisions taken since ratification — `BD-1`…`BD-7`
+## 1. Decisions taken since ratification — `BD-1`…`BD-8`
 
 Build-level calls. Each implements a ratified decision rather than making a new one, and each
 carries its reversal. **Two of them exist because `SCOPE.md` §3 carried an option that never
@@ -112,6 +114,18 @@ conversion provable (`H5`) and the test gate real (`H8`). *Reversal:* port `web/
 supabase-js and extract later — but then the ledger math moves untested inside a data-layer
 rewrite, which is the one silent-failure surface this folder exists to protect.
 
+**BD-8 — Claiming a player row links it to an auth user but does NOT create bar
+membership.** Taken during phase 1, 2026-09-16. `claim_player(token)` sets `players.user_id` and
+marks the claim link used; it inserts no `bar_members` row. A new `players_self_read` policy lets
+the claimed user read their own row, which is the whole privilege claiming confers. *Why:* `D16`
+gates writes on membership, and the review that produced `D16` was worried about exactly this
+path — if claiming made someone a member, a claimed player would immediately be able to read
+every other player's phone number and Venmo handle through `players_read`. Claiming without
+membership resolves that completely instead of narrowing it, and leaves `bar_members.role =
+'player'` meaning what it says: someone the host has deliberately let in. *Reversal:* have
+`claim_player` also insert a `bar_members` row with role `'player'` — one statement — if the
+owner ever wants claimed players to see the bar.
+
 ---
 
 ## 2. Phases
@@ -149,7 +163,30 @@ imports what phase 2 produces**, so Lane B must be merged before phase 5 starts.
 
 ### Phase 1 — Amend `0001_init.sql` to the ratified design
 
-**Status:** `PLANNED`. Lane A. Waits on nothing. Files: `supabase/migrations/0001_init.sql` only.
+**Status:** `BUILT` 2026-09-16 (HANDOFF step 12). 360 → ~780 lines. Applies cleanly to a scratch
+PostgreSQL 14.18 (exit 0, repeated on a fresh database), and all three done-when proofs pass —
+see the step for the numbers. The required Fable 5.1 review ran and found six must-fix defects,
+four of which were fixed and re-proved in this phase; **two are carried into phase 3 and must be
+settled before the file is applied**, because applying it freezes it (`D4`):
+
+1. **The `on delete` semantics for a ledger are unresolved and measured wrong.** Deleting one
+   session removed 2 of 3 orders and **kept the payment**, orphaned with `session_id` null — so
+   that player's charges vanish while their credit remains and the balance flips to "the house
+   owes them". This reproduces what the Go API does as of 2026-09-16 (`DeleteSession` cascades
+   children, and Mongo payments carry no session id), so it is not a regression — but it is a
+   decision, it is the owner's, and a schema that eats money on a delete should not freeze
+   unexamined. Options: leave it (matches current behaviour), `restrict` (a session can only be
+   deleted once it is empty), or soft-delete.
+2. **The validation harness is PostgreSQL 14 and the target is 15+.** PG15's
+   `on delete set null (column_list)` — its manual's own example is a tenant diamond identical to
+   this schema — would let the three nullable columns (`orders.drink_id`,
+   `payments.session_id`, `payments.counterparty_player_id`) take composite foreign keys too,
+   closing the last of G5. The syntax is a hard error on PG14, so adopting it means the file can
+   no longer be exercised locally before it freezes. Closing this needs `postgresql@17`
+   installed (available in brew, not installed as of 2026-09-16) — the owner's machine, the
+   owner's call.
+
+Lane A. Files: `supabase/migrations/0001_init.sql` only.
 
 **Scope.**
 1. `bars` gains `venmo_handle`, with room for `cashapp_handle` (`D6`).
@@ -170,9 +207,9 @@ imports what phase 2 produces**, so Lane B must be merged before phase 5 starts.
 10. Explicit `revoke`/`grant` on **every** function, plus a default-privilege revoke in `public`
     (§9.1 #4) — and a default `expires_at` on share links, POST-only RPC usage, no
     `replica identity full` (§9.1 #8).
-11. Composite FKs `(id, bar_id)` on parents and `(fk, bar_id)` on children (§9.1 #5) — **unless
-    GATE 2 says to accept the gap for a single bar**, in which case write the reason into the
-    file as a comment rather than leaving it unexplained.
+11. Composite FKs `(id, bar_id)` on parents and `(fk, bar_id)` on children (§9.1 #5).
+    **Confirmed at GATE 2 (G5): do them now**, while the migration is unapplied and they are
+    free, rather than accepting the gap for a single bar.
 
 **Subagents.** One **Fable 5.1** review of the finished SQL, in its own worktree, before the
 phase is called done — same trigger as the review that produced `D15`/`D16`: this is the surface
@@ -238,8 +275,9 @@ the rule into a gate; do it if it costs nothing, and say so if it doesn't.
 **Status:** `PLANNED`. Lane A. **Waits on the owner** (`D3`) and on phase 1.
 
 **Scope.**
-1. The owner creates `dev` and `prod` and hands over the refs. Two Free projects is exactly the
-   Free-organization allowance (`D3`, verified 2026-09-16).
+1. The owner creates **`dev` only** — confirmed at GATE 2 (G2); `prod` is created in phase 9, so
+   it does not sit idle and paused for weeks. Two Free projects is the Free-organization
+   allowance either way (`D3`, verified 2026-09-16).
 2. Re-add the Supabase MCP server **read-only**, pointed at `dev` — confirming the ref is
    poker-bar's by listing its tables and expecting an empty schema, never a farm one
    (`HANDOFF.md`, Known facts; `PASSOFF.md` item 1's procedure).
@@ -260,6 +298,13 @@ client reads their own bar after `create_bar()` — the `H4` trap, checked rathe
 point of GATE 0 was that an unread ref costs a database. Confirm before writing. Free projects
 pause after 7 days of low activity (`D3`) — a paused `dev` between sessions is expected, not a
 failure.
+
+**Two things phase 1 left for this phase, both of which must be settled BEFORE the apply**,
+because the apply is what freezes the file (`D4`): the `on delete` semantics for sessions,
+players and `bars.owner_id` (phase 1's status block states the measured consequence), and
+whether to adopt PG15's `on delete set null (column_list)` for the three nullable foreign keys —
+which is only safe to do once the validation harness is on the target major version. Do not
+apply while either is open.
 
 ---
 
@@ -356,8 +401,10 @@ user.
    determines the player, and a route segment the page still trusts invites it to believe the
    URL over the RPC (§9.1 #7).
 5. The host gets a way to mint and re-send links, since every link already sent dies (`D8`).
-6. `receipt/…/opengraph-image.tsx`: **per GATE 2's answer** — deleted, or ported to take the
-   token. Do not decide this in the phase.
+6. **Delete `receipt/…/opengraph-image.tsx`** — confirmed at GATE 2 (G4). It renders a player's
+   name, drinks and total into an image that link-preview bots fetch and cache, so a revoked
+   link stays previewable; it is the one surface where `D8`'s revocability cannot be made real.
+   Texted links lose their rich preview, which is the accepted cost.
 
 **Subagents.** None.
 
@@ -405,10 +452,15 @@ wrong for any value that was computed — `cost_estimate` and `$inc`'d quantitie
 **Status:** `PLANNED`. Lane A. Waits on phases 7 and 8, and on the owner (`prod`, and the backup
 question in §7).
 
-**Scope.** Create `prod`; apply the frozen `0001`; run the import **once**, after the last Mongo
-session; point the deployed web at `prod`; keep Mongo readable. Regenerate the PWA workers and
-verify the update on a real device (`H7`). Rollback is redeploying the previous commit and
-re-pointing the env (`D11`).
+**Scope.** Create `prod` (`D3`, G2); apply the frozen `0001`; **take the `mongodump` first** —
+immediately after the last session played on Mongo and **before** the import, so the archive is
+provably what was imported (`D17`); run the import **once**; point the deployed web at `prod`.
+Regenerate the PWA workers and verify the update on a real device (`H7`).
+
+**Rollback, as amended by `D17`:** restore the dump to a reachable MongoDB, re-point the env,
+redeploy the previous commit. Mongo is **not** left running after cutover — so the dump is the
+only fallback that exists, and a phase that skips it has removed the rollback rather than
+postponed it.
 
 **Subagents.** None.
 
@@ -429,8 +481,8 @@ re-entered by hand.
 **Status:** `PLANNED`. Lane A. Waits on phase 9, in the commit **after** cutover (`D11`).
 
 **Scope.** Delete `backend/`, its env, the Go module, the CORS origins, the README sections, and
-the last `NEXT_PUBLIC_API_URL` reads. The owner suspends or deletes the Render service and the
-Mongo Atlas cluster — recorded, not done by an agent.
+the last `NEXT_PUBLIC_API_URL` reads. The owner decommissions the Render service and the Mongo
+Atlas cluster — recorded, not done by an agent, and **only once phase 9's dump exists** (`D17`).
 
 **Subagents.** None. Driver is **Sonnet 5**: by this point it is a deletion with citations.
 
@@ -560,4 +612,16 @@ not each come back for approval.**
 | G5 | Composite foreign keys (§9.1 #5) — do them now, or accept the gap for one bar with your signature? | **Do them now.** The file calls itself multi-tenant, they are free in an unapplied migration, and they are an ALTER-plus-backfill once rows exist. | Phase 1 scope. |
 | G6 | `BD-6` (generated row types) and `BD-7` (core-first extraction) are build calls on options that **never became GATE 1 questions**. Leave them as build calls, or ratify either as a `D<n>`? | **Leave as build calls.** Both follow from scope already ratified; making them decisions adds ceremony without changing what gets built. | Whether a later session may reverse them without asking. |
 
-Answers: *(none yet — 2026-09-16)*
+**Answers — 2026-09-16**, given by the owner the turn they were asked, recorded the same turn.
+
+| # | Answer |
+|---|---|
+| G1 | **Approve as written.** The plan authorizes the whole run. |
+| G2 | **`dev` now, `prod` at phase 9.** Phase 3's scope narrowed to `dev`. |
+| G3 | **Free `prod`, and Mongo decommissioned at cutover** — *departing from the recommendation*, which was to keep Atlas running as the fallback. Because that answer deleted `D11`'s rollback target, a follow-up was asked in the same turn rather than the conflict being resolved here: the owner chose **`mongodump` before decommissioning**. Both halves are recorded as `DESIGN.md` `D17`, which partially supersedes `D11`. |
+| G4 | **Delete the OG image.** Phase 7 item 6. |
+| G5 | **Composite foreign keys now.** Phase 1 item 11, conditional removed. |
+| G6 | **`BD-6` and `BD-7` stay build calls**, not promoted to `D<n>`. A later session may reverse either on its stated reversal without coming back to the owner. |
+
+One answer departed from a recommendation (G3) and it is the only one carrying an owner's reason
+rather than this document's; `D17` records the reasoning on both sides.
