@@ -1,4 +1,4 @@
-# Poker Bar Manager
+# Buy-In
 
 A full-stack bar management app for poker nights. Track players, poker sessions, drink orders, inventory, and costs — all in one place.
 
