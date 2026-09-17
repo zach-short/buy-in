@@ -7,13 +7,13 @@ import { Toaster } from 'sonner';
 import { SessionProvider } from 'next-auth/react';
 
 export const metadata: Metadata = {
-  title: { default: 'Poker Bar', template: '%s — Poker Bar' },
+  title: { default: 'Buy-In', template: '%s — Buy-In' },
   description: 'Home bar management for poker nights',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Bar',
+    title: 'Buy-In',
   },
 };
 

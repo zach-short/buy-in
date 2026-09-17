@@ -1,6 +1,6 @@
 {
-  "name": "Poker Bar",
-  "short_name": "Poker Bar",
+  "name": "Buy-In",
+  "short_name": "Buy-In",
   "description": "Home bar management for poker nights",
   "start_url": "/",
   "display": "standalone",
