@@ -11,7 +11,7 @@ function Landing() {
   return (
     <main className='min-h-screen flex flex-col items-center justify-center px-6'>
       <div className='w-full max-w-xs space-y-8 text-center'>
-        <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Poker Bar</h1>
+        <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
         <div className='flex flex-col gap-3'>
           <Button
             size='lg'
@@ -51,7 +51,7 @@ function Dashboard() {
   return (
     <main className='min-h-screen px-6 py-10 max-w-sm mx-auto flex flex-col'>
       <div className='flex items-center justify-between mb-12'>
-        <h1 className='text-xl font-semibold tracking-widest uppercase text-primary'>Poker Bar</h1>
+        <h1 className='text-xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
         <button
           onClick={() => signOut({ callbackUrl: '/' })}
           className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
