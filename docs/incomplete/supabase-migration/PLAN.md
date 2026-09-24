@@ -244,7 +244,7 @@ Gates: `bun run test` **exit 0, 47 tests in 6 files** — the first tests this r
    cashouts − received + sent, positive means the player owes the house; "settled" becomes
    `=== 0` (`DESIGN.md` §8.2).
 3. The settlement optimizer, pure (`D2`).
-4. `venmoUrl()` — one builder, one note constant, `Poker Bar — <session name>` (`D12`) —
+4. `venmoUrl()` — one builder, one note constant, `Buy-In — <session name>` (`D12`) —
    replacing the three divergent call sites.
 5. `formatDate`, `formatTime`, `canMake`.
 6. Characterization tests **written before the move** (`conventions-typescript.md` X1).
@@ -274,7 +274,7 @@ the rule into a gate; do it if it costs nothing, and say so if it doesn't.
    it does not sit idle and paused for weeks. Two Free projects is the Free-organization
    allowance either way (`D3`, verified 2026-09-16).
 2. Re-add the Supabase MCP server **read-only**, pointed at `dev` — confirming the ref is
-   poker-bar's by listing its tables and expecting an empty schema, never a farm one
+   Buy-In's by listing its tables and expecting an empty schema, never a farm one
    (`HANDOFF.md`, Known facts; `PASSOFF.md` item 1's procedure).
 3. Apply `0001` to `dev`.
 4. `supabase gen types typescript` → `packages/core` (`BD-6`).
@@ -567,7 +567,7 @@ So the next effort need not guess whether an omission was considered.
   `docs/incomplete/` **is** committable.
 - **The Go API is still live and open** as of 2026-09-16 (§0). Until item 9 is done, assume
   anything in Mongo is public.
-- **No Supabase write tool from this repo** until a poker-bar ref exists, and read-only when it
+- **No Supabase write tool from this repo** until a Buy-In ref exists, and read-only when it
   returns (`CLAUDE.md`).
 
 ---

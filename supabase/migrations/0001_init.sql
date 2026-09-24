@@ -1,4 +1,4 @@
--- Poker Bar — initial schema
+-- Buy-In — initial schema
 -- Ports the MongoDB collections in backend/models/barModels.go to Postgres with
 -- multi-tenancy, RLS, and atomic order handling.
 --

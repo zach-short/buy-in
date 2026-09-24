@@ -1,4 +1,4 @@
-# Poker Bar — Mongo → Supabase + Monorepo + App Store Plan
+# Buy-In — Mongo → Supabase + Monorepo + App Store Plan
 
 **Decisions locked in:**
 - Payments: settlement optimizer + deep-link handoff. No funds touch the platform.
@@ -39,7 +39,7 @@ native/ (Expo) ─┘                  ├─ RLS (tenancy enforced once, in the
 Mirrors ezhomesteading (`web/` + `native/` + `packages/*` at root, bun workspaces — not `apps/`).
 
 ```
-poker-bar/
+buy-in/
 ├── package.json          # workspaces: ["web", "native", "packages/*"]
 ├── web/                  # existing frontend/, moved
 ├── native/               # new Expo app

@@ -22,7 +22,7 @@ that has not decided anything yet: they had not. They are kept unedited except w
 re-verified, so that the decisions in §7 can be read against exactly what was known when they
 were taken.
 
-**The effort in one line.** Move poker-bar off the Go/Gin + MongoDB API onto Supabase
+**The effort in one line.** Move Buy-In off the Go/Gin + MongoDB API onto Supabase
 Postgres, called directly from `web/` under RLS and Postgres functions, filling
 `packages/core` with the shared logic on the way and deleting `backend/` at the end.
 
@@ -65,7 +65,7 @@ row. Environment values were never read — only variable *names* (`cut -d= -f1`
 |---|---|---|
 | Identity | Module `github.com/zach-short/nextjs-boilerplate`, Go 1.24.1, gin 1.10.1, mongo-driver 1.17.4. | `backend/go.mod:1-11` |
 | Route count | 1 health + 4 `/auth/*` + **26** `/api/*`. The plan's "everything else (~18 routes)" undercounts. | `backend/routes/routes.go:10-59` |
-| **No authentication on any `/api` route** | The bar group carries no middleware — "no auth — single-user app". `AuthMiddleware` is referenced only to keep its import alive. CORS allows `localhost:3000` and `https://poker-bar.vercel.app`; CORS is a browser courtesy, not authentication. The NextAuth gate protects *pages*, not the API. | `routes.go:23`, `routes.go:61`; `main.go:20-29`; `web/proxy.ts:4-23` |
+| **No authentication on any `/api` route** | The bar group carries no middleware — "no auth — single-user app". `AuthMiddleware` is referenced only to keep its import alive. CORS allows `localhost:3000` and `https://poker-buy-in.vercel.app`; CORS is a browser courtesy, not authentication. The NextAuth gate protects *pages*, not the API. | `routes.go:23`, `routes.go:61`; `main.go:20-29`; `web/proxy.ts:4-23` |
 | Auth subsystem is dead code | `handlers/auth.go` (login/register/social/check-email over a `users` collection), `middleware/auth.go`, `utils/jwt.go` serve routes the app never calls: the web client for them, `web/lib/api.ts`, is imported by exactly one file, `web/components/auth/unified-auth.tsx`, and `UnifiedAuth` is imported by nothing. `web/types/auth.ts` and `web/models/user.ts` exist for that path only. The real login is a hardcoded name/password pair. | `grep -rn "lib/api'" web` → one hit; `grep -rn UnifiedAuth web` → only its own file; `web/lib/auth.ts:13` |
 | Money is `float64` | Every amount, quantity, price and cost. | `backend/models/barModels.go:22-24,35-36,52,60,66,79-80` |
 | Bug 1 (plan §1) — verified | `CreateOrder` checks stock in one loop, then decrements in a second loop with no transaction; a failure mid-loop leaves earlier decrements in place and no order. | `backend/handlers/orders.go:100-117`, `:119-138` |
@@ -265,8 +265,8 @@ Asked in chat, in one message, the turn this document was finished (2026-09-16).
 | Q9 | Migrate the Mongo data (O5a), or start clean and re-enter inventory/drinks from the seed? *(The size question is answered: **20 players, 18 sessions, 35 orders** as of 2026-09-16, §1.5. What is left is whether the `/player-receipt` history matters to you.)* | **Migrate** — the balances are real debts, and at this size the import is an afternoon, not a project. | Whether the import phase exists; verification effort. |
 | Q10 | Constraints the app assumes but the schema lacks: unique player name per bar, and one cashout per player per session — enforce both? | **Both, as unique indexes.** | Two lines in the schema; the import must not violate them. |
 | Q11 | Cutover (O8): big-bang after the last Mongo session, Mongo kept readable, `backend/` deleted in the next commit? *(Both factual halves are now measured: `poker-bar.vercel.app` is live and `https://poker-bar.onrender.com` is the Go API, §1.5.)* What remains: **does a push to `main` redeploy the Vercel project automatically** — it is configured outside this repo and cannot be read from the checkout — and at cutover, who takes down the Render service and the Mongo Atlas cluster? | **O8a**, and treat the deploy as automatic until you say otherwise, because assuming a push is inert is the assumption that ships a half-ported app. | The cutover phase's done-when; whether every phase before cutover must keep `main` deployable; what gets decommissioned. |
-| Q12 | The Venmo note (user-facing copy, R7). As of 2026-09-16 it is `'poker'` on two pages and the session name on the third (§1.3); `venmoUrl()` forces one choice. Plain: `Poker Bar — <session name>` · Terse: `<session name>` · Warm: `Thanks for the game — <session name>`. | **Plain.** | One constant in core. |
-| **Q13** *(new 2026-09-16)* | **The live API is readable by anyone right now** — 20 players with phone numbers, no credential, from any IP (§1.5, H1). Cutover is weeks of phases away. Do you want it (a) left as it is until cutover, accepting the exposure knowingly; (b) the Render service suspended now, which takes `poker-bar.vercel.app` down with it, since the web app has no other data source; or (c) a shared-secret header added to `backend/` and to `web/`'s fetches as a stopgap? | **(b) if you are not mid-season, (a) if you are** — never (c). A stopgap in `backend/` contradicts "`backend/` takes no new work" (`CLAUDE.md`), costs a day, and protects a surface that is being deleted; suspending a hobby app you are about to replace costs nothing but the app being down. This is yours to weigh because only you know whether a poker night is scheduled before cutover. | Whether the migration has a hard deadline; whether `backend/` gets one exception; whether the import can be rehearsed against a live Mongo or a dump. |
+| Q12 | The Venmo note (user-facing copy, R7). As of 2026-09-16 it is `'poker'` on two pages and the session name on the third (§1.3); `venmoUrl()` forces one choice. Plain: `Buy-In — <session name>` · Terse: `<session name>` · Warm: `Thanks for the game — <session name>`. | **Plain.** | One constant in core. |
+| **Q13** *(new 2026-09-16)* | **The live API is readable by anyone right now** — 20 players with phone numbers, no credential, from any IP (§1.5, H1). Cutover is weeks of phases away. Do you want it (a) left as it is until cutover, accepting the exposure knowingly; (b) the Render service suspended now, which takes `poker-buy-in.vercel.app` down with it, since the web app has no other data source; or (c) a shared-secret header added to `backend/` and to `web/`'s fetches as a stopgap? | **(b) if you are not mid-season, (a) if you are** — never (c). A stopgap in `backend/` contradicts "`backend/` takes no new work" (`CLAUDE.md`), costs a day, and protects a surface that is being deleted; suspending a hobby app you are about to replace costs nothing but the app being down. This is yours to weigh because only you know whether a poker night is scheduled before cutover. | Whether the migration has a hard deadline; whether `backend/` gets one exception; whether the import can be rehearsed against a live Mongo or a dump. |
 
 **Answers — 2026-09-16**, given by the owner in chat the turn they were re-sent, recorded the
 same turn. Verbatim: *"all recommended, Q13 is (b), no poker night scheduled"*.
@@ -343,7 +343,7 @@ reach a half-built mode.
 ### D3 — Two hosted Supabase projects: `dev` now, `prod` at cutover
 
 **Decision.** §3 O1b. The owner creates both and hands over the refs; no agent creates a
-project. The Supabase MCP server is re-added **read-only** once a poker-bar ref exists, per
+project. The Supabase MCP server is re-added **read-only** once a Buy-In ref exists, per
 GATE 0 (`HANDOFF.md`, Settled, 2026-09-16), and not before. The import is rehearsed on `dev`
 as often as needed and run once on `prod`. The migration files are the only artefact required
 to match across them.
@@ -539,7 +539,7 @@ pointed at `prod`; Mongo is kept readable; `backend/` is deleted in the commit *
 not before. Rollback is redeploying the previous commit and re-pointing the env.
 
 **Until the owner verifies otherwise, assume a push to `main` redeploys
-`poker-bar.vercel.app`.** Therefore `main` stays deployable through every phase, and unfinished
+`poker-buy-in.vercel.app`.** Therefore `main` stays deployable through every phase, and unfinished
 port work stays on `supabase-monorepo` and merges at cutover.
 
 **Defense.** Against O8b (dual-read behind a flag): two data sources under one UI, for a
@@ -562,7 +562,7 @@ this decision stands.
 
 *2026-09-16.*
 
-### D12 — The Venmo note is `Poker Bar — <session name>`
+### D12 — The Venmo note is `Buy-In — <session name>`
 
 **Decision.** One constant in `packages/core`, used by the single `venmoUrl()` builder. Register:
 plain (R7 variants offered, plain chosen).
@@ -570,7 +570,7 @@ plain (R7 variants offered, plain chosen).
 **Defense.** Against: the note is `'poker'` on two of the three current call sites
 (`bar-api.ts:111-118`, `player-receipt/…/page.tsx:85-102`) and someone may prefer it short.
 Answered: this string's only reader is a human scrolling a Venmo history weeks later, where
-`poker` is ambiguous across every poker night ever played and `Poker Bar — Friday Night` is
+`poker` is ambiguous across every poker night ever played and `Buy-In — Friday Night` is
 not. Length costs nothing in a payment note.
 
 **Supersedes.** All three current variants, including the third at `receipt-ui.tsx:54-72` which
@@ -581,7 +581,7 @@ uses the session name alone.
 ### D13 — Suspend the Render service now
 
 **Decision.** The owner suspends `https://poker-bar.onrender.com` now, before any migration
-phase begins. `poker-bar.vercel.app` goes down with it — the web app has no other data source —
+phase begins. `poker-buy-in.vercel.app` goes down with it — the web app has no other data source —
 and that is accepted. **No stopgap is added to `backend/`.** The app returns at cutover, on
 Supabase.
 
@@ -691,7 +691,7 @@ data comes from; it does not change what the user sees or how the app behaves.
 
 - **`backend/` is never edited** — it is deleted, not fixed (`CLAUDE.md`, Directory map). `D13`
   turned down a stopgap for exactly this reason.
-- **No Supabase write tool is called from this repo** until the owner names a poker-bar ref, and
+- **No Supabase write tool is called from this repo** until the owner names a Buy-In ref, and
   the server returns **read-only** when it returns (`HANDOFF.md`, Settled, GATE 0; `CLAUDE.md`,
   Never do this).
 - **`docs/incomplete/` is committable; `HANDOFF.md` and `PASSOFF.md` are not.** No commit block

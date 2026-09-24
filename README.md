@@ -31,7 +31,7 @@ A full-stack bar management app for poker nights. Track players, poker sessions,
 `docs/migration-plan.md` for the plan and `HANDOFF.md` for what is actually built and verified.
 
 ```
-poker-bar/
+buy-in/
 ├── web/                      # Next.js application (App Router) — talks to backend/ today
 │   ├── app/                  # drinks, inventory, menu, players, session(s), stats,
 │   │                         #   (protected)/dashboard, login, api/auth,
@@ -102,7 +102,7 @@ go mod download
 `backend/` ships no `.env.example` — create `backend/.env` directly with:
 ```env
 DATABASE_URL=mongodb+srv://username:password@cluster.mongodb.net/
-DATABASE_NAME=poker-bar
+DATABASE_NAME=buy-in
 JWT_SECRET=your-secret-key-here-change-in-production
 PORT=8080
 GIN_MODE=debug
