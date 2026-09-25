@@ -29,8 +29,26 @@
 --   G5   composite foreign keys, so a row's bar_id cannot disagree with its parents
 --   gap d create_order validates session membership and session status
 -- ─────────────────────────────────────────────────────────────────────────────
+--
+-- AMENDED IN PLACE 2026-09-25, still before this file had ever been applied
+-- anywhere: `supabase db push` against the real dev project (rxvznjtpskendwhwwgin)
+-- failed at the `player_share_links`/`player_claim_links` token defaults —
+-- `function gen_random_bytes(integer) does not exist`. Supabase pre-installs
+-- pgcrypto into an `extensions` schema, not `public` (confirmed via
+-- `list_extensions` against the live project), and the connecting role's
+-- search_path does not include it — so the unqualified call resolved to nothing.
+-- The local validation harness never caught this because a vanilla `create
+-- extension pgcrypto` there installs into `public`, which IS on the default
+-- search_path. `gen_random_uuid()` is unaffected: it has been a PostgreSQL core
+-- function (not pgcrypto's) since PG13, and core functions live in pg_catalog,
+-- which is always searched. Fixed by schema-qualifying both call sites and the
+-- CREATE EXTENSION itself, rather than changing search_path — the qualified form
+-- is correct regardless of which role or search_path is in effect. The push
+-- rolled back cleanly (transactional), so `public` was empty afterward and D4's
+-- window was never closed by that attempt.
+-- ─────────────────────────────────────────────────────────────────────────────
 
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
 -- ── tenancy ──────────────────────────────────────────────────────────────────
 
@@ -278,7 +296,7 @@ create index payments_bar_idx on payments (bar_id);
 -- literal 'dev-portal-secret' — every player's token was computable from their id.
 
 create table player_share_links (
-  token      text primary key default encode(gen_random_bytes(24), 'hex'),
+  token      text primary key default encode(extensions.gen_random_bytes(24), 'hex'),
   bar_id     uuid not null references bars(id) on delete cascade,
   player_id  uuid not null,
   -- D15: NULL scopes the link to the player's whole history (the portal). A
@@ -309,7 +327,7 @@ create index player_share_links_player_idx on player_share_links (player_id);
 -- machine, which has none.
 
 create table player_claim_links (
-  token      text primary key default encode(gen_random_bytes(24), 'hex'),
+  token      text primary key default encode(extensions.gen_random_bytes(24), 'hex'),
   bar_id     uuid not null references bars(id) on delete cascade,
   player_id  uuid not null,
   -- Dial (DESIGN.md §4): 7 days, shorter than a share link because this one grants

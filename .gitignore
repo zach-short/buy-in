@@ -46,5 +46,9 @@ yarn-error.log*
 coverage/
 .nyc_output/
 
+# Supabase CLI — machine-local link state, not portable across checkouts
+# (written by `supabase link` / `db push`; HANDOFF.md step 15, 2026-09-25)
+supabase/.temp/
+
 # Misc
 .turbo

@@ -2,24 +2,29 @@
   "mcpServers": {
     "next-devtools": {
       "command": "npx",
-      "args": [
-        "-y",
-        "next-devtools-mcp@latest"
-      ]
+      "args": ["-y", "next-devtools-mcp@latest"]
     },
     "context7": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp@latest"
-      ]
+      "args": ["-y", "@upstash/context7-mcp@latest"]
     },
     "playwright": {
       "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "supabase": {
+      "command": "npx",
       "args": [
         "-y",
-        "@playwright/mcp@latest"
-      ]
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref",
+        "rxvznjtpskendwhwwgin",
+        "--features",
+        "database,docs"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${BUY_IN_SUPABASE_ACCESS_TOKEN}"
+      }
     }
   }
 }

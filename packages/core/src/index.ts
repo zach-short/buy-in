@@ -27,3 +27,6 @@ export {
   type StockLike,
   type RecipeLike,
 } from './inventory';
+// BD-6: generated from the live schema (`supabase gen types typescript`), not
+// hand-written — regenerate as part of every phase that changes the schema.
+export type { Database, Json } from './database.types';

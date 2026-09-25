@@ -34,7 +34,7 @@ another effort may have moved something. Every command below was run in this che
 | Test | `bun run test` — **exit 1**, no test files, no vitest config. **Phase 2 is what makes this a gate.** | run 2026-09-16 |
 | Does a gate dirty the tree? | **No.** `git status --short` was empty immediately after a full `bun run build`. | run 2026-09-16 |
 | PWA workers | `web/public/sw.js` and `swe-worker-*.js` still carry **2026-04-12** mtimes after that build — next-pwa does not run under turbopack. `H7` stands: the cutover phase must regenerate and verify on a device. | `ls -l web/public/sw.js` 2026-09-16 |
-| **`D13` — is Render down?** | **No. `https://poker-bar.onrender.com/health` → 200 as of 2026-09-16.** The owner has not suspended it yet; `PASSOFF.md` item 9 is still `OPEN`, and `DESIGN.md` §1.5's open-API row is still **current fact, not history**. | `curl` 2026-09-16 |
+| **`D13` — is Render down?** | ~~No. `https://poker-bar.onrender.com/health` → 200 as of 2026-09-16. The owner has not suspended it yet; `PASSOFF.md` item 9 is still `OPEN`, and `DESIGN.md` §1.5's open-API row is still **current fact, not history**.~~ **Corrected 2026-09-24: yes.** The owner suspended it; `curl` against `/health` now returns `404` with `x-render-routing: no-server`. `PASSOFF.md` item 9 is `DONE — HANDOFF 14`. `DESIGN.md` §1.5's open-API exposure is history, not current fact, as of this date. | `curl` 2026-09-16; `curl` 2026-09-24 (`HANDOFF.md` 14) |
 | Vercel | `https://poker-bar.vercel.app` → 200. Whether a push to `main` redeploys it is **still unanswered**; `D11` binds — treat it as automatic. | `curl` 2026-09-16 |
 | Fixed reading overhead | **~53k tokens** for the mandatory set: `AGENT-PRACTICES` ~14k, `DESIGN.md` ~21k, `HANDOFF.md` ~10k, `0001_init.sql` ~5k, `CLAUDE.md` ~2k, `conventions-typescript.md` ~2k. Measured, not guessed. | `wc -c … \| awk '{print $1/4000}'` 2026-09-16 |
 
@@ -267,7 +267,10 @@ the rule into a gate; do it if it costs nothing, and say so if it doesn't.
 
 ### Phase 3 — Create the projects; apply `0001` to `dev`; freeze it
 
-**Status:** `PLANNED`. Lane A. **Waits on the owner** (`D3`) and on phase 1.
+**Status:** `BUILT` — `HANDOFF.md` step 15, 2026-09-25. Project ref `rxvznjtpskendwhwwgin`,
+migration `0001` / `init`, file hash
+`a9ef1f921fe44f295a31422c09beafb8f19c3a27bad7ca7d610302ff7ac4a63a`. `D4`'s in-place amendment
+window is now closed.
 
 **Scope.**
 1. The owner creates **`dev` only** — confirmed at GATE 2 (G2); `prod` is created in phase 9, so
@@ -284,10 +287,23 @@ the rule into a gate; do it if it costs nothing, and say so if it doesn't.
 
 **Subagents.** None.
 
-**Done when.** The tables exist in `dev` and RLS is on for all thirteen; `cd packages/core &&
-npx tsc --noEmit` exits 0 with the generated types in place. The proof no gate supplies: an
-anonymous client (anon key) reads **zero rows** from `players`, and the owner's authenticated
-client reads their own bar after `create_bar()` — the `H4` trap, checked rather than assumed.
+**Done when.** The tables exist in `dev` and RLS is on for all thirteen. ~~Corrected 2026-09-25
+(HANDOFF step 15): fourteen, not thirteen — this count predates phase 1 adding
+`player_claim_links` (`BD-4`).~~ `cd packages/core && npx tsc --noEmit` exits 0 with the
+generated types in place. The proof no gate supplies: an anonymous client (anon key) reads
+**zero rows** from `players`, and the owner's authenticated client reads their own bar after
+`create_bar()` — the `H4` trap, checked rather than assumed.
+
+**Executed 2026-09-25 (`HANDOFF.md` step 15).** All fourteen tables confirmed live with RLS
+enabled, via `list_tables` against the real project. `packages/core` typechecks with
+`database.types.ts` in place. The anon-reads-zero-rows proof ran as a real anonymous REST call
+(not the anon-key row-count phrasing above, which undersold it) and additionally proved the
+sharper claim the file's own comments make: a direct anonymous read gets a permission error, not
+an empty result. **The authenticated-owner-reads-own-bar half of the `H4` check is not done** —
+blocked on email confirmation for a real test sign-up; not worth escalating to the `service_role`
+key for, given `create_bar`'s atomicity is already proved twice elsewhere (step 12; this phase's
+own local harness). Full account in `HANDOFF.md` step 15, including the `pgcrypto`/`extensions`-
+schema defect the real apply caught that local testing could not.
 
 **Watch for.** `.mcp.json` once pointed at another project's production database; the whole
 point of GATE 0 was that an unread ref costs a database. Confirm before writing. Free projects
