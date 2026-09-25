@@ -4,7 +4,6 @@ import { ReactNode } from 'react';
 import { SWRProvider } from '@/context/swr-provider';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
-import { SessionProvider } from 'next-auth/react';
 
 export const metadata: Metadata = {
   title: { default: 'Buy-In', template: '%s — Buy-In' },
@@ -36,15 +35,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel='icon' href='/favicon.svg' type='image/svg+xml' />
       </head>
       <body>
-        <SessionProvider>
-          <ThemeProvider
-            attribute='class'
-            forcedTheme='dark'
-            disableTransitionOnChange
-          >
-            <SWRProvider>{children}</SWRProvider>
-          </ThemeProvider>
-        </SessionProvider>
+        <ThemeProvider
+          attribute='class'
+          forcedTheme='dark'
+          disableTransitionOnChange
+        >
+          <SWRProvider>{children}</SWRProvider>
+        </ThemeProvider>
         <Toaster theme='dark' position='bottom-center' richColors />
       </body>
     </html>

@@ -421,6 +421,36 @@ where Apple's rule actually applies.
 
 *2026-09-16.*
 
+**As built — 2026-09-25, `PLAN.md` phase 4 (`HANDOFF.md` step 16).** Implemented as decided; no
+provider besides email and password exists — `grep -rn
+"signInWithOAuth\|signInWithIdToken\|signInWithSSO\|signInWithOtp" web --include='*.ts' --include='*.tsx'
+--exclude-dir=node_modules` → exit 1, and the one sign-in call is `signInWithPassword` at
+`web/app/login/page.tsx:22`. The choices this decision left open, each with its reversal:
+- **No sign-up screen.** `D5` names what dies and replaces it; NextAuth had no sign-up either, and
+  §8.2 forbids new screens. A host's user is created in the Supabase dashboard with the email
+  auto-confirmed (`dev` requires confirmation — `HANDOFF.md` step 15). *Reversal:* a sign-up page
+  calling `signUp` then `create_bar()` (`BD-1`) — a new screen, so an owner decision.
+- **Sign-out lands on `/` and ends only this device's session** (`scope: 'local'`), because both
+  NextAuth sign-outs went to `/` and cleared only this browser's cookie (`web/app/page.tsx:56`,
+  `web/components/shared/button/signout.tsx:7` at `05b4718`). *Reversal:* the path and the scope
+  are two literals in `web/lib/supabase/sign-out.ts`.
+- ~~**The login field reads "Email" where it read "Name" — the only copy change**, and the one
+  this decision forces; the error copy "Invalid credentials." is unchanged, so an unconfirmed
+  email also shows it.~~ **Corrected 2026-09-25 (audit of `HANDOFF.md` step 16): not the only
+  one.** Supabase email/password users carry no display name or picture, unlike NextAuth's
+  hardcoded `name: 'Zach'` (`web/lib/auth.ts:14` at `05b4718`), so the profile card in
+  `web/components/shared/layout/menu-content.tsx:22-43` now shows the static label "User" and a
+  "U" avatar fallback in place of "Zach"/"ZA", with the signed-in user's real email underneath as
+  a subtitle (`{user?.email}`, `:37`). This is a consequence of `D5`, not a bug, but it is a
+  user-facing copy choice R7 says not to pick silently — **decided by the owner, 2026-09-25: keep
+  "User" + the real email as a subtitle**, as built; no code change needed. *Reversal:*
+  `menu-content.tsx:36` is one string; the avatar fallback is one more.
+- **`SessionProvider` is replaced by a hook, not a provider** — `web/hooks/use-auth-user.ts`,
+  one `onAuthStateChange` listener; for what the UI shows only, since `web/proxy.ts` is the gate.
+- **`@supabase/ssr` 0.12.7 and `@supabase/supabase-js` 2.117.2 are pinned exactly** in
+  `web/package.json`, unlike the file's caret ranges — the Supabase skill's supply-chain rule for
+  auth packages. *Reversal:* caret them; `bun.lock` pins either way.
+
 ### D6 — The host's payment handle is a column on `bars`
 
 **Decision.** `bars` gains `venmo_handle`, with room for `cashapp_handle` alongside it.

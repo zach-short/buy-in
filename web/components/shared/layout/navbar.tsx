@@ -7,9 +7,9 @@ import {
 import { MenuIcon, Home } from 'lucide-react';
 import { useState } from 'react';
 import { MenuContent } from './menu-content';
-import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuthUser } from '@/hooks/use-auth-user';
 
 export function Navbar({
   buttonClassName,
@@ -19,10 +19,10 @@ export function Navbar({
   contentClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const { data: session } = useSession();
+  const { user } = useAuthUser();
   const pathname = usePathname();
 
-  if (!session) {
+  if (!user) {
     if (pathname !== '/') {
       return (
         <Link

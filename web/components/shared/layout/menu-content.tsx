@@ -1,6 +1,5 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -12,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SignoutButton } from '../button/signout';
 import { ThemeToggle } from '../button/theme-toggle';
 import { cn } from '@/lib/utils';
+import { useAuthUser } from '@/hooks/use-auth-user';
 
 const menuItems = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -20,25 +20,21 @@ const menuItems = [
 ];
 
 function ProfileCard() {
-  const session = useSession();
-  const sessionUser = session.data?.user;
+  const { user } = useAuthUser();
 
-  const displayName = sessionUser?.name;
-  const displayEmail = sessionUser?.email;
-  const displayPicture = sessionUser?.image;
-
+  // Supabase email-and-password users (D5) carry no display name or picture — NextAuth's were
+  // hardcoded in web/lib/auth.ts — and user_metadata is untyped and user-editable, so the card
+  // shows the fallbacks it always had for a missing name and picture.
   return (
     <div className={`flex flex-row items-center justify-between`}>
       <div className='flex items-center gap-3'>
         <Avatar>
-          <AvatarImage src={displayPicture || undefined} />
-          <AvatarFallback>
-            {displayName?.substring(0, 2).toUpperCase() || 'U'}
-          </AvatarFallback>
+          <AvatarImage src={undefined} />
+          <AvatarFallback>U</AvatarFallback>
         </Avatar>
         <div className={`flex flex-col items-start`}>
-          <p className='font-medium'>{displayName || 'User'}</p>
-          <p className={`text-xs text-muted-foreground`}>{displayEmail}</p>
+          <p className='font-medium'>User</p>
+          <p className={`text-xs text-muted-foreground`}>{user?.email}</p>
         </div>
       </div>
       <ThemeToggle />

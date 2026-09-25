@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
 import useSWR from 'swr';
 import { fetcher, Session, Order } from '@/lib/bar-api';
 import { Button } from '@/components/ui/button';
+import { useAuthUser } from '@/hooks/use-auth-user';
+import { signOutToLanding } from '@/lib/supabase/sign-out';
 
 function Landing() {
   const router = useRouter();
@@ -53,7 +54,7 @@ function Dashboard() {
       <div className='flex items-center justify-between mb-12'>
         <h1 className='text-xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
         <button
-          onClick={() => signOut({ callbackUrl: '/' })}
+          onClick={signOutToLanding}
           className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
         >
           Sign out
@@ -129,7 +130,7 @@ function Dashboard() {
 }
 
 export default function HomePage() {
-  const { status } = useSession();
+  const { status } = useAuthUser();
   if (status === 'loading') return null;
   return status === 'authenticated' ? <Dashboard /> : <Landing />;
 }

@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,9 +18,13 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
-    const res = await signIn('credentials', { name, password, redirect: false });
+    // DESIGN.md D5: Supabase Auth, email and password only — no OAuth provider on the web.
+    const { error: signInError } = await createClient().auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (res?.ok) {
+    if (!signInError) {
       router.replace('/');
     } else {
       setError('Invalid credentials.');
@@ -38,10 +42,11 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className='space-y-3'>
           <Input
-            placeholder='Name'
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete='username'
+            type='email'
+            placeholder='Email'
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete='email'
             className='h-11'
           />
           <Input

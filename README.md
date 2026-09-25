@@ -9,13 +9,13 @@ A full-stack bar management app for poker nights. Track players, poker sessions,
 - **Drink Menu** — Define drink recipes with ingredients, pricing, and cost estimates
 - **Orders** — Log drink orders per player per session
 - **Inventory** — Track bar stock (spirits, mixers, garnishes, syrups, equipment) with reorder thresholds and cost-per-unit
-- **Auth** — Credentials-only sign-in via NextAuth.js (`web/lib/auth.ts`); no social/OAuth
-  provider is registered today
+- **Auth** — Supabase Auth, email and password only (`web/lib/supabase/`, `web/proxy.ts`); no
+  social/OAuth provider, by decision (`docs/incomplete/supabase-migration/DESIGN.md` `D5`)
 
 ## Tech Stack
 
 - **Web** (`web/`) — Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Radix UI,
-  NextAuth v5 (credentials provider only)
+  Supabase Auth via `@supabase/ssr` (email and password only)
 - **Backend** (`backend/`, legacy) — Go (Gin), JWT authentication, MongoDB. Planned for
   deletion, not yet removed — see `docs/migration-plan.md`.
 - **Shared** (`packages/core`, `@pb/core`) — platform-free logic and Zod schemas, meant to be
@@ -34,11 +34,11 @@ A full-stack bar management app for poker nights. Track players, poker sessions,
 buy-in/
 ├── web/                      # Next.js application (App Router) — talks to backend/ today
 │   ├── app/                  # drinks, inventory, menu, players, session(s), stats,
-│   │                         #   (protected)/dashboard, login, api/auth,
+│   │                         #   (protected)/dashboard, login,
 │   │                         #   player-receipt, portal, receipt
-│   ├── components/           # auth/, shared/ (navbar, buttons), ui/ (Radix primitives)
-│   ├── lib/                  # NextAuth config, API clients (api.ts, bar-api.ts), utils.ts
-│   ├── models/, types/       # TypeScript types local to web
+│   ├── components/           # shared/ (navbar, buttons), ui/ (Radix primitives)
+│   ├── lib/                  # supabase/ (browser, server and proxy clients), env/,
+│   │                         #   bar-api.ts (the Go API client), utils.ts
 │   ├── hooks/, context/      # React hooks and contexts
 │   └── public/               # static assets + generated PWA workers (sw.js, workbox-*.js)
 │
@@ -64,15 +64,16 @@ buy-in/
 
 **The repo is mid-migration**, from a `frontend/` + Go/MongoDB app to this Bun-workspace
 monorepo (`web/`, `packages/core`) on Supabase Postgres — see `docs/migration-plan.md` for the
-plan and `HANDOFF.md` for what actually works today. Right now `web/` still talks to the Go API
-in `backend/` over `NEXT_PUBLIC_API_URL`; nothing is wired to Supabase yet.
+plan and `HANDOFF.md` for what actually works. As of 2026-09-25, sign-in goes through Supabase
+Auth, while every data read and write still goes to the Go API in `backend/` over
+`NEXT_PUBLIC_API_URL`.
 
 ### Prerequisites
 
 - Bun — the workspace package manager for `web` and `packages/*`
 - Go 1.24+ — for `backend/`, the current (legacy) API
 - MongoDB (local or Atlas) — `backend/`'s current database
-- A Supabase project — not needed yet; nothing in this repo is wired to Supabase today
+- A Supabase project — for sign-in (Supabase Auth); its URL and publishable key go in `web/.env`
 
 ### Web (`web/`)
 
@@ -85,12 +86,14 @@ bun run dev
 Runs at http://localhost:3000. `web/.env` needs:
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8080   # the backend/ API origin
-AUTH_SECRET=...                             # NextAuth secret
+NEXT_PUBLIC_SUPABASE_URL=...                # the Supabase project URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...    # its publishable key (public by design)
 NEXT_PUBLIC_VENMO_HANDLE=@...               # settle-up deep-link recipient
 ```
 
-Auth is credentials-only (`web/lib/auth.ts`); there is no OAuth setup step because no OAuth
-provider is registered.
+Sign-in is Supabase Auth, email and password only; there is no OAuth setup step because no
+OAuth provider is offered (`D5`). There is no sign-up screen — a host's user is created in the
+Supabase dashboard (Authentication → Users → Add user, with the email auto-confirmed).
 
 ### Backend (`backend/`, legacy — planned for deletion)
 

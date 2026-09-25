@@ -325,7 +325,10 @@ stubbing `auth.users`, `auth.uid()` and the realtime publication, a seed, and pr
 
 ### Phase 4 — Swap NextAuth for Supabase Auth; delete the dead auth path
 
-**Status:** `PLANNED`. Lane A. Waits on phase 3. Files: `web/lib/auth.ts`, `web/proxy.ts`, the
+**Status:** `BUILT` 2026-09-25 — `HANDOFF.md` step 16; commit: the one this diff lands in (the
+owner commits — the building session could not know the hash; fill it from `git log -1
+--format=%h -- web/proxy.ts`). **The signed-in half of the runtime walk is owed to the owner** — see
+"Executed" below. Lane A. Waited on phase 3. Files: `web/lib/auth.ts`, `web/proxy.ts`, the
 login page, the session provider, plus deletions.
 
 **Scope.**
@@ -339,12 +342,39 @@ login page, the session provider, plus deletions.
 **Subagents.** None.
 
 **Done when.** All four gates green as of 2026-09-16 (§0) still exit 0. The proof no gate supplies: signing
-in as a real Supabase user reaches the session list, signing out returns to `/login`, and a
+in as a real Supabase user reaches the session list, ~~signing out returns to `/login`~~ signing
+out returns to the logged-out landing at `/` *(corrected 2026-09-25, phase 4 build: `/login` was
+never where sign-out went — both NextAuth sign-outs landed on `/`, `web/app/page.tsx:56`
+`signOut({ callbackUrl: '/' })` and `web/components/shared/button/signout.tsx:7`
+`window.location.href = '/'`, both at `05b4718`; `DESIGN.md` §8.2 keeps screen behaviour, so the
+port keeps `/`. Reversal: one string in `web/lib/supabase/sign-out.ts`)*, and a
 logged-out visit to `/sessions` still redirects — walked in a browser, not inferred.
 
 **Watch for.** The hardcoded `zach`/`7459` (`web/lib/auth.ts:13`) was the only login that existed
 as of 2026-09-16; the phase is not done while a code path still accepts it. The 10-year JWT is replaced by
 Supabase defaults (§3 dials) — a session that never expires was a convenience for one user.
+
+**Executed 2026-09-25 (`HANDOFF.md` step 16).** Scope items 1–4 built in order. (1) Sign-in is
+`signInWithPassword` on the login page, sign-out is `signOut({ scope: 'local' })` then a full
+navigation to `/` (`web/lib/supabase/sign-out.ts`), and `SessionProvider`/`useSession` are
+replaced by `web/hooks/use-auth-user.ts` (`onAuthStateChange`). (2) `BD-5`'s modules exist —
+`web/lib/supabase/{client,server,middleware}.ts`, typed with `@pb/core`'s generated `Database`,
+env read once in `web/lib/env/client.ts`; `NEXT_PUBLIC_API_URL`'s inline reads are down from four
+to three, the three `DESIGN.md` §1.3 assigns to phases 5 and 7. (3) Deleted: `web/lib/api.ts`,
+`web/components/auth/unified-auth.tsx`, `web/types/auth.ts`, `web/models/user.ts`, plus NextAuth
+itself — `web/lib/auth.ts` and `web/app/api/auth/[...nextauth]/route.ts` — and the `next-auth`
+and `axios` dependencies. (4) `web/proxy.ts`'s six public predicates are unchanged text; the
+matcher lost only its `api/auth` exclusion, which existed for NextAuth's handler. Gates: web
+`tsc` 0, core `tsc` 0, `bun run build` 0 (19 routes — the 20th was NextAuth's handler), Go build
+and vet 0. **Walked in a browser against `dev`:** logged-out `/sessions` → `/login`; `/login` shows
+Email/Password; `/` renders the logged-out landing with a clean console. **By `curl`, not a
+browser:** all six public prefixes 200 logged-out; eleven protected paths, plus the deleted
+`/api/auth/session`, 307 → `/login`; a forged
+`sb-rxvznjtpskendwhwwgin-auth-token` cookie still 307s (`getClaims` verifies, it does not trust
+presence). **Not walked — owed to the owner:** signing in as a real user, reaching `/sessions`,
+signing out. The building agent may not create accounts or type passwords, and `dev` has no
+confirmed user (`HANDOFF.md` step 15). Build-level calls are recorded under `DESIGN.md` `D5`,
+"As built".
 
 ---
 
