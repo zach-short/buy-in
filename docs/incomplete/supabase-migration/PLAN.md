@@ -325,9 +325,9 @@ stubbing `auth.users`, `auth.uid()` and the realtime publication, a seed, and pr
 
 ### Phase 4 — Swap NextAuth for Supabase Auth; delete the dead auth path
 
-**Status:** `BUILT` 2026-09-25 — `HANDOFF.md` step 16; commit: the one this diff lands in (the
-owner commits — the building session could not know the hash; fill it from `git log -1
---format=%h -- web/proxy.ts`). **The signed-in half of the runtime walk is owed to the owner** — see
+**Status:** `BUILT` 2026-09-25 — `HANDOFF.md` step 16; commit `6753037` on
+`worktree-agent-a3743da35265970c3` (off `05b4718`), not yet merged into `supabase-monorepo`.
+**The signed-in half of the runtime walk is owed to the owner** — see
 "Executed" below. Lane A. Waited on phase 3. Files: `web/lib/auth.ts`, `web/proxy.ts`, the
 login page, the session provider, plus deletions.
 
