@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+# name:one-line description — single source of truth for both the menu and completion
+COMMANDS=(
+  "dev:Run the Next.js dev server (bun --cwd web dev)"
+  "build:Build web/ for production"
+  "typecheck:Typecheck web/ and packages/core"
+  "lint:Lint web/ (the only real lint gate in this repo)"
+  "test:Run the root vitest command (currently a placeholder — no test files, always exits 1)"
+  "backend:Build and vet the legacy Go API in backend/"
+  "gates:Run every gate, in the order CI would run them"
+  "shell:Print the ~/.zshrc snippet for the buy-in function + completion"
+  "help:List commands"
+)
+
+cmd_dev() {
+  bun run dev
+}
+
+cmd_build() {
+  bun run build
+}
+
+cmd_typecheck() {
+  (cd "$ROOT/web" && npx tsc --noEmit)
+  (cd "$ROOT/packages/core" && npx tsc --noEmit)
+}
+
+cmd_lint() {
+  # The only real lint gate — there is no root-level "lint" script, and `bun run build`
+  # does not run it (Next.js 16 dropped build-time linting).
+  (cd "$ROOT/web" && bun run lint)
+}
+
+cmd_test() {
+  # `vitest run` at the root has no test files and always exits 1 (HANDOFF.md, "Gates that
+  # lie") — it is a placeholder, not a signal. Run it anyway so a real suite shows up here
+  # the day one exists.
+  bun run test
+}
+
+cmd_backend() {
+  (cd "$ROOT/backend" && go build ./... && go vet ./...)
+}
+
+cmd_gates() {
+  cmd_build
+  cmd_typecheck
+  cmd_lint
+  cmd_backend
+  cmd_test
+}
+
+cmd_help() {
+  echo "usage: buy-in <command>"
+  echo
+  for entry in "${COMMANDS[@]}"; do
+    printf "  %-11s %s\n" "${entry%%:*}" "${entry#*:}"
+  done
+}
+
+cmd_shell() {
+  cat <<'EOF'
+buy-in() { "$HOME/Projects/buy-in/scripts/buy-in" "$@"; }
+
+_buy_in_complete() {
+  local -a subcmds
+  subcmds=("${(@f)$(buy-in --complete)}")
+  _describe 'command' subcmds
+}
+compdef _buy_in_complete buy-in
+EOF
+}
+
+cmd___complete() {
+  for entry in "${COMMANDS[@]}"; do
+    echo "$entry"
+  done
+}
+
+# Same table drives an fzf picker on bare invocation — only when it'd actually be
+# interactive, so a cron job or `buy-in test | something` never gets asked anything.
+interactive_pick() {
+  local lines
+  lines="$(for entry in "${COMMANDS[@]}"; do
+    printf "%-11s %s\n" "${entry%%:*}" "${entry#*:}"
+  done)"
+  echo "$lines" | fzf --prompt='buy-in> ' --height='~70%' --reverse --no-info \
+    --header='select a command' | awk '{print $1}'
+}
+
+if [[ $# -eq 0 && -t 0 && -t 1 ]] && command -v fzf >/dev/null 2>&1; then
+  picked="$(interactive_pick || true)"
+  [[ -n "$picked" ]] || exit 0
+  set -- "$picked"
+fi
+
+case "${1:-help}" in
+  dev) cmd_dev ;;
+  build) cmd_build ;;
+  typecheck) cmd_typecheck ;;
+  lint) cmd_lint ;;
+  test) cmd_test ;;
+  backend) cmd_backend ;;
+  gates) cmd_gates ;;
+  shell) cmd_shell ;;
+  --complete) cmd___complete ;;
+  help|*) cmd_help ;;
+esac
