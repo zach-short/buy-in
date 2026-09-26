@@ -13,6 +13,10 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@pb/core": "workspace:*",
+    "@supabase/supabase-js": "2.117.2",
+    "@types/node": "^20.19.39",
+    "mongodb": "6.21.0",
     "vitest": "^4.1.10"
   }
 }

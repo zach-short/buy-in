@@ -4,16 +4,17 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { fetcher, apiFetch, InventoryItem } from '@/lib/bar-api';
+import { apiFetch } from '@/lib/bar-api';
+import { fetchInventory, type InventoryRow } from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check } from 'lucide-react';
 
 const CATEGORIES = ['Spirit', 'Mixer', 'Syrup', 'Garnish', 'Equipment'] as const;
 
-function QtyEditor({ item, onSave }: { item: InventoryItem; onSave: (qty: number) => Promise<void> }) {
+function QtyEditor({ item, onSave }: { item: InventoryRow; onSave: (qty: number) => Promise<void> }) {
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(String(item.qtyOnHand));
+  const [value, setValue] = useState(String(item.qty_on_hand));
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -28,10 +29,10 @@ function QtyEditor({ item, onSave }: { item: InventoryItem; onSave: (qty: number
   if (!editing) {
     return (
       <button
-        onClick={() => { setValue(String(item.qtyOnHand)); setEditing(true); }}
+        onClick={() => { setValue(String(item.qty_on_hand)); setEditing(true); }}
         className='text-right min-w-[56px] min-h-[40px] px-2 rounded hover:bg-secondary transition-colors tabular-nums text-sm'
       >
-        {item.qtyOnHand} {item.unit}
+        {item.qty_on_hand} {item.unit}
       </button>
     );
   }
@@ -70,12 +71,12 @@ const emptyForm: AddForm = { name: '', category: 'Spirit', unit: 'oz', qtyOnHand
 
 export default function InventoryPage() {
   const router = useRouter();
-  const { data: items = [], mutate } = useSWR<InventoryItem[]>('/api/inventory', fetcher);
+  const { data: items = [], mutate } = useSWR('inventory', fetchInventory);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<AddForm>(emptyForm);
   const [adding, setAdding] = useState(false);
 
-  async function updateQty(item: InventoryItem, qty: number) {
+  async function updateQty(item: InventoryRow, qty: number) {
     try {
       await apiFetch(`/api/inventory/${item.id}`, {
         method: 'PATCH',
@@ -91,7 +92,7 @@ export default function InventoryPage() {
     if (!form.name.trim() || !form.category || !form.unit) return;
     setAdding(true);
     try {
-      await apiFetch<InventoryItem>('/api/inventory', {
+      await apiFetch('/api/inventory', {
         method: 'POST',
         body: JSON.stringify({
           name: form.name.trim(),
@@ -113,10 +114,10 @@ export default function InventoryPage() {
     }
   }
 
-  const grouped = CATEGORIES.reduce<Record<string, InventoryItem[]>>((acc, cat) => {
+  const grouped = CATEGORIES.reduce<Record<string, InventoryRow[]>>((acc, cat) => {
     acc[cat] = items.filter((i) => i.category === cat);
     return acc;
-  }, {} as Record<string, InventoryItem[]>);
+  }, {} as Record<string, InventoryRow[]>);
 
   return (
     <main className='min-h-screen px-6 py-10 max-w-lg mx-auto pb-24'>
@@ -171,7 +172,7 @@ export default function InventoryPage() {
               {catItems.map((item) => (
                 <div key={item.id} className='flex items-center justify-between px-4 py-3 min-h-[52px]'>
                   <div className='flex items-center gap-2 min-w-0'>
-                    {item.qtyOnHand <= item.reorderThreshold && (
+                    {item.qty_on_hand <= item.reorder_threshold && (
                       <span className='text-destructive text-xs shrink-0'>!</span>
                     )}
                     <span className='text-sm truncate'>{item.name}</span>

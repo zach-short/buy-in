@@ -19,3 +19,16 @@ export function toCents(dollars: number): number {
 export function formatCents(cents: number): string {
   return (cents / 100).toFixed(2);
 }
+
+/**
+ * Cents as a plain dollar number, for the few display surfaces whose own format is not
+ * `formatCents`'s: a chart axis that picks its own ticks (`$20`, not `$20.00`), a form
+ * input prefilled with what the user would have typed (`25`, not `25.00`), and the legacy
+ * dollar-denominated request bodies phase 6 replaces. The input need not be a whole
+ * number — a recipe's cost estimate is fractional cents before it is ever stored
+ * (`recipeCostCents`) — this only ever divides, it never rounds. **Never for arithmetic**
+ * — sum and compare in cents first, convert once at the edge.
+ */
+export function centsToDollars(cents: number): number {
+  return cents / 100;
+}

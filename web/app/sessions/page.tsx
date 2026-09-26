@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
-import { fetcher, apiFetch, formatDate, Session, Player } from '@/lib/bar-api';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+import { formatDate } from '@pb/core';
+import { apiFetch } from '@/lib/bar-api';
+import { fetchPlayers, fetchSessions, type SessionWithPlayers } from '@/lib/supabase/queries';
 
 // SHA-256 of the delete passcode — plaintext never stored here
 const PASSCODE_HASH = 'e56975e864a626b52ec07ff2d4fc370f047c5f286a67f1bec49fc19eef5c40b4';
@@ -17,8 +20,8 @@ async function sha256(text: string): Promise<string> {
 
 export default function SessionsPage() {
   const router = useRouter();
-  const { data: sessions = [], isLoading, mutate } = useSWR<Session[]>('/api/sessions', fetcher);
-  const { data: players = [] } = useSWR<Player[]>('/api/players', fetcher);
+  const { data: sessions = [], isLoading, mutate } = useSWR('sessions', fetchSessions);
+  const { data: players = [] } = useSWR('players', fetchPlayers);
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [passcode, setPasscode] = useState('');
@@ -26,9 +29,9 @@ export default function SessionsPage() {
   const [deleting, setDeleting] = useState(false);
 
   const playerMap = new Map(players.map((p) => [p.id, p.name]));
-  const sorted = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sorted = [...sessions].sort((a, b) => new Date(b.played_on).getTime() - new Date(a.played_on).getTime());
 
-  function handleClick(s: Session) {
+  function handleClick(s: SessionWithPlayers) {
     router.push(s.status === 'active' ? `/session/${s.id}` : `/session/${s.id}/summary`);
   }
 
@@ -92,7 +95,7 @@ export default function SessionsPage() {
 
       <div className='space-y-3'>
         {sorted.map((session) => {
-          const names = session.playerIds.map((id) => playerMap.get(id)).filter(Boolean);
+          const names = session.player_ids.map((id) => playerMap.get(id)).filter(Boolean);
           return (
             <div key={session.id} className='relative group'>
               <button
@@ -102,7 +105,7 @@ export default function SessionsPage() {
                 <div className='flex items-start justify-between gap-3'>
                   <div className='min-w-0'>
                     <p className='text-sm font-medium truncate'>{session.name}</p>
-                    <p className='text-xs text-muted-foreground mt-0.5'>{formatDate(session.date)}</p>
+                    <p className='text-xs text-muted-foreground mt-0.5'>{formatDate(session.played_on)}</p>
                     {names.length > 0 && (
                       <p className='text-xs text-muted-foreground mt-1 truncate'>{names.join(', ')}</p>
                     )}

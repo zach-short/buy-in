@@ -1,3 +1,7 @@
+// The Go API client, going away in pieces. Phase 5 (2026-09-25) moved every authenticated
+// read to lib/supabase/queries.ts; what still calls through here is phase 6's writes (every
+// `apiFetch` in app/) and phase 7's public token pages (`fetcher` in /menu, /portal,
+// /player-receipt, /receipt). This env read goes when the last of those two phases lands.
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {

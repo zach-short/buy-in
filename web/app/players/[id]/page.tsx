@@ -4,33 +4,30 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
+import { centsToDollars, formatCents, formatDate, formatTime, isSettled } from '@pb/core';
+import { apiFetch, openVenmo } from '@/lib/bar-api';
+import { playerBalanceCents, sumCents } from '@/lib/ledger';
 import {
-  fetcher,
-  apiFetch,
-  computeBalance,
-  openVenmo,
-  formatDate,
-  formatTime,
-  Player,
-  Session,
-  Order,
-  BuyIn,
-  Cashout,
-  Payment,
-} from '@/lib/bar-api';
+  fetchBuyIns,
+  fetchCashouts,
+  fetchOrders,
+  fetchPlayerPayments,
+  fetchPlayers,
+  fetchSessions,
+} from '@/lib/supabase/queries';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-function BalanceLabel({ amount }: { amount: number }) {
-  if (Math.abs(amount) < 0.01)
+function BalanceLabel({ cents }: { cents: number }) {
+  if (isSettled(cents))
     return (
       <span className='text-3xl font-bold text-muted-foreground'>Even</span>
     );
-  if (amount > 0)
+  if (cents > 0)
     return (
       <div className='text-center'>
         <p className='text-3xl font-bold text-destructive'>
-          ${amount.toFixed(2)}
+          ${formatCents(cents)}
         </p>
         <p className='text-xs text-muted-foreground tracking-widest uppercase mt-1'>
           They owe you
@@ -40,7 +37,7 @@ function BalanceLabel({ amount }: { amount: number }) {
   return (
     <div className='text-center'>
       <p className='text-3xl font-bold text-green-500'>
-        ${Math.abs(amount).toFixed(2)}
+        ${formatCents(Math.abs(cents))}
       </p>
       <p className='text-xs text-muted-foreground tracking-widest uppercase mt-1'>
         You owe them
@@ -57,9 +54,9 @@ export default function PlayerDetailPage({
   const { id } = use(params);
   const router = useRouter();
 
-  const { data: players = [], mutate: mutatePlayers } = useSWR<Player[]>(
-    '/api/players',
-    fetcher,
+  const { data: players = [], mutate: mutatePlayers } = useSWR(
+    'players',
+    fetchPlayers,
   );
   const player = players.find((p) => p.id === id);
 
@@ -99,20 +96,22 @@ export default function PlayerDetailPage({
   }
 
   function handlePayVenmo() {
-    if (!player?.venmo || balance >= 0) return;
-    openVenmo(player.venmo, Math.abs(balance));
+    if (!player?.venmo || balanceCents >= 0) return;
+    // openVenmo still takes dollars; its builder moves to @pb/core's venmoUrls with D12's
+    // note when phase 7 ports the receipt surfaces that share it.
+    openVenmo(player.venmo, centsToDollars(Math.abs(balanceCents)));
   }
 
-  const { data: sessions = [] } = useSWR<Session[]>('/api/sessions', fetcher);
-  const { data: orders = [] } = useSWR<Order[]>('/api/orders', fetcher);
-  const { data: buyIns = [] } = useSWR<BuyIn[]>('/api/buyins', fetcher);
-  const { data: cashouts = [] } = useSWR<Cashout[]>('/api/cashouts', fetcher);
-  const { data: payments = [], mutate: mutatePayments } = useSWR<Payment[]>(
-    `/api/payments?playerId=${id}`,
-    fetcher,
+  const { data: sessions = [] } = useSWR('sessions', fetchSessions);
+  const { data: orders = [] } = useSWR('orders', fetchOrders);
+  const { data: buyIns = [] } = useSWR('buy_ins', fetchBuyIns);
+  const { data: cashouts = [] } = useSWR('cashouts', fetchCashouts);
+  const { data: payments = [], mutate: mutatePayments } = useSWR(
+    ['payments', id],
+    ([, playerId]) => fetchPlayerPayments(playerId),
   );
 
-  const balance = computeBalance(id, orders, buyIns, cashouts, payments);
+  const balanceCents = playerBalanceCents(id, orders, buyIns, cashouts, payments);
 
   const [paymentMode, setPaymentMode] = useState<'received' | 'sent' | null>(
     null,
@@ -133,7 +132,7 @@ export default function PlayerDetailPage({
     if (!amount || amount <= 0 || !paymentMode) return;
     setSaving(true);
     try {
-      await apiFetch<Payment>('/api/payments', {
+      await apiFetch('/api/payments', {
         method: 'POST',
         body: JSON.stringify({
           playerId: id,
@@ -158,40 +157,40 @@ export default function PlayerDetailPage({
 
   const sessionGroups = sessions
     .filter((s) =>
-      orders.some((o) => o.sessionId === s.id && o.playerId === id) ||
-      buyIns.some((b) => b.sessionId === s.id && b.playerId === id),
+      orders.some((o) => o.session_id === s.id && o.player_id === id) ||
+      buyIns.some((b) => b.session_id === s.id && b.player_id === id),
     )
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => new Date(b.played_on).getTime() - new Date(a.played_on).getTime())
     .map((session) => {
       const sessionOrders = orders
-        .filter((o) => o.sessionId === session.id && o.playerId === id)
+        .filter((o) => o.session_id === session.id && o.player_id === id)
         .sort(
           (a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
         );
       const sessionBuyIns = buyIns.filter(
-        (b) => b.sessionId === session.id && b.playerId === id,
+        (b) => b.session_id === session.id && b.player_id === id,
       );
       const sessionCashout = cashouts.find(
-        (c) => c.sessionId === session.id && c.playerId === id,
+        (c) => c.session_id === session.id && c.player_id === id,
       );
-      const drinkTotal = sessionOrders.reduce((s, o) => s + o.price, 0);
-      const buyInTotal = sessionBuyIns.reduce((s, b) => s + b.amount, 0);
-      const cashoutAmount = sessionCashout?.amount ?? 0;
-      const sessionNet = drinkTotal + buyInTotal - cashoutAmount;
+      const drinkTotalCents = sumCents(sessionOrders, (o) => o.price_cents);
+      const buyInTotalCents = sumCents(sessionBuyIns, (b) => b.amount_cents);
+      const cashoutCents = sessionCashout?.amount_cents ?? 0;
+      const sessionNetCents = drinkTotalCents + buyInTotalCents - cashoutCents;
       return {
         session,
         sessionOrders,
         sessionBuyIns,
-        drinkTotal,
-        buyInTotal,
-        cashoutAmount,
-        sessionNet,
+        drinkTotalCents,
+        buyInTotalCents,
+        cashoutCents,
+        sessionNetCents,
       };
     });
 
   const paymentHistory = [...payments].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
 
   if (!player) {
@@ -293,7 +292,7 @@ export default function PlayerDetailPage({
         <p className='text-xs tracking-widest uppercase text-muted-foreground mb-2'>
           Running Balance
         </p>
-        <BalanceLabel amount={balance} />
+        <BalanceLabel cents={balanceCents} />
       </div>
 
       {paymentMode === null ? (
@@ -302,7 +301,7 @@ export default function PlayerDetailPage({
             <button
               onClick={() => {
                 setPaymentMode('received');
-                setPaymentAmount(balance > 0 ? balance.toFixed(2) : '');
+                setPaymentAmount(balanceCents > 0 ? formatCents(balanceCents) : '');
               }}
               className='flex-1 py-3 border border-border rounded text-xs tracking-widest uppercase text-muted-foreground hover:border-primary hover:text-primary transition-colors'
             >
@@ -311,13 +310,13 @@ export default function PlayerDetailPage({
             <button
               onClick={() => {
                 setPaymentMode('sent');
-                setPaymentAmount(balance < 0 ? Math.abs(balance).toFixed(2) : '');
+                setPaymentAmount(balanceCents < 0 ? formatCents(Math.abs(balanceCents)) : '');
               }}
               className='flex-1 py-3 border border-border rounded text-xs tracking-widest uppercase text-muted-foreground hover:border-green-500 hover:text-green-500 transition-colors'
             >
               I Paid Them
             </button>
-            {player.venmo && balance < 0 && (
+            {player.venmo && balanceCents < 0 && (
               <button
                 onClick={handlePayVenmo}
                 className='flex-1 py-3 rounded text-xs tracking-widest uppercase font-semibold text-white transition-opacity hover:opacity-90'
@@ -394,27 +393,27 @@ export default function PlayerDetailPage({
               session,
               sessionOrders,
               sessionBuyIns,
-              drinkTotal,
-              buyInTotal,
-              cashoutAmount,
-              sessionNet,
+              drinkTotalCents,
+              buyInTotalCents,
+              cashoutCents,
+              sessionNetCents,
             }) => (
               <div key={session.id} className='border border-border rounded-md'>
                 <div className='flex items-center justify-between px-4 py-3 border-b border-border'>
                   <div>
                     <p className='text-sm font-medium'>{session.name}</p>
                     <p className='text-xs text-muted-foreground'>
-                      {formatDate(session.date)}
+                      {formatDate(session.played_on)}
                     </p>
                   </div>
                   <div className='text-right'>
                     <p
-                      className={`text-sm font-semibold ${sessionNet > 0 ? 'text-destructive' : sessionNet < 0 ? 'text-green-500' : 'text-muted-foreground'}`}
+                      className={`text-sm font-semibold ${sessionNetCents > 0 ? 'text-destructive' : sessionNetCents < 0 ? 'text-green-500' : 'text-muted-foreground'}`}
                     >
-                      {sessionNet > 0
-                        ? `+$${sessionNet.toFixed(2)}`
-                        : sessionNet < 0
-                          ? `-$${Math.abs(sessionNet).toFixed(2)}`
+                      {sessionNetCents > 0
+                        ? `+$${formatCents(sessionNetCents)}`
+                        : sessionNetCents < 0
+                          ? `-$${formatCents(Math.abs(sessionNetCents))}`
                           : 'Even'}
                     </p>
                     <p className='text-xs text-muted-foreground'>net</p>
@@ -429,36 +428,36 @@ export default function PlayerDetailPage({
                     >
                       <span>{i === 0 ? 'Buy-in' : 'Re-buy'}</span>
                       <span className='tabular-nums'>
-                        +${b.amount.toFixed(2)}
+                        +${formatCents(b.amount_cents)}
                       </span>
                     </div>
                   ))}
                   {sessionOrders.map((order) => (
                     <div key={order.id} className='flex justify-between'>
                       <span className='text-muted-foreground truncate pr-2'>
-                        {order.drinkName}{' '}
+                        {order.drink_name}{' '}
                         <span className='text-xs opacity-60'>
-                          {formatTime(order.timestamp)}
+                          {formatTime(order.created_at)}
                         </span>
                       </span>
                       <span className='tabular-nums shrink-0'>
-                        +${order.price.toFixed(2)}
+                        +${formatCents(order.price_cents)}
                       </span>
                     </div>
                   ))}
-                  {cashoutAmount > 0 && (
+                  {cashoutCents > 0 && (
                     <div className='flex justify-between text-green-500'>
                       <span>Cashout</span>
                       <span className='tabular-nums'>
-                        −${cashoutAmount.toFixed(2)}
+                        −${formatCents(cashoutCents)}
                       </span>
                     </div>
                   )}
                   <div className='flex justify-between font-medium pt-1 border-t border-border mt-1'>
                     <span>Session total</span>
                     <span className='tabular-nums'>
-                      ${(drinkTotal + buyInTotal).toFixed(2)} in · $
-                      {cashoutAmount.toFixed(2)} out
+                      ${formatCents(drinkTotalCents + buyInTotalCents)} in · $
+                      {formatCents(cashoutCents)} out
                     </span>
                   </div>
                 </div>
@@ -486,13 +485,13 @@ export default function PlayerDetailPage({
                   <p className='text-xs text-muted-foreground'>{p.note}</p>
                 )}
                 <p className='text-xs text-muted-foreground'>
-                  {formatDate(p.timestamp)}
+                  {formatDate(p.created_at)}
                 </p>
               </div>
               <span
                 className={`text-sm font-semibold tabular-nums ${p.direction === 'received' ? 'text-green-500' : 'text-destructive'}`}
               >
-                {p.direction === 'received' ? '−' : '+'}${p.amount.toFixed(2)}
+                {p.direction === 'received' ? '−' : '+'}${formatCents(p.amount_cents)}
               </span>
             </div>
           ))}

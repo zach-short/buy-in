@@ -4,7 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { fetcher, apiFetch, canMake, DrinkRecipe, InventoryItem } from '@/lib/bar-api';
+import { centsToDollars, formatCents } from '@pb/core';
+import { apiFetch } from '@/lib/bar-api';
+import { canMakeDrink, recipeCostCents } from '@/lib/recipes';
+import {
+  fetchDrinks, fetchInventory, type DrinkWithIngredients, type InventoryRow,
+} from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChevronDown, ChevronUp, Trash2, Check, Plus } from 'lucide-react';
@@ -14,13 +19,11 @@ type DrinkForm = { name: string; price: string; ingredients: IngForm[] };
 
 const emptyDrink: DrinkForm = { name: '', price: '', ingredients: [] };
 
-function calcCost(ingredients: IngForm[], inventory: InventoryItem[]): number {
-  const map = new Map(inventory.map((item) => [item.id, item]));
-  return ingredients.reduce((sum, ing) => {
-    const item = map.get(ing.itemId);
-    if (!item) return sum;
-    return sum + (parseFloat(ing.qtyUsed) || 0) * item.costPerUnit;
-  }, 0);
+function calcCostCents(ingredients: IngForm[], inventory: InventoryRow[]): number {
+  return recipeCostCents(
+    ingredients.map((ing) => ({ item_id: ing.itemId, qty_used: parseFloat(ing.qtyUsed) || 0 })),
+    inventory,
+  );
 }
 
 function DrinkEditor({
@@ -30,7 +33,7 @@ function DrinkEditor({
   onCancel,
 }: {
   drink: DrinkForm;
-  inventory: InventoryItem[];
+  inventory: InventoryRow[];
   onSave: (d: DrinkForm) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -63,14 +66,14 @@ function DrinkEditor({
     setSaving(false);
   }
 
-  const cost = calcCost(form.ingredients, inventory);
+  const costCents = calcCostCents(form.ingredients, inventory);
 
   return (
     <div className='space-y-3 pt-3 border-t border-border'>
       <Input placeholder='Drink name' value={form.name} onChange={(e) => setField('name', e.target.value)} className='h-11' />
       <div className='flex gap-3 items-center'>
         <Input type='number' placeholder='Price $' value={form.price} onChange={(e) => setField('price', e.target.value)} className='h-11 flex-1' />
-        <p className='text-sm text-muted-foreground whitespace-nowrap'>Cost: ${cost.toFixed(2)}</p>
+        <p className='text-sm text-muted-foreground whitespace-nowrap'>Cost: ${formatCents(costCents)}</p>
       </div>
 
       <div className='space-y-2'>
@@ -118,46 +121,41 @@ function DrinkEditor({
   );
 }
 
-function buildPayload(form: DrinkForm, inventory: InventoryItem[]) {
+// The Go API's request body, in its dollars; phase 6 replaces this write and its payload.
+function buildPayload(form: DrinkForm, inventory: InventoryRow[]) {
   const ingredients = form.ingredients
     .filter((i) => i.itemId && i.qtyUsed)
     .map((i) => ({ itemId: i.itemId, qtyUsed: parseFloat(i.qtyUsed) }));
   return {
     name: form.name.trim(),
     price: parseFloat(form.price) || 0,
-    costEstimate: calcCost(form.ingredients, inventory),
+    costEstimate: centsToDollars(calcCostCents(form.ingredients, inventory)),
     ingredients,
   };
 }
 
-function drinkToForm(drink: DrinkRecipe): DrinkForm {
+function drinkToForm(drink: DrinkWithIngredients): DrinkForm {
   return {
     name: drink.name,
-    price: String(drink.price),
-    ingredients: drink.ingredients.map((i) => ({ itemId: i.itemId, qtyUsed: String(i.qtyUsed) })),
+    price: String(centsToDollars(drink.price_cents)),
+    ingredients: drink.ingredients.map((i) => ({ itemId: i.item_id, qtyUsed: String(i.qty_used) })),
   };
 }
 
 
 export default function DrinksPage() {
   const router = useRouter();
-  const { data: drinks = [], mutate } = useSWR<DrinkRecipe[]>('/api/drinks', fetcher);
-  const { data: inventory = [] } = useSWR<InventoryItem[]>('/api/inventory', fetcher);
+  const { data: drinks = [], mutate } = useSWR('drinks', fetchDrinks);
+  const { data: inventory = [] } = useSWR('inventory', fetchInventory);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState('');
 
-  function drinkCost(drink: DrinkRecipe): number {
-    return drink.ingredients.reduce((sum, ing) => {
-      const item = inventory.find((i) => i.id === ing.itemId);
-      return sum + ing.qtyUsed * (item?.costPerUnit ?? 0);
-    }, 0);
-  }
 
   async function handleCreate(form: DrinkForm) {
     try {
-      await apiFetch<DrinkRecipe>('/api/drinks', { method: 'POST', body: JSON.stringify(buildPayload(form, inventory)) });
+      await apiFetch('/api/drinks', { method: 'POST', body: JSON.stringify(buildPayload(form, inventory)) });
       toast.success('Drink created');
       setShowAdd(false);
       mutate();
@@ -166,7 +164,7 @@ export default function DrinksPage() {
     }
   }
 
-  async function handleUpdate(drink: DrinkRecipe, form: DrinkForm) {
+  async function handleUpdate(drink: DrinkWithIngredients, form: DrinkForm) {
     try {
       await apiFetch(`/api/drinks/${drink.id}`, { method: 'PUT', body: JSON.stringify(buildPayload(form, inventory)) });
       toast.success('Drink updated');
@@ -217,8 +215,8 @@ export default function DrinksPage() {
       <div className='space-y-2'>
         {drinks.filter((d) => d.name.toLowerCase().includes(search.toLowerCase())).map((drink) => {
           const open = expandedId === drink.id;
-          const available = canMake(drink, inventory);
-          const cost = drinkCost(drink);
+          const available = canMakeDrink(drink, inventory);
+          const costCents = recipeCostCents(drink.ingredients, inventory);
           return (
             <div key={drink.id} className={`border border-border rounded-md${available ? '' : ' opacity-40'}`}>
               <button
@@ -228,7 +226,7 @@ export default function DrinksPage() {
                 <div className='text-left'>
                   <p className='text-sm'>{drink.name}</p>
                   <p className='text-xs text-muted-foreground mt-0.5'>
-                    ${drink.price.toFixed(2)} sell · ${cost.toFixed(2)} cost
+                    ${formatCents(drink.price_cents)} sell · ${formatCents(costCents)} cost
                   </p>
                 </div>
                 {open ? <ChevronUp className='size-4 text-muted-foreground' /> : <ChevronDown className='size-4 text-muted-foreground' />}

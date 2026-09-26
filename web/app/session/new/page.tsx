@@ -4,18 +4,22 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { fetcher, apiFetch, Player, Session, BuyIn } from '@/lib/bar-api';
+
+import { apiFetch } from '@/lib/bar-api';
+import { fetchPlayers, type PlayerRow } from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface SelectedPlayer {
-  player: Player;
+  // `selected` holds both a PlayerRow from the list below and the Go API's own response
+  // from addNewPlayer's apiFetch, and only `id` and `name` are ever read from it.
+  player: Pick<PlayerRow, 'id' | 'name'>;
   buyIn: string;
 }
 
 export default function NewSessionPage() {
   const router = useRouter();
-  const { data: players = [], mutate } = useSWR<Player[]>('/api/players', fetcher);
+  const { data: players = [], mutate } = useSWR('players', fetchPlayers);
 
   const [name, setName] = useState('Poker');
   const [selected, setSelected] = useState<SelectedPlayer[]>([]);
@@ -31,7 +35,7 @@ export default function NewSessionPage() {
       !selected.find((s) => s.player.id === p.id),
   );
 
-  function addPlayer(player: Player) {
+  function addPlayer(player: Pick<PlayerRow, 'id' | 'name'>) {
     setSelected((prev) => [...prev, { player, buyIn: defaultBuyIn }]);
     setSearch('');
   }
@@ -50,7 +54,7 @@ export default function NewSessionPage() {
     if (!newPlayerName.trim()) return;
     setCreating(true);
     try {
-      const player = await apiFetch<Player>('/api/players', {
+      const player = await apiFetch<Pick<PlayerRow, 'id' | 'name'>>('/api/players', {
         method: 'POST',
         body: JSON.stringify({ name: newPlayerName.trim() }),
       });
@@ -68,7 +72,7 @@ export default function NewSessionPage() {
     if (!name.trim() || selected.length === 0) return;
     setStarting(true);
     try {
-      const session = await apiFetch<Session>('/api/sessions', {
+      const session = await apiFetch<{ id: string }>('/api/sessions', {
         method: 'POST',
         body: JSON.stringify({
           name: name.trim(),
@@ -79,7 +83,7 @@ export default function NewSessionPage() {
         selected
           .filter((s) => parseFloat(s.buyIn) > 0)
           .map((s) =>
-            apiFetch<BuyIn>('/api/buyins', {
+            apiFetch('/api/buyins', {
               method: 'POST',
               body: JSON.stringify({
                 sessionId: session.id,

@@ -3,7 +3,11 @@
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
-import { fetcher, formatDate, formatTime, Session, Player, Order, BuyIn, Cashout } from '@/lib/bar-api';
+import { formatCents, formatDate, formatTime } from '@pb/core';
+import { sumCents } from '@/lib/ledger';
+import {
+  fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
+} from '@/lib/supabase/queries';
 import { Printer, Share2, MessageCircle } from 'lucide-react';
 
 export default function PlayerReceiptPage({
@@ -14,40 +18,40 @@ export default function PlayerReceiptPage({
   const { id, playerId } = use(params);
   const router = useRouter();
 
-  const { data: sessions = [] } = useSWR<Session[]>('/api/sessions', fetcher);
+  const { data: sessions = [] } = useSWR('sessions', fetchSessions);
   const session = sessions.find((s) => s.id === id);
 
-  const { data: players = [] } = useSWR<Player[]>('/api/players', fetcher);
+  const { data: players = [] } = useSWR('players', fetchPlayers);
   const player = players.find((p) => p.id === playerId);
 
-  const { data: orders = [] } = useSWR<Order[]>(
-    `/api/orders?sessionId=${id}`,
-    fetcher,
+  const { data: orders = [] } = useSWR(
+    ['orders', id],
+    ([, sessionId]) => fetchSessionOrders(sessionId),
   );
-  const { data: buyIns = [] } = useSWR<BuyIn[]>(
-    `/api/buyins?sessionId=${id}`,
-    fetcher,
+  const { data: buyIns = [] } = useSWR(
+    ['buy_ins', id],
+    ([, sessionId]) => fetchSessionBuyIns(sessionId),
   );
-  const { data: cashouts = [] } = useSWR<Cashout[]>(
-    `/api/cashouts?sessionId=${id}`,
-    fetcher,
+  const { data: cashouts = [] } = useSWR(
+    ['cashouts', id],
+    ([, sessionId]) => fetchSessionCashouts(sessionId),
   );
 
   const playerOrders = orders
-    .filter((o) => o.playerId === playerId)
+    .filter((o) => o.player_id === playerId)
     .sort(
       (a, b) =>
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
   const playerBuyIns = buyIns
-    .filter((b) => b.playerId === playerId)
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-  const playerCashout = cashouts.find((c) => c.playerId === playerId);
+    .filter((b) => b.player_id === playerId)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const playerCashout = cashouts.find((c) => c.player_id === playerId);
 
-  const drinkTotal = playerOrders.reduce((s, o) => s + o.price, 0);
-  const buyInTotal = playerBuyIns.reduce((s, b) => s + b.amount, 0);
-  const cashoutAmount = playerCashout?.amount ?? 0;
-  const total = drinkTotal + buyInTotal - cashoutAmount;
+  const drinkTotalCents = sumCents(playerOrders, (o) => o.price_cents);
+  const buyInTotalCents = sumCents(playerBuyIns, (b) => b.amount_cents);
+  const cashoutCents = playerCashout?.amount_cents ?? 0;
+  const totalCents = drinkTotalCents + buyInTotalCents - cashoutCents;
 
   function handlePrint() {
     window.print();
@@ -255,14 +259,14 @@ export default function PlayerReceiptPage({
           <p className='receipt-venue'>Buy-In</p>
           <p className='receipt-title'>{player.name}</p>
           <p className='receipt-date'>
-            {formatDate(session.date)} · {session.name}
+            {formatDate(session.played_on)} · {session.name}
           </p>
           <hr className='receipt-divider' />
           {playerBuyIns.map((b, i) => (
             <div key={b.id} className='receipt-row'>
               <span className='receipt-row-time' />
               <span className='receipt-row-name'>{i === 0 ? 'Buy-in' : 'Re-buy'}</span>
-              <span className='receipt-row-price'>+${b.amount.toFixed(2)}</span>
+              <span className='receipt-row-price'>+${formatCents(b.amount_cents)}</span>
             </div>
           ))}
           {playerOrders.length === 0 && playerBuyIns.length === 0 ? (
@@ -280,11 +284,11 @@ export default function PlayerReceiptPage({
             playerOrders.map((order) => (
               <div key={order.id} className='receipt-row'>
                 <span className='receipt-row-time'>
-                  {formatTime(order.timestamp)}
+                  {formatTime(order.created_at)}
                 </span>
-                <span className='receipt-row-name'>{order.drinkName}</span>
+                <span className='receipt-row-name'>{order.drink_name}</span>
                 <span className='receipt-row-price'>
-                  +${order.price.toFixed(2)}
+                  +${formatCents(order.price_cents)}
                 </span>
               </div>
             ))
@@ -294,14 +298,14 @@ export default function PlayerReceiptPage({
               <span className='receipt-row-time' />
               <span className='receipt-row-name'>Cash out</span>
               <span className='receipt-row-price' style={{ color: '#22c55e' }}>
-                −${cashoutAmount.toFixed(2)}
+                −${formatCents(cashoutCents)}
               </span>
             </div>
           )}
           <hr className='receipt-divider' />
           <div className='receipt-total-row'>
             <span>Total owed</span>
-            <span>${total.toFixed(2)}</span>
+            <span>${formatCents(totalCents)}</span>
           </div>
           <p className='receipt-footer'>Thank you · Good game</p>
         </div>

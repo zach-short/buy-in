@@ -4,17 +4,20 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { fetcher, apiFetch, computeBalance, Player, Order, BuyIn, Cashout, Payment } from '@/lib/bar-api';
+import { formatCents, isSettled } from '@pb/core';
+import { apiFetch } from '@/lib/bar-api';
+import { playerBalanceCents, sumCents } from '@/lib/ledger';
+import { fetchBuyIns, fetchCashouts, fetchOrders, fetchPayments, fetchPlayers } from '@/lib/supabase/queries';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 export default function PlayersPage() {
   const router = useRouter();
-  const { data: players = [], isLoading, mutate } = useSWR<Player[]>('/api/players', fetcher);
-  const { data: orders = [] }   = useSWR<Order[]>('/api/orders', fetcher);
-  const { data: buyIns = [] }   = useSWR<BuyIn[]>('/api/buyins', fetcher);
-  const { data: cashouts = [] } = useSWR<Cashout[]>('/api/cashouts', fetcher);
-  const { data: payments = [] } = useSWR<Payment[]>('/api/payments', fetcher);
+  const { data: players = [], isLoading, mutate } = useSWR('players', fetchPlayers);
+  const { data: orders = [] }   = useSWR('orders', fetchOrders);
+  const { data: buyIns = [] }   = useSWR('buy_ins', fetchBuyIns);
+  const { data: cashouts = [] } = useSWR('cashouts', fetchCashouts);
+  const { data: payments = [] } = useSWR('payments', fetchPayments);
 
   const [adding, setAdding] = useState(false);
   const [name, setName]     = useState('');
@@ -23,16 +26,16 @@ export default function PlayersPage() {
   const [saving, setSaving] = useState(false);
 
   const playerRows = players
-    .map((player) => ({ player, balance: computeBalance(player.id, orders, buyIns, cashouts, payments) }))
-    .sort((a, b) => b.balance - a.balance);
+    .map((player) => ({ player, balanceCents: playerBalanceCents(player.id, orders, buyIns, cashouts, payments) }))
+    .sort((a, b) => b.balanceCents - a.balanceCents);
 
-  const totalOwed = playerRows.filter((r) => r.balance > 0).reduce((s, r) => s + r.balance, 0);
+  const totalOwedCents = sumCents(playerRows.filter((r) => r.balanceCents > 0), (r) => r.balanceCents);
 
   async function handleAdd() {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await apiFetch<Player>('/api/players', {
+      await apiFetch('/api/players', {
         method: 'POST',
         body: JSON.stringify({ name: name.trim(), phone: phone.trim(), venmo: venmo.trim() }),
       });
@@ -52,8 +55,8 @@ export default function PlayersPage() {
       <div className='flex items-center justify-between mb-10'>
         <div>
           <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Players</h1>
-          {totalOwed > 0 && (
-            <p className='text-xs text-muted-foreground mt-0.5'>${totalOwed.toFixed(2)} outstanding</p>
+          {totalOwedCents > 0 && (
+            <p className='text-xs text-muted-foreground mt-0.5'>${formatCents(totalOwedCents)} outstanding</p>
           )}
         </div>
         <div className='flex items-center gap-4'>
@@ -112,7 +115,7 @@ export default function PlayersPage() {
       )}
 
       <div className='space-y-2'>
-        {playerRows.map(({ player, balance }) => (
+        {playerRows.map(({ player, balanceCents }) => (
           <button
             key={player.id}
             onClick={() => router.push(`/players/${player.id}`)}
@@ -121,12 +124,12 @@ export default function PlayersPage() {
             <div className='flex items-center justify-between gap-3'>
               <span className='text-sm font-medium'>{player.name}</span>
               <div className='flex items-center gap-2 shrink-0'>
-                {Math.abs(balance) < 0.01 ? (
+                {isSettled(balanceCents) ? (
                   <span className='text-xs tracking-widest uppercase text-muted-foreground'>Even</span>
-                ) : balance > 0 ? (
-                  <span className='text-sm font-semibold text-destructive tabular-nums'>${balance.toFixed(2)} owes you</span>
+                ) : balanceCents > 0 ? (
+                  <span className='text-sm font-semibold text-destructive tabular-nums'>${formatCents(balanceCents)} owes you</span>
                 ) : (
-                  <span className='text-sm font-semibold text-green-500 tabular-nums'>You owe ${Math.abs(balance).toFixed(2)}</span>
+                  <span className='text-sm font-semibold text-green-500 tabular-nums'>You owe ${formatCents(Math.abs(balanceCents))}</span>
                 )}
                 <span className='text-primary text-xs'>›</span>
               </div>

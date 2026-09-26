@@ -6,7 +6,9 @@ import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine,
 } from 'recharts';
-import { fetcher, Session, Order } from '@/lib/bar-api';
+import { centsToDollars, formatCents } from '@pb/core';
+import { sumCents } from '@/lib/ledger';
+import { fetchOrders, fetchSessions } from '@/lib/supabase/queries';
 
 function fmt(n: number) {
   return `$${n.toFixed(2)}`;
@@ -16,6 +18,10 @@ function shortDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// revenue/cost/profit/cumProfit are dollars because recharts plots them and picks its own
+// axis ticks from them — its nice-tick step is not scale-invariant, so plotting cents would
+// change the `$${v}` tick labels. Every sum is taken in cents first (below); the dollar
+// values exist only for the chart and its tooltips.
 interface SessionStat {
   name: string;
   date: string;
@@ -53,31 +59,40 @@ function BarTooltip({ active, payload }: { active?: boolean; payload?: { name: s
 
 export default function StatsPage() {
   const router = useRouter();
-  const { data: sessions = [] } = useSWR<Session[]>('/api/sessions', fetcher);
-  const { data: orders = [] } = useSWR<Order[]>('/api/orders', fetcher);
+  const { data: sessions = [] } = useSWR('sessions', fetchSessions);
+  const { data: orders = [] } = useSWR('orders', fetchOrders);
 
   const closedSessions = [...sessions]
     .filter((s) => s.status === 'closed')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a, b) => new Date(a.played_on).getTime() - new Date(b.played_on).getTime());
 
-  let running = 0;
+  let runningCents = 0;
+  let totalRevenueCents = 0;
+  let totalCostCents = 0;
   const data: SessionStat[] = closedSessions.map((s) => {
-    const sessionOrders = orders.filter((o) => o.sessionId === s.id);
-    const revenue = sessionOrders.reduce((sum, o) => sum + o.price, 0);
-    const cost = sessionOrders.reduce((sum, o) => sum + o.costEstimate, 0);
-    const profit = revenue - cost;
-    running += profit;
-    return { name: s.name, date: shortDate(s.date), revenue, cost, profit, cumProfit: running };
+    const sessionOrders = orders.filter((o) => o.session_id === s.id);
+    const revenueCents = sumCents(sessionOrders, (o) => o.price_cents);
+    const costCents = sumCents(sessionOrders, (o) => o.cost_estimate_cents);
+    const profitCents = revenueCents - costCents;
+    runningCents += profitCents;
+    totalRevenueCents += revenueCents;
+    totalCostCents += costCents;
+    return {
+      name: s.name,
+      date: shortDate(s.played_on),
+      revenue: centsToDollars(revenueCents),
+      cost: centsToDollars(costCents),
+      profit: centsToDollars(profitCents),
+      cumProfit: centsToDollars(runningCents),
+    };
   });
 
-  const totalRevenue = data.reduce((s, d) => s + d.revenue, 0);
-  const totalCost = data.reduce((s, d) => s + d.cost, 0);
-  const totalProfit = running;
-  const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+  const totalProfitCents = runningCents;
+  const margin = totalRevenueCents > 0 ? (totalProfitCents / totalRevenueCents) * 100 : 0;
 
   const cumMin = Math.min(0, ...data.map((d) => d.cumProfit));
   const cumMax = Math.max(0, ...data.map((d) => d.cumProfit));
-  const profitColor = totalProfit >= 0 ? '#c9a84c' : '#e05252';
+  const profitColor = totalProfitCents >= 0 ? '#c9a84c' : '#e05252';
 
   if (closedSessions.length === 0) {
     return (
@@ -100,9 +115,9 @@ export default function StatsPage() {
 
       <div className='grid grid-cols-2 gap-3 mb-10 sm:grid-cols-4'>
         {[
-          { label: 'Revenue', value: fmt(totalRevenue), color: 'text-foreground' },
-          { label: 'Cost', value: fmt(totalCost), color: 'text-muted-foreground' },
-          { label: 'Profit', value: fmt(totalProfit), color: totalProfit >= 0 ? 'text-primary' : 'text-destructive' },
+          { label: 'Revenue', value: `$${formatCents(totalRevenueCents)}`, color: 'text-foreground' },
+          { label: 'Cost', value: `$${formatCents(totalCostCents)}`, color: 'text-muted-foreground' },
+          { label: 'Profit', value: `$${formatCents(totalProfitCents)}`, color: totalProfitCents >= 0 ? 'text-primary' : 'text-destructive' },
           { label: 'Margin', value: `${margin.toFixed(1)}%`, color: margin >= 0 ? 'text-primary' : 'text-destructive' },
         ].map(({ label, value, color }) => (
           <div key={label} className='border border-border rounded-md p-4'>

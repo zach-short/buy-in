@@ -1,20 +1,21 @@
 'use client';
 
 import { useEffect } from 'react';
-import { DrinkRecipe, InventoryItem } from '@/lib/bar-api';
+import { formatCents } from '@pb/core';
+import type { DrinkWithIngredients, InventoryRow } from '@/lib/supabase/queries';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  drinks: DrinkRecipe[];
-  inventory: InventoryItem[];
-  onSelect: (drink: DrinkRecipe) => void;
+  drinks: DrinkWithIngredients[];
+  inventory: InventoryRow[];
+  onSelect: (drink: DrinkWithIngredients) => void;
   onClose: () => void;
 }
 
-function isDrinkAvailable(drink: DrinkRecipe, inventory: InventoryItem[]): boolean {
+function isDrinkAvailable(drink: DrinkWithIngredients, inventory: InventoryRow[]): boolean {
   return drink.ingredients.every((ing) => {
-    const item = inventory.find((i) => i.id === ing.itemId);
-    return item && item.qtyOnHand >= ing.qtyUsed;
+    const item = inventory.find((i) => i.id === ing.item_id);
+    return item && item.qty_on_hand >= ing.qty_used;
   });
 }
 
@@ -57,7 +58,7 @@ export function DrinkPickerModal({ drinks, inventory, onSelect, onClose }: Props
                 >
                   <span className='text-sm leading-snug'>{drink.name}</span>
                   <span className={cn('text-sm font-semibold mt-1 tabular-nums', available ? 'text-primary' : 'text-muted-foreground')}>
-                    ${drink.price.toFixed(2)}
+                    ${formatCents(drink.price_cents)}
                   </span>
                 </button>
               );

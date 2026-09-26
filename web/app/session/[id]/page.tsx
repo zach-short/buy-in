@@ -4,11 +4,15 @@ import { use, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
+import { centsToDollars, formatCents, toCents } from '@pb/core';
+import { apiFetch, markPlayerTabPaid, type CreateOrderResponse } from '@/lib/bar-api';
+import { SESSION_POLL_INTERVAL_MS } from '@/lib/config';
+import { sumCents } from '@/lib/ledger';
 import {
-  fetcher, apiFetch, markPlayerTabPaid,
-  Session, Player, Order, DrinkRecipe, InventoryItem, CreateOrderResponse,
-  BuyIn, Cashout,
-} from '@/lib/bar-api';
+  fetchDrinks, fetchInventory, fetchPlayers, fetchSession, fetchSessionBuyIns,
+  fetchSessionCashouts, fetchSessionOrders,
+  type DrinkWithIngredients, type OrderRow, type PlayerRow,
+} from '@/lib/supabase/queries';
 import { DrinkPickerModal } from '@/components/DrinkPickerModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,22 +34,19 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const router = useRouter();
 
-  const { data: session, mutate: mutateSession } = useSWR<Session>(`/api/sessions?id=${id}`, async () => {
-    const sessions = await fetcher<Session[]>('/api/sessions');
-    return sessions.find((s) => s.id === id)!;
-  });
-  const { data: players = [], mutate: mutatePlayers } = useSWR<Player[]>('/api/players', fetcher);
-  const { data: orders = [], mutate: mutateOrders } = useSWR<Order[]>(
-    `/api/orders?sessionId=${id}`, fetcher, { refreshInterval: 15000 }
+  const { data: session, mutate: mutateSession } = useSWR(['session', id], ([, sessionId]) => fetchSession(sessionId));
+  const { data: players = [], mutate: mutatePlayers } = useSWR('players', fetchPlayers);
+  const { data: orders = [], mutate: mutateOrders } = useSWR(
+    ['orders', id], ([, sessionId]) => fetchSessionOrders(sessionId), { refreshInterval: SESSION_POLL_INTERVAL_MS }
   );
-  const { data: buyIns = [], mutate: mutateBuyIns } = useSWR<BuyIn[]>(
-    `/api/buyins?sessionId=${id}`, fetcher
+  const { data: buyIns = [], mutate: mutateBuyIns } = useSWR(
+    ['buy_ins', id], ([, sessionId]) => fetchSessionBuyIns(sessionId)
   );
-  const { data: cashouts = [], mutate: mutateCashouts } = useSWR<Cashout[]>(
-    `/api/cashouts?sessionId=${id}`, fetcher
+  const { data: cashouts = [], mutate: mutateCashouts } = useSWR(
+    ['cashouts', id], ([, sessionId]) => fetchSessionCashouts(sessionId)
   );
-  const { data: drinks = [] } = useSWR<DrinkRecipe[]>('/api/drinks', fetcher);
-  const { data: inventory = [], mutate: mutateInventory } = useSWR<InventoryItem[]>('/api/inventory', fetcher);
+  const { data: drinks = [] } = useSWR('drinks', fetchDrinks);
+  const { data: inventory = [], mutate: mutateInventory } = useSWR('inventory', fetchInventory);
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
@@ -70,40 +71,41 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     if (!session) return;
-    const tick = () => setElapsed(formatElapsed(session.date));
+    const tick = () => setElapsed(formatElapsed(session.played_on));
     tick();
     const iv = setInterval(tick, 60000);
     return () => clearInterval(iv);
   }, [session]);
 
   useEffect(() => {
-    if (!selectedPlayerId && session?.playerIds?.length) {
-      setSelectedPlayerId(session.playerIds[0]);
+    // player_ids[0] — see the ordering note on withPlayerIds in lib/supabase/queries.ts.
+    if (!selectedPlayerId && session?.player_ids.length) {
+      setSelectedPlayerId(session.player_ids[0]);
     }
   }, [session, selectedPlayerId]);
 
-  const sessionPlayers = players.filter((p) => session?.playerIds?.includes(p.id));
+  const sessionPlayers = players.filter((p) => session?.player_ids.includes(p.id));
 
-  const tabTotal = useCallback(
-    (playerId: string) => orders.filter((o) => o.playerId === playerId).reduce((s, o) => s + o.price, 0),
+  const tabTotalCents = useCallback(
+    (playerId: string) => sumCents(orders.filter((o) => o.player_id === playerId), (o) => o.price_cents),
     [orders]
   );
 
-  const buyInTotal = useCallback(
-    (playerId: string) => buyIns.filter((b) => b.playerId === playerId).reduce((s, b) => s + b.amount, 0),
+  const buyInTotalCents = useCallback(
+    (playerId: string) => sumCents(buyIns.filter((b) => b.player_id === playerId), (b) => b.amount_cents),
     [buyIns]
   );
 
   const isTabPaid = useCallback(
     (playerId: string) => {
-      const playerOrders = orders.filter((o) => o.playerId === playerId);
+      const playerOrders = orders.filter((o) => o.player_id === playerId);
       return playerOrders.length > 0 && playerOrders.every((o) => o.paid);
     },
     [orders]
   );
 
   const playerCashout = useCallback(
-    (playerId: string) => cashouts.find((c) => c.playerId === playerId),
+    (playerId: string) => cashouts.find((c) => c.player_id === playerId),
     [cashouts]
   );
 
@@ -112,7 +114,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     if (!amount || amount < 0) return;
     setEarlyCashingOut(true);
     try {
-      await apiFetch<Cashout>('/api/cashouts', {
+      await apiFetch('/api/cashouts', {
         method: 'POST',
         body: JSON.stringify({ sessionId: id, playerId, amount }),
       });
@@ -129,7 +131,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
 
   async function handleMarkPaid(playerId: string) {
     const alreadyPaid = isTabPaid(playerId);
-    mutateOrders(orders.map((o) => o.playerId === playerId ? { ...o, paid: !alreadyPaid } : o), false);
+    mutateOrders(orders.map((o) => o.player_id === playerId ? { ...o, paid: !alreadyPaid } : o), false);
     try {
       await markPlayerTabPaid(id, playerId, !alreadyPaid);
       mutateOrders();
@@ -144,7 +146,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     if (!amount || amount <= 0) return;
     setRebuying(true);
     try {
-      await apiFetch<BuyIn>('/api/buyins', {
+      await apiFetch('/api/buyins', {
         method: 'POST',
         body: JSON.stringify({ sessionId: id, playerId, amount }),
       });
@@ -159,11 +161,13 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  async function handleAddPlayer(player: Player) {
+  // Pick, because a player just created by the Go API (handleAddNewPlayer) arrives in that
+  // API's shape, not as a PlayerRow; only id and name are read. Phase 6 ports this write.
+  async function handleAddPlayer(player: Pick<PlayerRow, 'id' | 'name'>) {
     if (!session) return;
     setAddingPlayer(true);
     try {
-      const currentIds = session.playerIds ?? [];
+      const currentIds = session.player_ids;
       if (currentIds.includes(player.id)) {
         toast.error(`${player.name} is already in this session`);
         return;
@@ -174,7 +178,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       });
       const buyIn = parseFloat(addPlayerBuyIn);
       if (buyIn > 0) {
-        await apiFetch<BuyIn>('/api/buyins', {
+        await apiFetch('/api/buyins', {
           method: 'POST',
           body: JSON.stringify({ sessionId: id, playerId: player.id, amount: buyIn }),
         });
@@ -197,7 +201,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     if (!name.trim() || !session) return;
     setAddingPlayer(true);
     try {
-      const player = await apiFetch<Player>('/api/players', {
+      const player = await apiFetch<Pick<PlayerRow, 'id' | 'name'>>('/api/players', {
         method: 'POST',
         body: JSON.stringify({ name: name.trim() }),
       });
@@ -215,9 +219,9 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       await Promise.all(
         sessionPlayers.map((p) => {
           const amount = parseFloat(cashoutAmounts[p.id] ?? '0') || 0;
-          const alreadyCashedOut = cashouts.some((c) => c.playerId === p.id);
+          const alreadyCashedOut = cashouts.some((c) => c.player_id === p.id);
           if (amount > 0 && !alreadyCashedOut) {
-            return apiFetch<Cashout>('/api/cashouts', {
+            return apiFetch('/api/cashouts', {
               method: 'POST',
               body: JSON.stringify({ sessionId: id, playerId: p.id, amount }),
             });
@@ -236,17 +240,18 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   }
 
   const selectedOrders = orders
-    .filter((o) => o.playerId === selectedPlayerId)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    .filter((o) => o.player_id === selectedPlayerId)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  async function handleDrinkSelect(drink: DrinkRecipe) {
-    if (!selectedPlayerId) return;
+  async function handleDrinkSelect(drink: DrinkWithIngredients) {
+    if (!selectedPlayerId || !session) return;
     setShowPicker(false);
     const tempId = `temp-${Date.now()}`;
-    const optimistic: Order = {
-      id: tempId, sessionId: id, playerId: selectedPlayerId,
-      drinkId: drink.id, drinkName: drink.name, price: drink.price,
-      costEstimate: drink.costEstimate, timestamp: new Date().toISOString(), paid: false,
+    const optimistic: OrderRow = {
+      id: tempId, bar_id: session.bar_id, session_id: id, player_id: selectedPlayerId,
+      drink_id: drink.id, drink_name: drink.name, price_cents: drink.price_cents,
+      cost_estimate_cents: drink.cost_estimate_cents, ingredients: [],
+      created_at: new Date().toISOString(), paid: false,
     };
     mutateOrders([optimistic, ...orders], false);
     try {
@@ -266,7 +271,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  async function handleUndo(order: Order) {
+  async function handleUndo(order: OrderRow) {
     mutateOrders(orders.filter((o) => o.id !== order.id), false);
     try {
       await apiFetch(`/api/orders/${order.id}`, { method: 'DELETE' });
@@ -284,13 +289,12 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   }
 
   if (showCashout) {
-    const totalBuyIns = sessionPlayers.reduce((s, p) => s + buyInTotal(p.id), 0);
-    const totalCashedOut = sessionPlayers.reduce((s, p) => {
-      const v = parseFloat(cashoutAmounts[p.id] ?? '0') || 0;
-      return s + v;
-    }, 0);
-    const remaining = totalBuyIns - totalCashedOut;
-    const isOver = remaining < 0;
+    // The typed chip values are dollars; they enter the pot arithmetic as cents so that
+    // "remaining === 0" is exact rather than a float comparison.
+    const totalBuyInsCents = sumCents(sessionPlayers, (p) => buyInTotalCents(p.id));
+    const totalCashedOutCents = sumCents(sessionPlayers, (p) => toCents(parseFloat(cashoutAmounts[p.id] ?? '0') || 0));
+    const remainingCents = totalBuyInsCents - totalCashedOutCents;
+    const isOver = remainingCents < 0;
 
     return (
       <main className='min-h-screen flex flex-col max-w-lg mx-auto px-6 py-10'>
@@ -302,28 +306,28 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         <div className='border border-border rounded-md px-5 py-4 mb-6 flex items-center justify-between'>
           <div>
             <p className='text-xs tracking-widest uppercase text-muted-foreground'>Pot remaining</p>
-            <p className={`text-2xl font-bold mt-0.5 tabular-nums ${isOver ? 'text-destructive' : remaining === 0 ? 'text-green-500' : 'text-foreground'}`}>
-              ${Math.abs(remaining).toFixed(2)}
+            <p className={`text-2xl font-bold mt-0.5 tabular-nums ${isOver ? 'text-destructive' : remainingCents === 0 ? 'text-green-500' : 'text-foreground'}`}>
+              ${formatCents(Math.abs(remainingCents))}
               {isOver && <span className='text-xs font-normal ml-1 text-destructive'>over</span>}
             </p>
           </div>
           <div className='text-right text-xs text-muted-foreground space-y-0.5'>
-            <p>${totalBuyIns.toFixed(2)} total buy-ins</p>
-            <p>−${totalCashedOut.toFixed(2)} cashed out</p>
+            <p>${formatCents(totalBuyInsCents)} total buy-ins</p>
+            <p>−${formatCents(totalCashedOutCents)} cashed out</p>
           </div>
         </div>
 
         <div className='space-y-4 flex-1'>
           {sessionPlayers.map((player) => {
-            const drinks = tabTotal(player.id);
-            const buys = buyInTotal(player.id);
+            const drinksCents = tabTotalCents(player.id);
+            const buysCents = buyInTotalCents(player.id);
             return (
               <div key={player.id} className='border border-border rounded-md px-4 py-4'>
                 <div className='flex items-center justify-between mb-3'>
                   <span className='text-sm font-medium'>{player.name}</span>
                   <div className='text-right text-xs text-muted-foreground'>
-                    <span>Bought in ${buys.toFixed(2)}</span>
-                    {drinks > 0 && <span> · Drinks ${drinks.toFixed(2)}</span>}
+                    <span>Bought in ${formatCents(buysCents)}</span>
+                    {drinksCents > 0 && <span> · Drinks ${formatCents(drinksCents)}</span>}
                   </div>
                 </div>
                 <div className='relative'>
@@ -379,7 +383,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           className='shrink-0 h-9 text-xs tracking-widest uppercase'
           onClick={() => {
             const prefill: Record<string, string> = {};
-            cashouts.forEach((c) => { prefill[c.playerId] = String(c.amount); });
+            cashouts.forEach((c) => { prefill[c.player_id] = String(centsToDollars(c.amount_cents)); });
             setCashoutAmounts(prefill);
             setShowCashout(true);
           }}
@@ -407,7 +411,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
             )}
           >
             <span className='text-xs font-medium truncate max-w-[80px]'>{player.name}</span>
-            <span className='text-xs tabular-nums'>${tabTotal(player.id).toFixed(2)}</span>
+            <span className='text-xs tabular-nums'>${formatCents(tabTotalCents(player.id))}</span>
             {isTabPaid(player.id) && (
               <span className='text-[9px] tracking-widest uppercase text-green-500'>Paid</span>
             )}
@@ -446,7 +450,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
                   if (e.key === 'Enter' && addPlayerSearch.trim()) {
                     const match = players.find(
                       (p) => p.name.toLowerCase() === addPlayerSearch.trim().toLowerCase() &&
-                        !session?.playerIds?.includes(p.id)
+                        !session?.player_ids.includes(p.id)
                     );
                     if (match) handleAddPlayer(match);
                     else handleAddNewPlayer(addPlayerSearch.trim());
@@ -474,7 +478,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
             const matches = players.filter(
               (p) =>
                 p.name.toLowerCase().includes(addPlayerSearch.toLowerCase()) &&
-                !session?.playerIds?.includes(p.id)
+                !session?.player_ids.includes(p.id)
             );
             if (matches.length === 0) {
               return (
@@ -509,10 +513,10 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         <div className='px-6 py-3 border-b border-border space-y-3'>
           <div className='flex items-center justify-between gap-3'>
             <div className='text-xs text-muted-foreground'>
-              Buy-ins: <span className='text-foreground font-medium'>${buyInTotal(selectedPlayerId).toFixed(2)}</span>
+              Buy-ins: <span className='text-foreground font-medium'>${formatCents(buyInTotalCents(selectedPlayerId))}</span>
               {playerCashout(selectedPlayerId) && (
                 <span className='ml-2 text-green-500 font-medium'>
-                  · Cashed out ${playerCashout(selectedPlayerId)!.amount.toFixed(2)}
+                  · Cashed out ${formatCents(playerCashout(selectedPlayerId)!.amount_cents)}
                 </span>
               )}
             </div>
@@ -611,11 +615,11 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
             {selectedOrders.map((order) => (
               <div key={order.id} className='flex items-center justify-between px-4 py-3 min-h-[52px]'>
                 <div className='min-w-0'>
-                  <p className='text-sm'>{order.drinkName}</p>
-                  <p className='text-xs text-muted-foreground'>{formatTime(order.timestamp)}</p>
+                  <p className='text-sm'>{order.drink_name}</p>
+                  <p className='text-xs text-muted-foreground'>{formatTime(order.created_at)}</p>
                 </div>
                 <div className='flex items-center gap-3 shrink-0'>
-                  <span className='text-sm font-semibold text-primary tabular-nums'>${order.price.toFixed(2)}</span>
+                  <span className='text-sm font-semibold text-primary tabular-nums'>${formatCents(order.price_cents)}</span>
                   {!order.id.startsWith('temp-') && (
                     <button
                       onClick={() => handleUndo(order)}
@@ -632,7 +636,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       </div>
 
       {/* Mark Paid */}
-      {selectedPlayerId && orders.filter((o) => o.playerId === selectedPlayerId).length > 0 && (
+      {selectedPlayerId && orders.filter((o) => o.player_id === selectedPlayerId).length > 0 && (
         <div className='px-6 pb-6'>
           <button
             onClick={() => handleMarkPaid(selectedPlayerId)}

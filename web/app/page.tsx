@@ -2,7 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
-import { fetcher, Session, Order } from '@/lib/bar-api';
+
+import { formatCents } from '@pb/core';
+import { sumCents } from '@/lib/ledger';
+import { fetchSessions, fetchSessionOrders } from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
 import { useAuthUser } from '@/hooks/use-auth-user';
 import { signOutToLanding } from '@/lib/supabase/sign-out';
@@ -37,16 +40,16 @@ function Landing() {
 
 function Dashboard() {
   const router = useRouter();
-  const { data: sessions } = useSWR<Session[]>('/api/sessions', fetcher);
+  const { data: sessions } = useSWR('sessions', fetchSessions);
   const lastClosed = sessions?.find((s) => s.status === 'closed');
-  const { data: lastOrders } = useSWR<Order[]>(
-    lastClosed ? `/api/orders?sessionId=${lastClosed.id}` : null,
-    fetcher,
+  const { data: lastOrders } = useSWR(
+    lastClosed ? ['orders', lastClosed.id] : null,
+    ([, sessionId]) => fetchSessionOrders(sessionId),
   );
 
-  const revenue = lastOrders?.reduce((s, o) => s + o.price, 0) ?? 0;
-  const cogs = lastOrders?.reduce((s, o) => s + o.costEstimate, 0) ?? 0;
-  const profit = revenue - cogs;
+  const revenueCents = lastOrders ? sumCents(lastOrders, (o) => o.price_cents) : 0;
+  const cogsCents = lastOrders ? sumCents(lastOrders, (o) => o.cost_estimate_cents) : 0;
+  const profitCents = revenueCents - cogsCents;
   const activeSession = sessions?.find((s) => s.status === 'active');
 
   return (
@@ -109,16 +112,16 @@ function Dashboard() {
             <div className='grid grid-cols-3 gap-2 text-center'>
               <div>
                 <p className='text-xs text-muted-foreground mb-1'>Revenue</p>
-                <p className='text-base font-semibold text-primary'>${revenue.toFixed(2)}</p>
+                <p className='text-base font-semibold text-primary'>${formatCents(revenueCents)}</p>
               </div>
               <div>
                 <p className='text-xs text-muted-foreground mb-1'>Cost</p>
-                <p className='text-base font-semibold'>${cogs.toFixed(2)}</p>
+                <p className='text-base font-semibold'>${formatCents(cogsCents)}</p>
               </div>
               <div>
                 <p className='text-xs text-muted-foreground mb-1'>Profit</p>
-                <p className={`text-base font-semibold ${profit >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                  ${profit.toFixed(2)}
+                <p className={`text-base font-semibold ${profitCents >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                  ${formatCents(profitCents)}
                 </p>
               </div>
             </div>

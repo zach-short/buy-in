@@ -1,0 +1,18 @@
+{
+  // No other gate reads scripts/: web's tsc covers web/, core's covers packages/core.
+  // Without this file the Mongo import — the one script that writes real balances —
+  // would never be type-checked. Run: cd scripts && npx tsc --noEmit
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext"],
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": ["import-mongo"]
+}

@@ -60,12 +60,24 @@ became a GATE 1 question** — flagged as such, so the owner can turn either int
 at GATE 2.
 
 **BD-1 — The bar-and-membership primitive is a `create_bar()` RPC, not a trigger on
-`auth.users`.** (`DESIGN.md` §9 gap b, `H4`.) A `security definer` function that inserts the
+`auth.users`.** (`DESIGN.md` §9 gap b, `H4`.) ~~A `security definer` function that inserts the
 `bars` row and the owner's `bar_members` row in one transaction, called by the client after
-sign-up and by the import with the owner's id. *Why not the trigger:* `D16` and the settled
+sign-up and by the import with the owner's id.~~ *Why not the trigger:* `D16` and the settled
 architecture both expect players to claim accounts later, and a trigger on `auth.users` fires for
 **every** signup — so each claiming player would silently get their own bar. *Reversal:* add the
 trigger and have it call the same function; the RPC stays either way, because the import needs it.
+
+> **Corrected 2026-09-25 (phase 8, measured against `dev`), three clauses of the struck
+> sentence are not what was built.** `create_bar()` is `security invoker`, not definer
+> (`supabase/migrations/0001_init.sql:475-495`). The owner's `bar_members` row comes from the
+> `bars_owner_membership` trigger on `bars` (`:456-473`, added in phase 1), not from the function,
+> so the invariant holds for **any** insert into `bars`. And the function takes no owner id: it
+> authorizes by `auth.uid()`, so a service-role caller, which is what `D9`'s import is, is
+> refused. `rpc('create_bar')` with the service-role key returned `403` / `42501` "create_bar
+> requires an authenticated user" and wrote no row (2026-09-25). The import therefore inserts the
+> `bars` row with the service role and asserts that the trigger created the `owner` membership
+> (`scripts/import-mongo/bar.ts`). What `BD-1` protects, no bar without its owner's membership,
+> holds either way. *Reversal for the import:* sign in as the owner and call `create_bar` there.
 
 **BD-2 — `sessions.played_on` becomes `timestamptz`.** (Gap f, `H6`.) *Why not a second column:*
 two columns for "when" is two sources of truth, and the sort order the app relies on would depend
@@ -380,7 +392,10 @@ confirmed user (`HANDOFF.md` step 15). Build-level calls are recorded under `DES
 
 ### Phase 5 — Port the data layer and every read
 
-**Status:** `PLANNED`. Lane A. Waits on phase 4 **and on Lane B (phase 2) being merged**.
+**Status:** `BUILT` 2026-09-25 (`HANDOFF.md` steps 18 and 20; `PASSOFF.md` item 14). Built via
+`/delegate` — builder subagent, independent Opus 5 audit (NON-BLOCKING FINDINGS, all applied),
+merged into the main checkout by the orchestrating session. Lane A. Phase 4 and Lane B (phase 2)
+satisfied.
 
 **Scope.**
 1. Replace `apiFetch` with the typed client (`BD-5`); `bar-api.ts` keeps its row types until they
@@ -429,7 +444,15 @@ from the **snapshot**, not the current recipe (bug 2). Both checked by querying 
 **Watch for.** `create_order` is `security invoker`, so a caller without a `bar_members` row
 gets "session not found" rather than a permission error — a confusing failure that looks like
 missing data. And after `D16`, a `role = 'player'` member cannot write at all; test with a staff
-user.
+user. **Added by the phase 5 audit (`HANDOFF.md` step 20), N1:** `web/lib/supabase/queries.ts`'s
+`selectAll` pages a list by offset, and on the newest-first lists (orders, buy-ins, cashouts,
+payments) a write landing between two pages of one fetch can double-count a row or drop one, with
+no error — reproduced in simulation (150100 read against a true 150700). This cannot happen
+before this phase, since nothing writes to Supabase until now; it becomes live the moment phase 6
+ships. Real volumes (35 orders, 120 buy-ins, 74 payments) are far under the 1000-row page size, so
+it is unlikely to bite by accident, but it is a real race, not a theoretical one, and belongs on
+this phase's list: switch to keyset pagination on `(created_at, id)` — paging oldest-first alone
+does not fix the insert case.
 
 ---
 
@@ -467,26 +490,49 @@ an `anon` policy — if one seems necessary, that contradicts `D8` and goes to t
 
 ### Phase 8 — Write and rehearse the import on `dev`
 
-**Status:** `PLANNED`. Lane A. Waits on phase 3 (schema on `dev`) — and can start once phase 3
-lands, ahead of phases 5–7, if the owner wants the data question closed early.
+**Status:** `IN FLIGHT` 2026-09-25 (`PASSOFF.md` item 15, run via `/delegate`, ahead of phases
+5–7 at the owner's explicit request — the option this status line always named). Lane A. Phase 3
+(schema on `dev`) is satisfied (`DONE — HANDOFF 15`); running in parallel with phase 5, which is
+also `IN FLIGHT` — no file overlap (phase 5 owns `web/`, this owns `scripts/` and a new Supabase
+auth user).
 
-**Scope.** The `scripts/` bun script per `D9`: idempotent (truncate the bar's rows, reload),
-taking the owner's `auth.users` id as an argument, calling `create_bar()` (`BD-1`), reading Mongo
-**directly via `DATABASE_URL`** — not through the Go API, which `D13` takes down. Float → cents
-by `Math.round(x * 100)`. Mongo timestamps written **explicitly** into every `created_at`
-(`H6`, gap g). Never committed with credentials.
+**Status:** `BUILT` 2026-09-25 (`HANDOFF.md` steps 19, 21). Built via `/delegate` across four
+rounds — initial build and rehearsal, an audit that found the re-run safety claim false, a fix,
+an audit that found the fix's own recovery path unsafe (`B1`), a second fix, and a final audit
+that closed clean. Rehearsed twice against real `dev` data; a third, independent audit
+reproduced the fix's safety property on its own harness. Not yet merged into the main checkout's
+git history — see the commit blocks in the hand-back.
 
-**Subagents.** None.
+**Scope, corrected 2026-09-25 against what was actually built (R5 — this paragraph described the
+plan, not the code, as of the last audit):** the `scripts/import-mongo/` bun script, taking the
+owner's `auth.users` id as an argument, reading Mongo **directly via `DATABASE_URL`** — not
+through the Go API, which `D13` takes down — and writing Postgres through the service role.
+`create_bar()` is **not** called (see `BD-1`'s 2026-09-25 correction above): the script inserts
+`bars` directly and asserts the `bars_owner_membership` trigger created the owner's membership,
+because `create_bar()` refuses a service-role caller. Dollar amounts a person typed use `toCents`
+(`@pb/core`); computed values (`cost_estimate`, `$inc`'d quantities) use a separate rounding path
+per `H5` — never `Math.round(x * 100)` uniformly across both. Mongo timestamps written
+**explicitly** into every `created_at` (`H6`, gap g). Never committed with credentials.
+Idempotency is `D9`'s 2026-09-25 amendment, not a literal truncate-and-reload — see there for the
+three-path mechanism (`load`/`keep`/`replace`) a re-run actually takes.
+
+**Subagents.** None in the original build; the two safety-fix rounds and every audit ran as
+separate `/delegate` rounds, each its own subagent in its own worktree, not a subagent of this
+phase's own build step.
 
 **Done when.** The script runs twice in a row on `dev` with identical results (that is what
-idempotent means here). The proof no gate supplies: **every player's balance matches to the
-cent** before and after — tolerance 0, per the dial — computed from Mongo on one side and from
-`get_shared_tab` on the other; plus the first and last order of a sampled session keep their
-order, proving the timestamps were written rather than defaulted; plus both `D10` unique indexes
-hold on real data. **If either index rejects real rows, stop** — a duplicate player name or a
-double cashout is a finding for the owner, not something to coerce past the constraint.
+idempotent means here) — proved twice: the original rehearsal (byte-identical snapshots, sha256
+matched) and again after the safety fix, on an independent harness. The proof no gate supplies:
+**every player's balance matches to the cent** before and after — tolerance 0, per the dial —
+computed from Mongo on one side and from `get_shared_tab` on the other (20/20 players matched);
+plus the first and last order of a sampled session keep their order, proving the timestamps were
+written rather than defaulted; plus both `D10` unique indexes hold on real data (they did — 0
+real rows rejected, so there was nothing for the owner to decide). **A fourth proof was added
+after the fact, not in the original done-when:** a re-run against the wrong owner, or against a
+bar the app has since written to, must refuse without `--force` and touch nothing — closed in
+round 3, reproduced independently in round 4.
 
-**Watch for.** `Math.round(x * 100)` is right for values a human typed as dollars and cents and
+**Watch for.** `toCents` is right for values a human typed as dollars and cents and
 wrong for any value that was computed — `cost_estimate` and `$inc`'d quantities especially
 (`H5`). Check those separately rather than trusting one rounding rule across every column.
 

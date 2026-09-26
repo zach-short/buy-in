@@ -3,7 +3,7 @@
 // Platform-specific behaviour is injected by the caller (see the SupabaseClient
 // parameter on every query builder).
 
-export { toCents, formatCents } from './money';
+export { toCents, formatCents, centsToDollars } from './money';
 export {
   computeBalanceCents,
   isSettled,
@@ -29,4 +29,4 @@ export {
 } from './inventory';
 // BD-6: generated from the live schema (`supabase gen types typescript`), not
 // hand-written — regenerate as part of every phase that changes the schema.
-export type { Database, Json } from './database.types';
+export type { Database, Json, Tables } from './database.types';

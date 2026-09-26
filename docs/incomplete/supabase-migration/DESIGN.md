@@ -185,7 +185,7 @@ Each option carries the strongest argument *against* the recommendation, so that
 
 ### O5 — Data migration mechanics
 
-- **(a) A one-shot TypeScript script (bun) under `scripts/`, reading Mongo with the `mongodb` driver and writing Postgres through supabase-js with the service-role key — Recommended, with two conditions:** it is idempotent (truncate the bar's rows, reload) so it can be rehearsed on `dev` repeatedly, and it takes the owner's `auth.users` id as an argument (the bar needs an owner before any row can be inserted — §1.4 gap b). Lives outside `backend/`, which is off-limits. *Against:* both databases' credentials on one machine, and a service-role key in a script's environment — acceptable once, on the owner's machine, never committed.
+- **(a) A one-shot TypeScript script (bun) under `scripts/`, reading Mongo with the `mongodb` driver and writing Postgres through supabase-js with the service-role key — Recommended, with two conditions:** it is idempotent so it can be rehearsed on `dev` repeatedly (see `D9`'s 2026-09-25 amendment for what that means as built — not a literal truncate-and-reload on every run), and it takes the owner's `auth.users` id as an argument (the bar needs an owner before any row can be inserted — §1.4 gap b). Lives outside `backend/`, which is off-limits. *Against:* both databases' credentials on one machine, and a service-role key in a script's environment — acceptable once, on the owner's machine, never committed.
 - **(b) `mongoexport` to JSON, transform, load with `psql \copy`.** No service-role key; the JSON dump is a durable snapshot for verification. *Against:* more manual steps; the dump contains phone numbers and Venmo handles and must stay out of git.
 - **(c) A Go script inside `backend/` (it already has the Mongo driver).** *Against:* `backend/` takes no new work (`CLAUDE.md`).
 
@@ -524,10 +524,21 @@ including its `dev-portal-secret` fallback.
 
 **Decision.** §3 O5a. A bun script under `scripts/`, outside `backend/`, reading Mongo with the
 `mongodb` driver and writing Postgres through supabase-js with the service-role key. Three
-conditions are ratified with it: it is **idempotent** (truncate the bar's rows, reload) so it
-can be rehearsed on `dev`; it takes the owner's `auth.users` id as an **argument**, because the
-bar needs an owner before any row can be inserted (§1.4 gap b); and verification is a
-**per-player balance match to the cent** — tolerance 0 (§4) — not a row count (§5 H5).
+conditions are ratified with it: it is **idempotent** so it can be rehearsed on `dev` repeatedly;
+it takes the owner's `auth.users` id as an **argument**, because the bar needs an owner before any
+row can be inserted (§1.4 gap b); and verification is a **per-player balance match to the cent**
+— tolerance 0 (§4) — not a row count (§5 H5).
+
+**Amended 2026-09-25 (`HANDOFF.md` step 21): "truncate the bar's rows, reload" describes only
+one of the mechanism's three paths, not idempotency itself.** A round-2 audit found the original
+"always truncate and reload" implementation let a stray re-run silently revert app-made deletes,
+edits and claims, wipe share/claim links unchecked, and overwrite the bar's name/Venmo handle —
+none of that was a truncate-and-reload problem, it was that clearing ran unconditionally. The
+built script now distinguishes three cases: an unmodified re-run **writes nothing at all**
+("`load: skipped`"); a fresh/empty bar **loads with no prior clear**; and only an explicit
+`--force` reaches a clear-and-reload, scoped to the bar's own rows. **The ratified property is
+unchanged** — two runs give identical results — the mechanism that delivers it is not the
+parenthetical's literal description anymore. `scripts/import-mongo/{drift,load}.ts`.
 
 **Defense.** Against O5a: both databases' credentials on one machine, and a service-role key in
 a script's environment. Answered: once, on the owner's own machine, never committed — and the
@@ -706,6 +717,22 @@ data comes from; it does not change what the user sees or how the app behaves.
 - **Session membership semantics stay**: `Session.playerIds[]` drives `includes` and the default
   selected player (`playerIds[0]`), while display order comes from the players list sorted by
   name (`session/[id]/page.tsx:80-85,166-173`, `players.go:21`).
+  **Amended 2026-09-25 (phase 5, `HANDOFF.md` step 18): neither half survives as stated, and
+  the change is larger than first recorded here (corrected by the phase 5 audit, R5).**
+  `session_players` (`0001_init.sql:166-173`) has no column that can encode insertion order —
+  `bar_id`, `session_id`, `player_id` only, primary key `(session_id, player_id)` — and Postgres
+  does not guarantee row order absent one. **The display-order half is also affected, not just
+  the default-player half**: the `/sessions` card list (`sessions/page.tsx`, pre-port) listed
+  session names in `Session.playerIds[]`'s tap order too, via `sessions.go:21` returning it
+  as-is — this file's line 707 was wrong to call it "already name-sorted" everywhere; that was
+  true of the session screen's own player list (`session/[id]/page.tsx:80-85`), not of
+  `/sessions`' cards. Asked of the owner and answered 2026-09-25 — the same question named both
+  surfaces explicitly: the default selected player, and the name order on session cards, both
+  become name-order[0]/name-sorted, replacing tap order everywhere it was load-bearing. The
+  alternative (a `0002` migration adding a position column, to reproduce tap order exactly) was
+  offered and declined. This also settles the same question for drink-recipe ingredient order
+  (`phase 5's builder report`) and for phase 8's import, which faces an identical loss of Mongo
+  array order.
 - **The session screen keeps a 15 s refresh** (`session/[id]/page.tsx:39`), as a dial (`D7`).
 - **The same routes stay public**: `/`, `/login`, `/menu`, `/receipt/*`, `/portal/*`,
   `/player-receipt/*` (`web/proxy.ts:8-14`). `D8` and `D14` change *how* they read, never *which*

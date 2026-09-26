@@ -3,7 +3,12 @@
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
-import { fetcher, Session, Player, Order, BuyIn, Cashout } from '@/lib/bar-api';
+import { formatCents } from '@pb/core';
+import { sumCents } from '@/lib/ledger';
+import {
+  fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
+  type PlayerRow,
+} from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -16,30 +21,30 @@ export default function SummaryPage({
   const { id } = use(params);
   const router = useRouter();
 
-  const { data: sessions = [] } = useSWR<Session[]>('/api/sessions', fetcher);
+  const { data: sessions = [] } = useSWR('sessions', fetchSessions);
   const session = sessions.find((s) => s.id === id);
-  const { data: players = [] } = useSWR<Player[]>('/api/players', fetcher);
-  const { data: orders = [] } = useSWR<Order[]>(
-    `/api/orders?sessionId=${id}`,
-    fetcher,
+  const { data: players = [] } = useSWR('players', fetchPlayers);
+  const { data: orders = [] } = useSWR(
+    ['orders', id],
+    ([, sessionId]) => fetchSessionOrders(sessionId),
   );
-  const { data: buyIns = [] } = useSWR<BuyIn[]>(
-    `/api/buyins?sessionId=${id}`,
-    fetcher,
+  const { data: buyIns = [] } = useSWR(
+    ['buy_ins', id],
+    ([, sessionId]) => fetchSessionBuyIns(sessionId),
   );
-  const { data: cashouts = [] } = useSWR<Cashout[]>(
-    `/api/cashouts?sessionId=${id}`,
-    fetcher,
+  const { data: cashouts = [] } = useSWR(
+    ['cashouts', id],
+    ([, sessionId]) => fetchSessionCashouts(sessionId),
   );
 
   const sessionPlayers = players.filter((p) =>
-    session?.playerIds?.includes(p.id),
+    session?.player_ids.includes(p.id),
   );
   const playersWithPhone = sessionPlayers.filter((p) => p.phone);
 
-  const totalRevenue = orders.reduce((s, o) => s + o.price, 0);
-  const totalCogs = orders.reduce((s, o) => s + o.costEstimate, 0);
-  const totalProfit = totalRevenue - totalCogs;
+  const totalRevenueCents = sumCents(orders, (o) => o.price_cents);
+  const totalCogsCents = sumCents(orders, (o) => o.cost_estimate_cents);
+  const totalProfitCents = totalRevenueCents - totalCogsCents;
 
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [textIndex, setTextIndex] = useState<number | null>(null);
@@ -51,7 +56,7 @@ export default function SummaryPage({
     setTextIndex(0);
   }
 
-  function openText(player: Player) {
+  function openText(player: PlayerRow) {
     const url = `${window.location.origin}/receipt/${id}/${player.id}`;
     const body = encodeURIComponent(`${url}`);
     window.location.href = `sms:${player.phone}&body=${body}`;
@@ -76,11 +81,11 @@ export default function SummaryPage({
       {sessionPlayers.length > 0 && (() => {
         const idx = Math.min(carouselIndex, sessionPlayers.length - 1);
         const player = sessionPlayers[idx];
-        const playerBuyIns = buyIns.filter((b) => b.playerId === player.id);
-        const playerCashout = cashouts.find((c) => c.playerId === player.id);
-        const buyInTotal = playerBuyIns.reduce((s, b) => s + b.amount, 0);
-        const cashoutAmount = playerCashout?.amount ?? 0;
-        const net = buyInTotal - cashoutAmount;
+        const playerBuyIns = buyIns.filter((b) => b.player_id === player.id);
+        const playerCashout = cashouts.find((c) => c.player_id === player.id);
+        const buyInTotalCents = sumCents(playerBuyIns, (b) => b.amount_cents);
+        const cashoutCents = playerCashout?.amount_cents ?? 0;
+        const netCents = buyInTotalCents - cashoutCents;
 
         return (
           <div className='border border-border rounded-md mb-6'>
@@ -104,10 +109,10 @@ export default function SummaryPage({
                   {playerBuyIns.map((b, i) => (
                     <div key={b.id} className='flex justify-between text-muted-foreground'>
                       <span>{i === 0 ? 'Buy-in' : 'Re-buy'}</span>
-                      <span className='tabular-nums'>+${b.amount.toFixed(2)}</span>
+                      <span className='tabular-nums'>+${formatCents(b.amount_cents)}</span>
                     </div>
                   ))}
-                  {buyInTotal === 0 && (
+                  {buyInTotalCents === 0 && (
                     <div className='flex justify-between text-muted-foreground'>
                       <span>Buy-in</span>
                       <span className='tabular-nums'>—</span>
@@ -116,13 +121,13 @@ export default function SummaryPage({
                   <div className='flex justify-between text-green-500'>
                     <span>Cash out</span>
                     <span className='tabular-nums'>
-                      {playerCashout ? `−$${cashoutAmount.toFixed(2)}` : '—'}
+                      {playerCashout ? `−$${formatCents(cashoutCents)}` : '—'}
                     </span>
                   </div>
                   <div className='flex justify-between font-semibold pt-1.5 border-t border-border'>
-                    <span>{net > 0 ? 'They owe' : net < 0 ? 'You owe' : 'Even'}</span>
-                    <span className={`tabular-nums ${net > 0 ? 'text-destructive' : net < 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
-                      {net === 0 ? '—' : `$${Math.abs(net).toFixed(2)}`}
+                    <span>{netCents > 0 ? 'They owe' : netCents < 0 ? 'You owe' : 'Even'}</span>
+                    <span className={`tabular-nums ${netCents > 0 ? 'text-destructive' : netCents < 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
+                      {netCents === 0 ? '—' : `$${formatCents(Math.abs(netCents))}`}
                     </span>
                   </div>
                 </div>
@@ -160,19 +165,19 @@ export default function SummaryPage({
           <div>
             <p className='text-xs text-muted-foreground mb-1'>Revenue</p>
             <p className='text-xl font-semibold text-primary'>
-              ${totalRevenue.toFixed(2)}
+              ${formatCents(totalRevenueCents)}
             </p>
           </div>
           <div>
             <p className='text-xs text-muted-foreground mb-1'>Cost</p>
-            <p className='text-xl font-semibold'>${totalCogs.toFixed(2)}</p>
+            <p className='text-xl font-semibold'>${formatCents(totalCogsCents)}</p>
           </div>
           <div>
             <p className='text-xs text-muted-foreground mb-1'>Profit</p>
             <p
-              className={`text-xl font-semibold ${totalProfit >= 0 ? 'text-primary' : 'text-destructive'}`}
+              className={`text-xl font-semibold ${totalProfitCents >= 0 ? 'text-primary' : 'text-destructive'}`}
             >
-              ${totalProfit.toFixed(2)}
+              ${formatCents(totalProfitCents)}
             </p>
           </div>
         </div>
@@ -244,8 +249,8 @@ export default function SummaryPage({
       {/* Per-player breakdown */}
       <div className='space-y-4'>
         {sessionPlayers.map((player) => {
-          const playerOrders = orders.filter((o) => o.playerId === player.id);
-          const subtotal = playerOrders.reduce((s, o) => s + o.price, 0);
+          const playerOrders = orders.filter((o) => o.player_id === player.id);
+          const subtotalCents = sumCents(playerOrders, (o) => o.price_cents);
           if (playerOrders.length === 0) return null;
           return (
             <div key={player.id} className='border border-border rounded-md'>
@@ -253,7 +258,7 @@ export default function SummaryPage({
                 <span className='text-sm font-medium'>{player.name}</span>
                 <div className='flex items-center gap-3'>
                   <span className='text-sm font-semibold text-primary'>
-                    ${subtotal.toFixed(2)}
+                    ${formatCents(subtotalCents)}
                   </span>
                   <Link
                     href={`/session/${id}/player/${player.id}`}
@@ -270,10 +275,10 @@ export default function SummaryPage({
                     className='flex justify-between text-sm py-0.5'
                   >
                     <span className='text-muted-foreground'>
-                      {order.drinkName}
+                      {order.drink_name}
                     </span>
                     <span className='tabular-nums'>
-                      ${order.price.toFixed(2)}
+                      ${formatCents(order.price_cents)}
                     </span>
                   </div>
                 ))}
