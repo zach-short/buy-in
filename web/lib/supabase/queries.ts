@@ -34,22 +34,56 @@ const DRINK_COLUMNS = '*, ingredients:drink_ingredients(item_id, qty_used)';
 // The Data API returns at most `max_rows` rows per request — 1000 by default, set
 // server-wide. The Go API returned every row, and balances are sums over whole-bar lists,
 // so a single capped select would under-count a balance with no error at all. Page until
-// the exact count is reached; the count, not the page length, decides when to stop, so a
-// cap lower than PAGE_SIZE still returns everything.
+// a page holds every row still left (its exact count), so a cap lower than PAGE_SIZE
+// still returns everything.
+//
+// Pages are keyset, not offset (PLAN.md phase 6, N1 from the phase 5 audit): each page
+// asks for the rows strictly after the last one seen, on the same (column, id) order the
+// query sorts by. By offset, a write landing between two pages of one fetch shifted every
+// later row by one — on a newest-first list an insert re-read a row and double-counted it
+// in a balance, a delete skipped one. Paging oldest-first alone would not have fixed the
+// insert case.
 const PAGE_SIZE = 1000;
 
 type Page<Row> = PromiseLike<{ data: Row[] | null; error: PostgrestError | null; count: number | null }>;
 
-async function selectAll<Row>(page: (from: number, to: number) => Page<Row>): Promise<Row[]> {
+/** The sort a list pages along; `id` ascending is always the tiebreak, as every query orders by it last. */
+interface Keyset {
+  column?: 'created_at' | 'played_on';
+  ascending?: boolean;
+}
+
+type Keyed = { id: string; created_at?: string; played_on?: string };
+
+// Values are double-quoted because a timestamptz carries PostgREST's reserved `.` and `:`
+// (docs.postgrest.org v14, URL grammar, "Reserved characters").
+function after(last: Keyed, keyset: Keyset): string {
+  const byId = `id.gt.${last.id}`;
+  if (!keyset.column) return byId;
+  const value = `"${last[keyset.column]}"`;
+  const op = keyset.ascending ? 'gt' : 'lt';
+  return `${keyset.column}.${op}.${value},and(${keyset.column}.eq.${value},${byId})`;
+}
+
+function afterFilter<Q extends { or(filters: string): Q }>(query: Q, cursor: string | null): Q {
+  return cursor ? query.or(cursor) : query;
+}
+
+async function selectAll<Row extends Keyed>(keyset: Keyset, page: (cursor: string | null) => Page<Row>): Promise<Row[]> {
   const rows: Row[] = [];
   for (;;) {
-    const { data, error, count } = await page(rows.length, rows.length + PAGE_SIZE - 1);
+    const cursor = rows.length ? after(rows[rows.length - 1], keyset) : null;
+    const { data, error, count } = await page(cursor);
     if (error) throw error;
     if (count === null) throw new Error('selectAll needs { count: "exact" } on its select');
     rows.push(...(data ?? []));
-    if (!data?.length || rows.length >= count) return rows;
+    if (!data?.length || data.length >= count) return rows;
   }
 }
+
+const BY_ID: Keyset = {};
+const NEWEST_FIRST: Keyset = { column: 'created_at', ascending: false };
+const OLDEST_FIRST: Keyset = { column: 'created_at', ascending: true };
 
 // Mongo sorted strings with its default simple binary collation (players.go:21,
 // drinks.go:21, inventory.go:21); Postgres's `order by name` uses the database collation,
@@ -84,9 +118,9 @@ function withPlayerIds(row: Tables<'sessions'> & { session_players: SessionPlaye
 
 /** GET /api/sessions — `date` desc (sessions.go:21). */
 export async function fetchSessions(): Promise<SessionWithPlayers[]> {
-  const rows = await selectAll((from, to) =>
-    createClient().from('sessions').select(SESSION_COLUMNS, { count: 'exact' })
-      .order('played_on', { ascending: false }).order('id').range(from, to),
+  const rows = await selectAll({ column: 'played_on', ascending: false }, (cursor) =>
+    afterFilter(createClient().from('sessions').select(SESSION_COLUMNS, { count: 'exact' }), cursor)
+      .order('played_on', { ascending: false }).order('id').limit(PAGE_SIZE),
   );
   return rows.map(withPlayerIds);
 }
@@ -100,16 +134,16 @@ export async function fetchSession(id: string): Promise<SessionWithPlayers | nul
 
 /** GET /api/players — `name` asc (players.go:21). */
 export async function fetchPlayers(): Promise<PlayerRow[]> {
-  const rows = await selectAll((from, to) =>
-    createClient().from('players').select('*', { count: 'exact' }).order('id').range(from, to),
+  const rows = await selectAll(BY_ID, (cursor) =>
+    afterFilter(createClient().from('players').select('*', { count: 'exact' }), cursor).order('id').limit(PAGE_SIZE),
   );
   return rows.sort(byName);
 }
 
 /** GET /api/drinks — `name` asc (drinks.go:21). */
 export async function fetchDrinks(): Promise<DrinkWithIngredients[]> {
-  const rows = await selectAll((from, to) =>
-    createClient().from('drinks').select(DRINK_COLUMNS, { count: 'exact' }).order('id').range(from, to),
+  const rows = await selectAll(BY_ID, (cursor) =>
+    afterFilter(createClient().from('drinks').select(DRINK_COLUMNS, { count: 'exact' }), cursor).order('id').limit(PAGE_SIZE),
   );
   // drink_ingredients has no column for Mongo's array order (0001_init.sql:129-139), so
   // item_id is only a stable order, not the recipe's entry order.
@@ -119,70 +153,84 @@ export async function fetchDrinks(): Promise<DrinkWithIngredients[]> {
 
 /** GET /api/inventory — `category` asc, then `name` asc (inventory.go:21). */
 export async function fetchInventory(): Promise<InventoryRow[]> {
-  const rows = await selectAll((from, to) =>
-    createClient().from('inventory_items').select('*', { count: 'exact' }).order('id').range(from, to),
+  const rows = await selectAll(BY_ID, (cursor) =>
+    afterFilter(createClient().from('inventory_items').select('*', { count: 'exact' }), cursor).order('id').limit(PAGE_SIZE),
   );
   return rows.sort((a, b) => compareBinary(a.category, b.category) || byName(a, b));
 }
 
 /** GET /api/orders — `timestamp` desc (orders.go:37). */
 export async function fetchOrders(): Promise<OrderRow[]> {
-  return selectAll((from, to) =>
-    createClient().from('orders').select('*', { count: 'exact' })
-      .order('created_at', { ascending: false }).order('id').range(from, to),
+  return selectAll(NEWEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('orders').select('*', { count: 'exact' }), cursor)
+      .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
   );
 }
 
 /** GET /api/orders?sessionId= — `timestamp` desc (orders.go:37). */
 export async function fetchSessionOrders(sessionId: string): Promise<OrderRow[]> {
-  return selectAll((from, to) =>
-    createClient().from('orders').select('*', { count: 'exact' }).eq('session_id', sessionId)
-      .order('created_at', { ascending: false }).order('id').range(from, to),
+  return selectAll(NEWEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('orders').select('*', { count: 'exact' }).eq('session_id', sessionId), cursor)
+      .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
   );
 }
 
 /** GET /api/buyins — `timestamp` asc (ledger.go:34). The first row is labelled "Buy-in", the rest "Re-buy". */
 export async function fetchBuyIns(): Promise<BuyInRow[]> {
-  return selectAll((from, to) =>
-    createClient().from('buy_ins').select('*', { count: 'exact' }).order('created_at').order('id').range(from, to),
+  return selectAll(OLDEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('buy_ins').select('*', { count: 'exact' }), cursor)
+      .order('created_at').order('id').limit(PAGE_SIZE),
   );
 }
 
 /** GET /api/buyins?sessionId= — `timestamp` asc (ledger.go:34). */
 export async function fetchSessionBuyIns(sessionId: string): Promise<BuyInRow[]> {
-  return selectAll((from, to) =>
-    createClient().from('buy_ins').select('*', { count: 'exact' }).eq('session_id', sessionId)
-      .order('created_at').order('id').range(from, to),
+  return selectAll(OLDEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('buy_ins').select('*', { count: 'exact' }).eq('session_id', sessionId), cursor)
+      .order('created_at').order('id').limit(PAGE_SIZE),
   );
 }
 
 /** GET /api/cashouts — unsorted in Go (ledger.go:125), i.e. insertion order; `created_at` asc is that order stated. */
 export async function fetchCashouts(): Promise<CashoutRow[]> {
-  return selectAll((from, to) =>
-    createClient().from('cashouts').select('*', { count: 'exact' }).order('created_at').order('id').range(from, to),
+  return selectAll(OLDEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('cashouts').select('*', { count: 'exact' }), cursor)
+      .order('created_at').order('id').limit(PAGE_SIZE),
   );
 }
 
 /** GET /api/cashouts?sessionId= — see fetchCashouts. */
 export async function fetchSessionCashouts(sessionId: string): Promise<CashoutRow[]> {
-  return selectAll((from, to) =>
-    createClient().from('cashouts').select('*', { count: 'exact' }).eq('session_id', sessionId)
-      .order('created_at').order('id').range(from, to),
+  return selectAll(OLDEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('cashouts').select('*', { count: 'exact' }).eq('session_id', sessionId), cursor)
+      .order('created_at').order('id').limit(PAGE_SIZE),
   );
 }
 
 /** GET /api/payments — `timestamp` desc (ledger.go:195). */
 export async function fetchPayments(): Promise<PaymentRow[]> {
-  return selectAll((from, to) =>
-    createClient().from('payments').select('*', { count: 'exact' })
-      .order('created_at', { ascending: false }).order('id').range(from, to),
+  return selectAll(NEWEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('payments').select('*', { count: 'exact' }), cursor)
+      .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
   );
 }
 
 /** GET /api/payments?playerId= — `timestamp` desc (ledger.go:195). */
 export async function fetchPlayerPayments(playerId: string): Promise<PaymentRow[]> {
-  return selectAll((from, to) =>
-    createClient().from('payments').select('*', { count: 'exact' }).eq('player_id', playerId)
-      .order('created_at', { ascending: false }).order('id').range(from, to),
+  return selectAll(NEWEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('payments').select('*', { count: 'exact' }).eq('player_id', playerId), cursor)
+      .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
   );
+}
+
+/**
+ * The signed-in host's bar, for the writes that start a row with no parent to take it from.
+ * One bar per account is ratified scope (DESIGN.md §2); a second fails loudly rather than
+ * writing into whichever bar Postgres returned first.
+ */
+export async function fetchBarId(): Promise<string> {
+  const { data, error } = await createClient().from('bars').select('id').limit(2);
+  if (error) throw error;
+  if (data.length !== 1) throw new Error(`Expected one bar for this account, found ${data.length}`);
+  return data[0].id;
 }

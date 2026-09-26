@@ -21,6 +21,7 @@ export {
   type VenmoUrls,
 } from './venmo';
 export { formatDate, formatTime } from './format';
+export { writeErrorMessage, type WriteErrorLike } from './write-errors';
 export {
   canMake,
   type IngredientLike,

@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { centsToDollars, formatCents } from '@pb/core';
-import { apiFetch } from '@/lib/bar-api';
+import { centsToDollars, formatCents, toCents } from '@pb/core';
 import { canMakeDrink, recipeCostCents } from '@/lib/recipes';
 import {
   fetchDrinks, fetchInventory, type DrinkWithIngredients, type InventoryRow,
 } from '@/lib/supabase/queries';
+import { saveDrink, type DrinkFields } from '@/lib/supabase/writes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChevronDown, ChevronUp, Trash2, Check, Plus } from 'lucide-react';
@@ -121,15 +121,17 @@ function DrinkEditor({
   );
 }
 
-// The Go API's request body, in its dollars; phase 6 replaces this write and its payload.
-function buildPayload(form: DrinkForm, inventory: InventoryRow[]) {
+// The cost estimate is stored in whole cents; recipeCostCents is fractional (a recipe
+// uses fractional quantities), so it rounds here, once, the way the import rounds the
+// same figure (H5: half away from zero, which Math.round is for a non-negative cost).
+function buildDrink(form: DrinkForm, inventory: InventoryRow[]): DrinkFields {
   const ingredients = form.ingredients
     .filter((i) => i.itemId && i.qtyUsed)
     .map((i) => ({ itemId: i.itemId, qtyUsed: parseFloat(i.qtyUsed) }));
   return {
     name: form.name.trim(),
-    price: parseFloat(form.price) || 0,
-    costEstimate: centsToDollars(calcCostCents(form.ingredients, inventory)),
+    priceCents: toCents(parseFloat(form.price) || 0),
+    costEstimateCents: Math.round(calcCostCents(form.ingredients, inventory)),
     ingredients,
   };
 }
@@ -155,7 +157,7 @@ export default function DrinksPage() {
 
   async function handleCreate(form: DrinkForm) {
     try {
-      await apiFetch('/api/drinks', { method: 'POST', body: JSON.stringify(buildPayload(form, inventory)) });
+      await saveDrink(buildDrink(form, inventory));
       toast.success('Drink created');
       setShowAdd(false);
       mutate();
@@ -166,7 +168,7 @@ export default function DrinksPage() {
 
   async function handleUpdate(drink: DrinkWithIngredients, form: DrinkForm) {
     try {
-      await apiFetch(`/api/drinks/${drink.id}`, { method: 'PUT', body: JSON.stringify(buildPayload(form, inventory)) });
+      await saveDrink(buildDrink(form, inventory), drink.id);
       toast.success('Drink updated');
       setExpandedId(null);
       mutate();

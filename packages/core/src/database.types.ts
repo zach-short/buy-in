@@ -654,6 +654,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_session_player: {
+        Args: { p_buy_in_cents: number; p_player_id: string; p_session_id: string }
+        Returns: undefined
+      }
       claim_player: { Args: { p_token: string }; Returns: string }
       create_bar: {
         Args: {
@@ -668,10 +672,26 @@ export type Database = {
         Returns: Json
       }
       delete_order: { Args: { p_order_id: string }; Returns: undefined }
+      delete_session: { Args: { p_session_id: string }; Returns: undefined }
       get_menu: { Args: { p_bar_id: string }; Returns: Json }
       get_shared_tab: { Args: { p_token: string }; Returns: Json }
       is_bar_member: { Args: { b: string }; Returns: boolean }
       is_bar_staff: { Args: { b: string }; Returns: boolean }
+      save_drink: {
+        Args: {
+          p_bar_id: string
+          p_cost_estimate_cents: number
+          p_drink_id?: string
+          p_ingredients: Json
+          p_name: string
+          p_price_cents: number
+        }
+        Returns: string
+      }
+      start_session: {
+        Args: { p_bar_id: string; p_name: string; p_players: Json }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

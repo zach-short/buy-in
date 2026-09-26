@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { apiFetch } from '@/lib/bar-api';
+import { toCents } from '@pb/core';
 import { fetchInventory, type InventoryRow } from '@/lib/supabase/queries';
+import { createInventoryItem, setInventoryQty } from '@/lib/supabase/writes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check } from 'lucide-react';
@@ -78,10 +79,7 @@ export default function InventoryPage() {
 
   async function updateQty(item: InventoryRow, qty: number) {
     try {
-      await apiFetch(`/api/inventory/${item.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ qtyOnHand: qty }),
-      });
+      await setInventoryQty(item.id, qty);
       mutate();
     } catch (e) {
       toast.error((e as Error).message);
@@ -92,16 +90,13 @@ export default function InventoryPage() {
     if (!form.name.trim() || !form.category || !form.unit) return;
     setAdding(true);
     try {
-      await apiFetch('/api/inventory', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: form.name.trim(),
-          category: form.category,
-          unit: form.unit,
-          qtyOnHand: parseFloat(form.qtyOnHand) || 0,
-          reorderThreshold: parseFloat(form.reorderThreshold) || 0,
-          costPerUnit: parseFloat(form.costPerUnit) || 0,
-        }),
+      await createInventoryItem({
+        name: form.name.trim(),
+        category: form.category,
+        unit: form.unit,
+        qtyOnHand: parseFloat(form.qtyOnHand) || 0,
+        reorderThreshold: parseFloat(form.reorderThreshold) || 0,
+        costPerUnitCents: toCents(parseFloat(form.costPerUnit) || 0),
       });
       toast.success('Item added');
       setForm(emptyForm);

@@ -1,7 +1,8 @@
 // The Go API client, going away in pieces. Phase 5 (2026-09-25) moved every authenticated
-// read to lib/supabase/queries.ts; what still calls through here is phase 6's writes (every
-// `apiFetch` in app/) and phase 7's public token pages (`fetcher` in /menu, /portal,
-// /player-receipt, /receipt). This env read goes when the last of those two phases lands.
+// read to lib/supabase/queries.ts and phase 6 (2026-09-26) every write to
+// lib/supabase/writes.ts; what still calls through here is phase 7's: the two portal-token
+// mints in players/[id]/page.tsx, and the public token pages (`fetcher` in /menu, /portal,
+// /player-receipt, /receipt). This env read goes when phase 7 lands.
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -94,11 +95,6 @@ export interface Payment {
   timestamp: string;
 }
 
-export interface CreateOrderResponse {
-  order: Order;
-  lowStockWarnings: string[];
-}
-
 export function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
@@ -119,13 +115,6 @@ export function openVenmo(handle: string, amount: number) {
   const webUrl = `https://account.venmo.com/pay?recipients=${h}&amount=${amount.toFixed(2)}&note=${note}`;
   window.location.href = deepLink;
   setTimeout(() => { if (!document.hidden) window.location.href = webUrl; }, 1500);
-}
-
-export function markPlayerTabPaid(sessionId: string, playerId: string, paid = true) {
-  return apiFetch<{ paid: boolean }>(`/api/sessions/${sessionId}/players/${playerId}/paid`, {
-    method: 'PATCH',
-    body: JSON.stringify({ paid }),
-  });
 }
 
 export function computeBalance(

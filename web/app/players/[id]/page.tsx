@@ -4,7 +4,7 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { centsToDollars, formatCents, formatDate, formatTime, isSettled } from '@pb/core';
+import { centsToDollars, formatCents, formatDate, formatTime, isSettled, toCents } from '@pb/core';
 import { apiFetch, openVenmo } from '@/lib/bar-api';
 import { playerBalanceCents, sumCents } from '@/lib/ledger';
 import {
@@ -15,6 +15,7 @@ import {
   fetchPlayers,
   fetchSessions,
 } from '@/lib/supabase/queries';
+import { createPayment, updatePlayer } from '@/lib/supabase/writes';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -77,14 +78,7 @@ export default function PlayerDetailPage({
     if (!editName.trim()) return;
     setSavingEdit(true);
     try {
-      await apiFetch(`/api/players/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          name: editName.trim(),
-          phone: editPhone.trim(),
-          venmo: editVenmo.trim(),
-        }),
-      });
+      await updatePlayer(id, { name: editName.trim(), phone: editPhone.trim(), venmo: editVenmo.trim() });
       mutatePlayers();
       setEditing(false);
       toast.success('Saved');
@@ -129,18 +123,10 @@ export default function PlayerDetailPage({
 
   async function handlePayment() {
     const amount = parseFloat(paymentAmount);
-    if (!amount || amount <= 0 || !paymentMode) return;
+    if (!amount || amount <= 0 || !paymentMode || !player) return;
     setSaving(true);
     try {
-      await apiFetch('/api/payments', {
-        method: 'POST',
-        body: JSON.stringify({
-          playerId: id,
-          amount,
-          note: paymentNote.trim(),
-          direction: paymentMode,
-        }),
-      });
+      await createPayment(player, toCents(amount), paymentNote.trim(), paymentMode);
       toast.success(
         paymentMode === 'received' ? 'Payment recorded' : 'Payout recorded',
       );

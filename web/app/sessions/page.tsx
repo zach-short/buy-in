@@ -7,8 +7,8 @@ import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { formatDate } from '@pb/core';
-import { apiFetch } from '@/lib/bar-api';
 import { fetchPlayers, fetchSessions, type SessionWithPlayers } from '@/lib/supabase/queries';
+import { deleteSession } from '@/lib/supabase/writes';
 
 // SHA-256 of the delete passcode — plaintext never stored here
 const PASSCODE_HASH = 'e56975e864a626b52ec07ff2d4fc370f047c5f286a67f1bec49fc19eef5c40b4';
@@ -58,7 +58,7 @@ export default function SessionsPage() {
     }
     setDeleting(true);
     try {
-      await apiFetch(`/api/sessions/${pendingDeleteId}`, { method: 'DELETE' });
+      await deleteSession(pendingDeleteId);
       await mutate();
       toast.success('Session deleted');
       setPendingDeleteId(null);

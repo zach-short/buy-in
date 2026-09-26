@@ -138,6 +138,18 @@ membership resolves that completely instead of narrowing it, and leaves `bar_mem
 `claim_player` also insert a `bar_members` row with role `'player'` — one statement — if the
 owner ever wants claimed players to see the bar.
 
+**BD-9 — Multi-table writes are `security invoker` RPCs in `0002`, not browser sequences.**
+Taken 2026-09-26 at phase 6, asked of the owner and answered the same turn. Saving a drink
+(`drinks` + `drink_ingredients`), starting a session (`sessions` + `session_players` +
+`buy_ins`) and adding a player mid-session (`session_players` + a buy-in) were each one Mongo
+document write; from the browser they would be two or three requests, and a drop between them
+leaves, for instance, a drink with no recipe — which `canMake` treats as always makeable, so
+every later pour skips its stock decrement with no error. `save_drink`, `start_session`,
+`add_session_player` and `D19`'s `delete_session` each run in one transaction, invoker so RLS
+still decides. Single-row writes (players, inventory, buy-ins, cashouts, payments, mark-paid)
+stay plain table writes under RLS, as phase 6's scope said. *Reversal:* drop the functions in a
+later migration and sequence the writes client-side, accepting the partial-write window.
+
 ---
 
 ## 2. Phases
@@ -394,8 +406,9 @@ confirmed user (`HANDOFF.md` step 15). Build-level calls are recorded under `DES
 
 **Status:** `BUILT` 2026-09-25 (`HANDOFF.md` steps 18 and 20; `PASSOFF.md` item 14). Built via
 `/delegate` — builder subagent, independent Opus 5 audit (NON-BLOCKING FINDINGS, all applied),
-merged into the main checkout by the orchestrating session. Lane A. Phase 4 and Lane B (phase 2)
-satisfied.
+merged into the main checkout by the orchestrating session. **Committed `7d2196c`** on
+`supabase-monorepo`, 2026-09-26 (bundled with phase 8 — see that phase's status). Lane A. Phase 4
+and Lane B (phase 2) satisfied.
 
 **Scope.**
 1. Replace `apiFetch` with the typed client (`BD-5`); `bar-api.ts` keeps its row types until they
@@ -427,7 +440,18 @@ introduce a new one by formatting a date column client-side.
 
 ### Phase 6 — Port every write to the RPCs
 
-**Status:** `PLANNED`. Lane A. Waits on phase 5.
+**Status:** `IN FLIGHT` 2026-09-26, on Opus 5.5 (the phase's stated Opus 5 — same Default
+tier). Lane A. Phase 5 satisfied (`BUILT`, committed `7d2196c`). Adds `0002` (`BD-9`, `D19`).
+
+> **Status note, 2026-09-26 (`HANDOFF.md` step 23) — code done, `dev` owed.** Every write is
+> ported (19 call sites in 7 files, `web/lib/supabase/writes.ts`); `0002_write_rpcs.sql` is
+> written and proved on the PG17 harness (14/14, including both done-when properties below);
+> N1 is fixed (keyset pagination in `queries.ts`); all gates green. **Not `BUILT`**, because
+> (1) `0002` is not applied to `dev` — the Supabase MCP returned `Unauthorized` (its
+> `BUY_IN_SUPABASE_ACCESS_TOKEN` is not in the app's environment); (2) the four `0002` entries
+> in `packages/core/src/database.types.ts` were added by hand in the generator's shape and must
+> be replaced by a real `supabase gen types` after the apply (BD-6); (3) the done-when's `dev`
+> pour-and-undo walk. The two pages' writes are unusable against `dev` until (1).
 
 **Scope.** Orders through `create_order` and `delete_order`; buy-ins, cashouts and payments
 through their tables under RLS; mark-tab-paid. `orders.paid` stays a **display flag** and
@@ -500,8 +524,9 @@ auth user).
 rounds — initial build and rehearsal, an audit that found the re-run safety claim false, a fix,
 an audit that found the fix's own recovery path unsafe (`B1`), a second fix, and a final audit
 that closed clean. Rehearsed twice against real `dev` data; a third, independent audit
-reproduced the fix's safety property on its own harness. Not yet merged into the main checkout's
-git history — see the commit blocks in the hand-back.
+reproduced the fix's safety property on its own harness. **Committed `7d2196c`** on
+`supabase-monorepo`, 2026-09-26 (bundled with phase 5, since both amended `DESIGN.md`/`PLAN.md`
+in the same working tree — see `HANDOFF.md` step 22).
 
 **Scope, corrected 2026-09-25 against what was actually built (R5 — this paragraph described the
 plan, not the code, as of the last audit):** the `scripts/import-mongo/` bun script, taking the

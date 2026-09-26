@@ -962,3 +962,35 @@ pure children. The Go bug it was fixing (a partial, error-swallowing cascade) is
 a stronger means: the delete does not half-happen because it does not happen at all.
 
 *2026-09-16.*
+
+### D19 — A session deletes with its buy-ins and cashouts, and refuses while drinks remain
+
+**Decision.** Taken 2026-09-26 at phase 6, asked under R12 because it contradicts `D18`'s
+defense. A `delete_session(p_session_id)` RPC in `0002` deletes the session's `buy_ins` and
+`cashouts` together with the session, in one transaction, and **refuses while any `orders` row
+remains** — the host undoes each drink first, which is the only path that restores stock from
+the order's snapshot (`delete_order`). The refusal reads *"Undo this session's drinks before
+deleting it."* (plain register, chosen from three at R7). `payments` still restrict: no screen
+writes a session-scoped payment (`players/[id]/page.tsx`'s payment form sends none, and Go's
+`Payment` had no session id), so one blocking a delete means something outside the app wrote it.
+
+**Defense.** `D18` rested on "the session a host actually wants to delete is one created by
+mistake, which is empty". In this app it is not: `/session/new` writes a buy-in for every
+player the moment the session starts, $20 by default (`web/app/session/new/page.tsx`,
+`startSession`), and no screen can delete a buy-in (`grep -rn "buyins/\${" web/app` → nothing,
+2026-09-26). Under `D18` as written, a session started by mistake could never be deleted and
+would leave every player in it owing their buy-in forever — the same silent balance corruption
+`D18` exists to prevent, arrived at from the other side. Drinks still block, because deleting an
+order without restoring its stock is the Go bug (`orders.go:217-228`) this effort fixed.
+
+Against: a night with real buy-ins and cashouts now deletes behind the passcode gate alone.
+Answered — buy-ins and cashouts net out of nobody's balance but that night's players', and the
+passcode gate (`web/app/sessions/page.tsx`, `confirmDelete`) is the "second thought" `D18` wanted.
+The alternative offered — cascade everything, restoring stock from each snapshot — was declined.
+
+**Supersedes.** `D18`, **partially**: dead for sessions — "a session … can be deleted only once
+nothing in the ledger points at it" and the "created by mistake is empty" defense. Alive: the
+`restrict` foreign keys themselves (`delete_session` removes the rows explicitly, so the schema
+still refuses any other path), and everything `D18` says about players, bars and `auth.users`.
+
+*2026-09-26.*

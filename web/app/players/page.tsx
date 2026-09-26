@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { formatCents, isSettled } from '@pb/core';
-import { apiFetch } from '@/lib/bar-api';
 import { playerBalanceCents, sumCents } from '@/lib/ledger';
 import { fetchBuyIns, fetchCashouts, fetchOrders, fetchPayments, fetchPlayers } from '@/lib/supabase/queries';
+import { createPlayer } from '@/lib/supabase/writes';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -35,10 +35,7 @@ export default function PlayersPage() {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await apiFetch('/api/players', {
-        method: 'POST',
-        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), venmo: venmo.trim() }),
-      });
+      await createPlayer({ name: name.trim(), phone: phone.trim(), venmo: venmo.trim() });
       toast.success(`${name.trim()} added`);
       mutate();
       setAdding(false);

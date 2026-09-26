@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 
-import { apiFetch } from '@/lib/bar-api';
+import { toCents } from '@pb/core';
 import { fetchPlayers, type PlayerRow } from '@/lib/supabase/queries';
+import { createPlayer, startSession as writeStartSession } from '@/lib/supabase/writes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface SelectedPlayer {
-  // `selected` holds both a PlayerRow from the list below and the Go API's own response
-  // from addNewPlayer's apiFetch, and only `id` and `name` are ever read from it.
+  // `selected` holds both a PlayerRow from the list below and createPlayer's id-and-name
+  // from addNewPlayer, and only `id` and `name` are ever read from it.
   player: Pick<PlayerRow, 'id' | 'name'>;
   buyIn: string;
 }
@@ -54,10 +55,7 @@ export default function NewSessionPage() {
     if (!newPlayerName.trim()) return;
     setCreating(true);
     try {
-      const player = await apiFetch<Pick<PlayerRow, 'id' | 'name'>>('/api/players', {
-        method: 'POST',
-        body: JSON.stringify({ name: newPlayerName.trim() }),
-      });
+      const player = await createPlayer({ name: newPlayerName.trim(), phone: '', venmo: '' });
       await mutate();
       setSelected((prev) => [...prev, { player, buyIn: defaultBuyIn }]);
       setNewPlayerName('');
@@ -72,28 +70,13 @@ export default function NewSessionPage() {
     if (!name.trim() || selected.length === 0) return;
     setStarting(true);
     try {
-      const session = await apiFetch<{ id: string }>('/api/sessions', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: name.trim(),
-          playerIds: selected.map((s) => s.player.id),
-        }),
-      });
-      await Promise.all(
-        selected
-          .filter((s) => parseFloat(s.buyIn) > 0)
-          .map((s) =>
-            apiFetch('/api/buyins', {
-              method: 'POST',
-              body: JSON.stringify({
-                sessionId: session.id,
-                playerId: s.player.id,
-                amount: parseFloat(s.buyIn),
-              }),
-            })
-          )
+      // One transaction (0002 start_session): a zero or blank buy-in writes no row, as the
+      // Go-era `parseFloat(s.buyIn) > 0` filter did.
+      const sessionId = await writeStartSession(
+        name.trim(),
+        selected.map((s) => ({ playerId: s.player.id, buyInCents: toCents(parseFloat(s.buyIn) || 0) })),
       );
-      router.push(`/session/${session.id}`);
+      router.push(`/session/${sessionId}`);
     } catch (e) {
       toast.error((e as Error).message);
       setStarting(false);

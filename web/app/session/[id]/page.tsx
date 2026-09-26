@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { centsToDollars, formatCents, toCents } from '@pb/core';
-import { apiFetch, markPlayerTabPaid, type CreateOrderResponse } from '@/lib/bar-api';
 import { SESSION_POLL_INTERVAL_MS } from '@/lib/config';
 import { sumCents } from '@/lib/ledger';
 import {
@@ -13,6 +12,9 @@ import {
   fetchSessionCashouts, fetchSessionOrders,
   type DrinkWithIngredients, type OrderRow, type PlayerRow,
 } from '@/lib/supabase/queries';
+import {
+  addSessionPlayer, closeSession, createBuyIn, createCashout, createPlayer, pourDrink, setTabPaid, undoOrder,
+} from '@/lib/supabase/writes';
 import { DrinkPickerModal } from '@/components/DrinkPickerModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,13 +113,10 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
 
   async function handleEarlyCashout(playerId: string) {
     const amount = parseFloat(earlyCashoutAmount);
-    if (!amount || amount < 0) return;
+    if (!amount || amount < 0 || !session) return;
     setEarlyCashingOut(true);
     try {
-      await apiFetch('/api/cashouts', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId: id, playerId, amount }),
-      });
+      await createCashout(session, playerId, toCents(amount));
       toast.success(`Cashed out $${amount.toFixed(2)}`);
       mutateCashouts();
       setEarlyCashoutPlayerId(null);
@@ -133,7 +132,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     const alreadyPaid = isTabPaid(playerId);
     mutateOrders(orders.map((o) => o.player_id === playerId ? { ...o, paid: !alreadyPaid } : o), false);
     try {
-      await markPlayerTabPaid(id, playerId, !alreadyPaid);
+      await setTabPaid(id, playerId, !alreadyPaid);
       mutateOrders();
     } catch (e) {
       mutateOrders();
@@ -143,13 +142,10 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
 
   async function handleRebuy(playerId: string) {
     const amount = parseFloat(rebuyAmount);
-    if (!amount || amount <= 0) return;
+    if (!amount || amount <= 0 || !session) return;
     setRebuying(true);
     try {
-      await apiFetch('/api/buyins', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId: id, playerId, amount }),
-      });
+      await createBuyIn(session, playerId, toCents(amount));
       toast.success(`Re-buy $${amount.toFixed(2)} added`);
       mutateBuyIns();
       setRebuyPlayerId(null);
@@ -161,8 +157,8 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  // Pick, because a player just created by the Go API (handleAddNewPlayer) arrives in that
-  // API's shape, not as a PlayerRow; only id and name are read. Phase 6 ports this write.
+  // Pick, because a player just created (handleAddNewPlayer) arrives as createPlayer's
+  // id-and-name, not a whole PlayerRow; only id and name are read.
   async function handleAddPlayer(player: Pick<PlayerRow, 'id' | 'name'>) {
     if (!session) return;
     setAddingPlayer(true);
@@ -172,18 +168,11 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         toast.error(`${player.name} is already in this session`);
         return;
       }
-      await apiFetch(`/api/sessions/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ playerIds: [...currentIds, player.id] }),
-      });
-      const buyIn = parseFloat(addPlayerBuyIn);
-      if (buyIn > 0) {
-        await apiFetch('/api/buyins', {
-          method: 'POST',
-          body: JSON.stringify({ sessionId: id, playerId: player.id, amount: buyIn }),
-        });
-        mutateBuyIns();
-      }
+      // One transaction (0002 add_session_player): the Go screen PATCHed playerIds and
+      // then posted the buy-in, and a failure between left a player with no buy-in.
+      const buyInCents = toCents(parseFloat(addPlayerBuyIn) || 0);
+      await addSessionPlayer(id, player.id, buyInCents);
+      if (buyInCents > 0) mutateBuyIns();
       await mutateSession();
       setSelectedPlayerId(player.id);
       setShowAddPlayer(false);
@@ -201,10 +190,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     if (!name.trim() || !session) return;
     setAddingPlayer(true);
     try {
-      const player = await apiFetch<Pick<PlayerRow, 'id' | 'name'>>('/api/players', {
-        method: 'POST',
-        body: JSON.stringify({ name: name.trim() }),
-      });
+      const player = await createPlayer({ name: name.trim(), phone: '', venmo: '' });
       await mutatePlayers();
       await handleAddPlayer(player);
     } catch (e) {
@@ -214,6 +200,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   }
 
   async function handleCloseSession() {
+    if (!session) return;
     setClosingSession(true);
     try {
       await Promise.all(
@@ -221,17 +208,11 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           const amount = parseFloat(cashoutAmounts[p.id] ?? '0') || 0;
           const alreadyCashedOut = cashouts.some((c) => c.player_id === p.id);
           if (amount > 0 && !alreadyCashedOut) {
-            return apiFetch('/api/cashouts', {
-              method: 'POST',
-              body: JSON.stringify({ sessionId: id, playerId: p.id, amount }),
-            });
+            return createCashout(session, p.id, toCents(amount));
           }
         })
       );
-      await apiFetch(`/api/sessions/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'closed' }),
-      });
+      await closeSession(id);
       router.push(`/session/${id}/summary`);
     } catch (e) {
       toast.error((e as Error).message);
@@ -255,10 +236,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     };
     mutateOrders([optimistic, ...orders], false);
     try {
-      const res = await apiFetch<CreateOrderResponse>('/api/orders', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId: id, playerId: selectedPlayerId, drinkId: drink.id }),
-      });
+      const res = await pourDrink(id, selectedPlayerId, drink.id);
       toast.success(`${drink.name} added`);
       if (res.lowStockWarnings?.length) {
         res.lowStockWarnings.forEach((n) => toast.warning(`Low stock: ${n}`));
@@ -274,7 +252,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   async function handleUndo(order: OrderRow) {
     mutateOrders(orders.filter((o) => o.id !== order.id), false);
     try {
-      await apiFetch(`/api/orders/${order.id}`, { method: 'DELETE' });
+      await undoOrder(order.id);
       toast.success('Order removed');
       mutateOrders();
       mutateInventory();
