@@ -32,6 +32,9 @@ export async function proxy(request: NextRequest) {
 }
 
 // `api/auth` left the exclusion list with NextAuth's route handler, the only thing it existed for.
+// The PWA worker files are static and must never redirect: a browser refuses to register a
+// service worker whose script answers 3xx, and /sw.js answered 307 → /login to every
+// logged-out visitor on the live site (HANDOFF step 28, 2026-09-27).
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|icons).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|icons|sw\\.js|swe-worker-|workbox-).*)'],
 };
