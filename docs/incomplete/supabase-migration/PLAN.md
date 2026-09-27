@@ -486,7 +486,7 @@ does not fix the insert case.
 ### Phase 7 — Port the public surfaces to token RPCs
 
 **Status:** `IN FLIGHT` 2026-09-27, on Opus 5.5 (the phase's stated Opus 5, same Default tier).
-Phase 6 satisfied (`BUILT`, `1ed5595`). `HANDOFF.md` step 25.
+Phase 6 satisfied (`BUILT`, `1ed5595`). `HANDOFF.md` step 25. Code committed `08e6b24`.
 
 > **Status note, 2026-09-27 — code done, `dev` proof half owed.** All six scope items are built
 > and every gate is green. What is proved on `dev` is listed in `HANDOFF.md` step 25: `/menu/<bar>`
