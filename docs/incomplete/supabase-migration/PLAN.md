@@ -440,8 +440,11 @@ introduce a new one by formatting a date column client-side.
 
 ### Phase 6 — Port every write to the RPCs
 
-**Status:** `IN FLIGHT` 2026-09-26, on Opus 5.5 (the phase's stated Opus 5 — same Default
-tier). Lane A. Phase 5 satisfied (`BUILT`, committed `7d2196c`). Adds `0002` (`BD-9`, `D19`).
+**Status:** `BUILT` 2026-09-27 (`HANDOFF.md` step 24). Code committed `e134e07`; `0002` applied
+to `dev` and recorded as version `0002`; types regenerated. Bug 1 proved on `dev`; bug 2's
+snapshot-vs-recipe half proved on the PG17 harness only (step 23), accepted by the owner.
+~~`IN FLIGHT` 2026-09-26, on Opus 5.5 (the phase's stated Opus 5 — same Default
+tier). Lane A. Phase 5 satisfied (`BUILT`, committed `7d2196c`). Adds `0002` (`BD-9`, `D19`).~~
 
 > **Status note, 2026-09-26 (`HANDOFF.md` step 23) — code done, `dev` owed.** Every write is
 > ported (19 call sites in 7 files, `web/lib/supabase/writes.ts`); `0002_write_rpcs.sql` is

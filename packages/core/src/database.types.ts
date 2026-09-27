@@ -655,7 +655,11 @@ export type Database = {
     }
     Functions: {
       add_session_player: {
-        Args: { p_buy_in_cents: number; p_player_id: string; p_session_id: string }
+        Args: {
+          p_buy_in_cents: number
+          p_player_id: string
+          p_session_id: string
+        }
         Returns: undefined
       }
       claim_player: { Args: { p_token: string }; Returns: string }
