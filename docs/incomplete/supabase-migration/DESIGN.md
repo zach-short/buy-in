@@ -365,6 +365,15 @@ it goes wrong with real balances in it. O1c (local stack) needs Docker, absent o
 
 **Binds.** No phase requiring a project ref may start before the owner supplies one.
 
+**Superseded 2026-09-27 (`HANDOFF.md` step 28) — one project, not two.** At phase 9 the owner
+chose to use `dev` (`rxvznjtpskendwhwwgin`) as production rather than create a second project:
+"just use the current db as prod no need for dev and prod db". O1b's premise — that the import
+be rehearsed away from the database that becomes production — is moot because that rehearsal's
+load *is* the production data now (proved under `D9`'s 2026-09-27 amendment). Costs the owner
+takes with it, stated so nobody rediscovers them: the Free plan pauses a project after 7 days
+of low activity, and that now takes the live app down until it is resumed; `bun run dev` locally
+reads and writes the real ledger; and `.mcp.json`'s Supabase server has write access to it.
+
 **Raised by the same verification, and NOT decided here:** the Free Plan has **no downloadable
 backups** (`guides/deployment/going-into-prod`, 2026-09-16). `prod` will hold a ledger of real
 debts between real people, imported once from a Mongo database that `D11` keeps readable and
@@ -556,6 +565,19 @@ against them.
 
 *2026-09-16.*
 
+**Amended 2026-09-27 (`HANDOFF.md` step 28): the import does not run again at cutover.** One
+real night was recorded on `dev` after the phase 8 rehearsal (session `a52bc345-…`, `HANDOFF.md`
+step 24), so it is in no Mongo. Asked at phase 9: (a) promote `dev`'s data, (b) import into a
+fresh `prod` and re-enter the night, (c) import and script-copy the night. The owner first chose
+(c), then the same day replaced the question with `D3`'s supersession — `dev` *is* `prod` —
+which is (a) without a copy. So the rows the phase 8 rehearsal loaded are the production rows.
+Proved the same day, read-only (service role on Supabase, a read of Mongo, no links minted):
+of Mongo's 20 players, **16 balances equal Mongo's to the cent and 4 differ only by rows created
+on or after 2026-09-26** — the night and the closed test session `8978ec24…`, which nets 0 per
+player — with **0 unexplained**; the 21st Supabase player is the night's new player. Mongo has
+taken no writes since Render went down (`D13`, `HANDOFF.md` step 14, 2026-09-24), before the
+rehearsal. `scripts/import-mongo/` stays as the tool that produced these rows; nothing reruns it.
+
 ### D10 — Unique indexes on `players (bar_id, name)` and `cashouts (session_id, player_id)`
 
 **Decision.** Both, as unique indexes in `0001_init.sql` (per D4, amended in place).
@@ -602,6 +624,15 @@ Mongo Atlas cluster.
 this decision stands.
 
 *2026-09-16.*
+
+**Answered 2026-09-27 (`HANDOFF.md` step 28): a push to `main` deploys.** The owner confirmed
+that the Vercel project is git-linked with `main` as its production branch. The pessimistic half
+is now simply the fact, and merging `supabase-monorepo` is the deploy. Not independently
+verified: the Vercel connector in these sessions sees only the `ezh` team, which does not hold
+this project. The URLs on 2026-09-27: `poker-buy-in.vercel.app` 200, `www.buy-in.win` 200,
+and `buy-in.win` 308. The owner renamed the project, and the domain was added, in `HANDOFF.md`
+step 15. `poker-bar.vercel.app`, the name the phase 9 pass-off used, returns 404, which is
+expected after the rename.
 
 ### D12 — The Venmo note is `Buy-In — <session name>`
 
@@ -904,6 +935,10 @@ downloadable backups**, and the Mongo Atlas cluster is **decommissioned at cutov
 kept running. Before it is, the owner takes a `mongodump` and keeps it off-repo — and takes it
 **immediately after the last session played on Mongo and before the import runs**, so the
 archived copy is provably the exact state that was imported.
+
+**Amended 2026-09-27 (`HANDOFF.md` step 28):** with no import at cutover (`D9`, `D3`
+superseded), "before the import runs" no longer has an event to precede. The dump is still
+taken, before Atlas is decommissioned; it is the only copy of the pre-migration ledger.
 
 `D11`'s rollback therefore changes shape rather than disappearing: it becomes **restore the dump
 to a reachable MongoDB, re-point the env, redeploy the previous commit.** Slower, and it still
