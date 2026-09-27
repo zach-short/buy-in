@@ -2,13 +2,36 @@
 
 import { use } from 'react';
 import useSWR from 'swr';
-import {
-  fetcher, computeBalance, openVenmo,
-  formatDate, formatTime,
-  Order, BuyIn, Cashout, Payment, Player, Session,
-} from '@/lib/bar-api';
 
-const VENMO_HANDLE = process.env.NEXT_PUBLIC_VENMO_HANDLE ?? '';
+import {
+  formatCents, formatDate, formatTime, isSettled, renderVenmoNote, venmoTxnFor, venmoUrls,
+  type SharedTab,
+} from '@pb/core';
+import { sharedBalanceCents, sumCents } from '@/lib/ledger';
+import { fetchSharedTab } from '@/lib/supabase/public';
+import { openVenmo } from '@/lib/venmo';
+
+function byCreatedAt(a: { created_at: string }, b: { created_at: string }): number {
+  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+}
+
+// One card per night the player has a drink or a buy-in in, newest night first — the Go-era
+// page's filter and order, kept (DESIGN.md §8.2). Every row is already this player's.
+function sessionGroups(tab: SharedTab) {
+  return tab.sessions
+    .filter((s) => tab.orders.some((o) => o.session_id === s.id) || tab.buy_ins.some((b) => b.session_id === s.id))
+    .sort((a, b) => new Date(b.played_on).getTime() - new Date(a.played_on).getTime())
+    .map((session) => {
+      const sessionOrders = tab.orders.filter((o) => o.session_id === session.id).sort(byCreatedAt);
+      const sessionBuyIns = tab.buy_ins.filter((b) => b.session_id === session.id);
+      const sessionCashout = tab.cashouts.find((c) => c.session_id === session.id);
+      const drinkCents = sumCents(sessionOrders, (o) => o.price_cents);
+      const buyInCents = sumCents(sessionBuyIns, (b) => b.amount_cents);
+      const cashoutCents = sessionCashout?.amount_cents ?? 0;
+      const netCents = drinkCents + buyInCents - cashoutCents;
+      return { session, sessionOrders, sessionBuyIns, sessionCashout, drinkCents, buyInCents, cashoutCents, netCents };
+    });
+}
 
 function VenmoIcon() {
   return (
@@ -18,26 +41,13 @@ function VenmoIcon() {
   );
 }
 
-export default function PlayerReceiptPage({
-  params,
-}: {
-  params: Promise<{ playerId: string; token: string }>;
-}) {
-  const { playerId, token } = use(params);
+export default function PlayerReceiptPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
 
-  const { data: auth, error: authError } = useSWR<{ valid: boolean; player: Player }>(
-    `/api/portal/${playerId}/validate?token=${token}`,
-    fetcher,
-  );
+  // A portal-scoped link (D15); the token alone decides whose history this is (§9.1 #7).
+  const { data: tab, error } = useSWR(['shared_tab', token, 'portal'], ([, t]) => fetchSharedTab(t, 'portal'));
 
-  const enabled = auth?.valid ?? false;
-  const { data: sessions = [] }  = useSWR<Session[]>(enabled ? '/api/sessions' : null, fetcher);
-  const { data: orders = [] }    = useSWR<Order[]>(enabled ? '/api/orders' : null, fetcher);
-  const { data: buyIns = [] }    = useSWR<BuyIn[]>(enabled ? '/api/buyins' : null, fetcher);
-  const { data: cashouts = [] }  = useSWR<Cashout[]>(enabled ? '/api/cashouts' : null, fetcher);
-  const { data: payments = [] }  = useSWR<Payment[]>(enabled ? `/api/payments?playerId=${playerId}` : null, fetcher);
-
-  if (authError) {
+  if (error) {
     return (
       <div className='min-h-screen flex items-center justify-center px-6'>
         <div className='text-center space-y-2'>
@@ -48,7 +58,7 @@ export default function PlayerReceiptPage({
     );
   }
 
-  if (!auth) {
+  if (!tab) {
     return (
       <div className='min-h-screen flex items-center justify-center text-muted-foreground text-sm tracking-widest'>
         Loading…
@@ -56,49 +66,19 @@ export default function PlayerReceiptPage({
     );
   }
 
-  const player = auth.player;
-  const balance = computeBalance(playerId, orders, buyIns, cashouts, payments);
-
-  const sessionGroups = sessions
-    .filter((s) =>
-      orders.some((o) => o.sessionId === s.id && o.playerId === playerId) ||
-      buyIns.some((b) => b.sessionId === s.id && b.playerId === playerId),
-    )
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .map((session) => {
-      const sessionOrders = orders
-        .filter((o) => o.sessionId === session.id && o.playerId === playerId)
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      const sessionBuyIns = buyIns.filter(
-        (b) => b.sessionId === session.id && b.playerId === playerId,
-      );
-      const sessionCashout = cashouts.find(
-        (c) => c.sessionId === session.id && c.playerId === playerId,
-      );
-      const drinkTotal  = sessionOrders.reduce((s, o) => s + o.price, 0);
-      const buyInTotal  = sessionBuyIns.reduce((s, b) => s + b.amount, 0);
-      const cashoutAmount = sessionCashout?.amount ?? 0;
-      const sessionNet  = drinkTotal + buyInTotal - cashoutAmount;
-      return { session, sessionOrders, sessionBuyIns, sessionCashout, drinkTotal, buyInTotal, cashoutAmount, sessionNet };
-    });
+  const { player } = tab;
+  const balanceCents = sharedBalanceCents(tab);
+  const groups = sessionGroups(tab);
+  // The host's handle from bars (D6), not NEXT_PUBLIC_VENMO_HANDLE. Pay when the player owes,
+  // charge the host when the host owes — the direction this page always had. The note is the
+  // host's template, plain "Buy-In" by default, never the amount unless the template asks
+  // (owner, 2026-09-27; 0003).
+  const handle = tab.bar.venmo_handle;
+  const note = renderVenmoNote(tab.bar.venmo_note_template, { amountCents: balanceCents });
 
   function handleVenmo() {
-    const h = VENMO_HANDLE.replace(/^@/, '');
-    const note = encodeURIComponent('poker');
-    if (balance > 0) {
-      // Player owes owner — player pays owner
-      const deep = `venmo://paycharge?txn=pay&recipients=${h}&amount=${balance.toFixed(2)}&note=${note}`;
-      const web  = `https://account.venmo.com/pay?recipients=${h}&amount=${balance.toFixed(2)}&note=${note}`;
-      window.location.href = deep;
-      setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
-    } else {
-      // Owner owes player — player charges owner
-      const amt = Math.abs(balance).toFixed(2);
-      const deep = `venmo://paycharge?txn=charge&recipients=${h}&amount=${amt}&note=${note}`;
-      const web  = `https://account.venmo.com/pay?txn=charge&recipients=${h}&amount=${amt}&note=${note}`;
-      window.location.href = deep;
-      setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
-    }
+    if (!handle) return;
+    openVenmo(venmoUrls(handle, balanceCents, note, venmoTxnFor(balanceCents)));
   }
 
   return (
@@ -242,40 +222,40 @@ export default function PlayerReceiptPage({
         <div className='pr-balance-card'>
           <div>
             <p className='pr-balance-label'>Running Balance</p>
-            {Math.abs(balance) < 0.01 ? (
+            {isSettled(balanceCents) ? (
               <p className='pr-balance-amount' style={{ color: 'var(--muted-foreground)', fontSize: '1.1rem' }}>All settled up</p>
             ) : (
               <>
-                <p className='pr-balance-amount' style={{ color: balance > 0 ? 'var(--destructive)' : '#22c55e' }}>
-                  ${Math.abs(balance).toFixed(2)}
+                <p className='pr-balance-amount' style={{ color: balanceCents > 0 ? 'var(--destructive)' : '#22c55e' }}>
+                  ${formatCents(Math.abs(balanceCents))}
                 </p>
-                <p className='pr-balance-sub'>{balance > 0 ? 'you owe' : 'owed to you'}</p>
+                <p className='pr-balance-sub'>{balanceCents > 0 ? 'you owe' : 'owed to you'}</p>
               </>
             )}
           </div>
-          {VENMO_HANDLE && Math.abs(balance) >= 0.01 && (
+          {handle && !isSettled(balanceCents) && (
             <button onClick={handleVenmo} className='pr-venmo-btn'>
               <VenmoIcon />
-              {balance > 0 ? 'Pay' : 'Request'}
+              {balanceCents > 0 ? 'Pay' : 'Request'}
             </button>
           )}
         </div>
 
         <p className='pr-section-label'>Session History</p>
 
-        {sessionGroups.length === 0 ? (
+        {groups.length === 0 ? (
           <p className='pr-empty'>No history yet</p>
         ) : (
-          sessionGroups.map(({ session, sessionOrders, sessionBuyIns, sessionCashout, drinkTotal, buyInTotal, cashoutAmount, sessionNet }) => (
+          groups.map(({ session, sessionOrders, sessionBuyIns, sessionCashout, drinkCents, buyInCents, cashoutCents, netCents }) => (
             <div key={session.id} className='pr-session'>
               <div className='pr-session-head'>
                 <div>
                   <p className='pr-session-name'>{session.name}</p>
-                  <p className='pr-session-date'>{formatDate(session.date)}</p>
+                  <p className='pr-session-date'>{formatDate(session.played_on)}</p>
                 </div>
                 <div>
-                  <p className='pr-session-net' style={{ color: sessionNet > 0 ? 'var(--destructive)' : sessionNet < 0 ? '#22c55e' : 'var(--muted-foreground)' }}>
-                    {sessionNet > 0 ? `+$${sessionNet.toFixed(2)}` : sessionNet < 0 ? `-$${Math.abs(sessionNet).toFixed(2)}` : 'Even'}
+                  <p className='pr-session-net' style={{ color: netCents > 0 ? 'var(--destructive)' : netCents < 0 ? '#22c55e' : 'var(--muted-foreground)' }}>
+                    {netCents > 0 ? `+$${formatCents(netCents)}` : netCents < 0 ? `-$${formatCents(Math.abs(netCents))}` : 'Even'}
                   </p>
                   <p className='pr-session-net-label'>net</p>
                 </div>
@@ -284,27 +264,27 @@ export default function PlayerReceiptPage({
                 {sessionBuyIns.map((b, i) => (
                   <div key={b.id} className='pr-row'>
                     <span className='pr-row-name'>{i === 0 ? 'Buy-in' : 'Re-buy'}</span>
-                    <span className='pr-row-amount'>+${b.amount.toFixed(2)}</span>
+                    <span className='pr-row-amount'>+${formatCents(b.amount_cents)}</span>
                   </div>
                 ))}
                 {sessionOrders.map((o) => (
                   <div key={o.id} className='pr-row'>
                     <span className='pr-row-name'>
-                      {o.drinkName}
-                      <span className='pr-row-time'>{formatTime(o.timestamp)}</span>
+                      {o.drink_name}
+                      <span className='pr-row-time'>{formatTime(o.created_at)}</span>
                     </span>
-                    <span className='pr-row-amount'>+${o.price.toFixed(2)}</span>
+                    <span className='pr-row-amount'>+${formatCents(o.price_cents)}</span>
                   </div>
                 ))}
                 {sessionCashout && (
                   <div className='pr-row pr-cashout'>
                     <span className='pr-row-name'>Cashout</span>
-                    <span className='pr-row-amount'>−${cashoutAmount.toFixed(2)}</span>
+                    <span className='pr-row-amount'>−${formatCents(cashoutCents)}</span>
                   </div>
                 )}
                 <div className='pr-total-row'>
                   <span>Session total</span>
-                  <span>${(drinkTotal + buyInTotal).toFixed(2)} in · ${cashoutAmount.toFixed(2)} out</span>
+                  <span>${formatCents(drinkCents + buyInCents)} in · ${formatCents(cashoutCents)} out</span>
                 </div>
               </div>
             </div>

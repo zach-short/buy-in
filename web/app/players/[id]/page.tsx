@@ -4,8 +4,8 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { centsToDollars, formatCents, formatDate, formatTime, isSettled, toCents } from '@pb/core';
-import { apiFetch, openVenmo } from '@/lib/bar-api';
+import { formatCents, formatDate, formatTime, isSettled, toCents, DEFAULT_VENMO_NOTE, venmoUrls } from '@pb/core';
+import { openVenmo } from '@/lib/venmo';
 import { playerBalanceCents, sumCents } from '@/lib/ledger';
 import {
   fetchBuyIns,
@@ -16,6 +16,9 @@ import {
   fetchSessions,
 } from '@/lib/supabase/queries';
 import { createPayment, updatePlayer } from '@/lib/supabase/writes';
+import {
+  playerReceiptUrl, portalUrl, replacePortalToken, shareToken,
+} from '@/lib/supabase/share-links';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -91,9 +94,10 @@ export default function PlayerDetailPage({
 
   function handlePayVenmo() {
     if (!player?.venmo || balanceCents >= 0) return;
-    // openVenmo still takes dollars; its builder moves to @pb/core's venmoUrls with D12's
-    // note when phase 7 ports the receipt surfaces that share it.
-    openVenmo(player.venmo, centsToDollars(Math.abs(balanceCents)));
+    // The house owes this player, so the host pays the player's own handle. A whole balance
+    // gets the plain default note (owner, 2026-09-27), never the amount. The host's template
+    // is worded for players paying the house, so it is not applied to the house paying out.
+    openVenmo(venmoUrls(player.venmo, balanceCents, DEFAULT_VENMO_NOTE));
   }
 
   const { data: sessions = [] } = useSWR('sessions', fetchSessions);
@@ -116,9 +120,26 @@ export default function PlayerDetailPage({
 
   async function handleRequestReceipt() {
     if (!player?.phone) return;
-    const { token } = await apiFetch<{ token: string }>(`/api/players/${id}/portal-token`);
-    const url = `${window.location.origin}/player-receipt/${id}/${token}`;
-    window.location.href = `sms:${player.phone}&body=${encodeURIComponent(url)}`;
+    try {
+      const url = playerReceiptUrl(await shareToken(player, null));
+      window.location.href = `sms:${player.phone}&body=${encodeURIComponent(url)}`;
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  async function copyPortalLink(replace: boolean) {
+    if (!player) return;
+    // Replacing revokes every portal link this player holds — the ones already texted stop
+    // working (D8's revocability, owner's answer 2026-09-27).
+    if (replace && !window.confirm(`Replace ${player.name}'s portal link? The old one stops working.`)) return;
+    try {
+      const token = replace ? await replacePortalToken(player) : await shareToken(player, null);
+      await navigator.clipboard.writeText(portalUrl(token));
+      toast.success(replace ? 'New portal link copied' : 'Portal link copied');
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
   async function handlePayment() {
@@ -202,17 +223,16 @@ export default function PlayerDetailPage({
         </div>
         <div className='flex items-center gap-4'>
           <button
-            onClick={async () => {
-              const { token } = await apiFetch<{ token: string }>(
-                `/api/players/${id}/portal-token`,
-              );
-              const url = `${window.location.origin}/portal/${id}/${token}`;
-              await navigator.clipboard.writeText(url);
-              toast.success('Portal link copied');
-            }}
+            onClick={() => copyPortalLink(false)}
             className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
           >
             Portal
+          </button>
+          <button
+            onClick={() => copyPortalLink(true)}
+            className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
+          >
+            New link
           </button>
           <button
             onClick={openEdit}

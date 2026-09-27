@@ -20,8 +20,22 @@ export {
   type VenmoTxn,
   type VenmoUrls,
 } from './venmo';
+export {
+  renderVenmoNote,
+  DEFAULT_VENMO_NOTE,
+  VENMO_NOTE_TEMPLATE_MAX_LENGTH,
+  type VenmoNoteVars,
+} from './venmo-note';
 export { formatDate, formatTime } from './format';
 export { writeErrorMessage, type WriteErrorLike } from './write-errors';
+export {
+  parseSharedTab,
+  parseMenu,
+  requireScope,
+  type SharedTab,
+  type SharedTabScope,
+  type MenuItem,
+} from './shared-tab';
 export {
   canMake,
   type IngredientLike,

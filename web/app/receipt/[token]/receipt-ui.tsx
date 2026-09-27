@@ -2,78 +2,24 @@
 
 import { use } from 'react';
 import useSWR from 'swr';
-import { fetcher, formatDate, formatTime, Session, Player, Order, BuyIn, Cashout } from '@/lib/bar-api';
 
-export default function PublicReceiptPage({
-  params,
-}: {
-  params: Promise<{ sessionId: string; playerId: string }>;
-}) {
-  const { sessionId, playerId } = use(params);
+import { formatCents, formatDate, formatTime, renderVenmoNote, VENMO_NOTE_PREFIX, venmoUrls } from '@pb/core';
+import { sumCents } from '@/lib/ledger';
+import { fetchSharedTab } from '@/lib/supabase/public';
+import { openVenmo } from '@/lib/venmo';
 
-  const { data: portalData } = useSWR<{ token: string }>(
-    `/api/players/${playerId}/portal-token`,
-    fetcher,
-  );
-  const portalUrl = portalData ? `/portal/${playerId}/${portalData.token}` : null;
-  const { data: sessions = [] } = useSWR<Session[]>('/api/sessions', fetcher);
-  const session = sessions.find((s) => s.id === sessionId);
+function byCreatedAt(a: { created_at: string }, b: { created_at: string }): number {
+  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+}
 
-  const { data: players = [] } = useSWR<Player[]>('/api/players', fetcher);
-  const player = players.find((p) => p.id === playerId);
+export default function PublicReceiptPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
 
-  const { data: orders = [] } = useSWR<Order[]>(
-    `/api/orders?sessionId=${sessionId}`,
-    fetcher,
-  );
-  const { data: buyIns = [] } = useSWR<BuyIn[]>(
-    `/api/buyins?sessionId=${sessionId}`,
-    fetcher,
-  );
-  const { data: cashouts = [] } = useSWR<Cashout[]>(
-    `/api/cashouts?sessionId=${sessionId}`,
-    fetcher,
-  );
+  // A session-scoped link (D15): every row in it is this player's, for this one night, so
+  // nothing is filtered here — the RPC already did it.
+  const { data: tab, error } = useSWR(['shared_tab', token, 'session'], ([, t]) => fetchSharedTab(t, 'session'));
 
-  const playerOrders = orders
-    .filter((o) => o.playerId === playerId)
-    .sort(
-      (a, b) =>
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-    );
-  const playerBuyIns = buyIns
-    .filter((b) => b.playerId === playerId)
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-  const playerCashout = cashouts.find((c) => c.playerId === playerId);
-
-  const drinkTotal = playerOrders.reduce((s, o) => s + o.price, 0);
-  const buyInTotal = playerBuyIns.reduce((s, b) => s + b.amount, 0);
-  const cashoutAmount = playerCashout?.amount ?? 0;
-  const total = drinkTotal + buyInTotal - cashoutAmount;
-
-  const venmoNote = encodeURIComponent(`${session?.name ?? ''}`);
-  const venmoRecipient = process.env.NEXT_PUBLIC_VENMO_HANDLE?.replace(
-    /^@/,
-    '',
-  );
-  const venmoDeepLink = venmoRecipient
-    ? `venmo://paycharge?txn=pay&recipients=${venmoRecipient}&amount=${total.toFixed(2)}&note=${venmoNote}`
-    : null;
-  const venmoWebUrl = venmoRecipient
-    ? `https://account.venmo.com/pay?recipients=${venmoRecipient}&amount=${total.toFixed(2)}&note=${venmoNote}`
-    : null;
-
-  function handleVenmo() {
-    if (!venmoDeepLink || !venmoWebUrl) return;
-    window.location.href = venmoDeepLink;
-    setTimeout(() => {
-      if (!document.hidden) window.location.href = venmoWebUrl;
-    }, 1500);
-  }
-
-  const isLoading = sessions.length === 0 || players.length === 0;
-
-  if (isLoading) {
+  if (!tab && !error) {
     return (
       <div className='min-h-screen flex items-center justify-center text-muted-foreground text-sm tracking-widest'>
         Loading…
@@ -81,13 +27,32 @@ export default function PublicReceiptPage({
     );
   }
 
-  if (!session || !player) {
+  const session = tab?.sessions[0];
+  const player = tab?.player;
+
+  if (!tab || !session || !player) {
     return (
       <div className='min-h-screen flex items-center justify-center text-muted-foreground text-sm tracking-widest'>
         Receipt not found
       </div>
     );
   }
+
+  const playerOrders = [...tab.orders].sort(byCreatedAt);
+  const playerBuyIns = [...tab.buy_ins].sort(byCreatedAt);
+  const playerCashout = tab.cashouts[0];
+
+  const cashoutCents = playerCashout?.amount_cents ?? 0;
+  const totalCents =
+    sumCents(playerOrders, (o) => o.price_cents) + sumCents(playerBuyIns, (b) => b.amount_cents) - cashoutCents;
+
+  // The host's handle from bars (D6), not an env var. The note is the host's template (0003,
+  // owner 2026-09-27); with none set, a night's receipt keeps D12's `Buy-In — <session>`.
+  // Offered only when the player owes: the Go-era button sent a negative amount to Venmo.
+  const handle = tab.bar.venmo_handle;
+  const template = tab.bar.venmo_note_template ?? `${VENMO_NOTE_PREFIX} — {{session}}`;
+  const note = renderVenmoNote(template, { amountCents: totalCents, sessionName: session.name });
+  const venmo = handle && totalCents > 0 ? venmoUrls(handle, totalCents, note) : null;
 
   return (
     <>
@@ -235,7 +200,7 @@ export default function PublicReceiptPage({
           <p className='r-venue'>Buy-In</p>
           <p className='r-name'>{player.name}</p>
           <p className='r-date'>
-            {formatDate(session.date)} · {session.name}
+            {formatDate(session.played_on)} · {session.name}
           </p>
 
           <hr className='r-divider' />
@@ -244,15 +209,15 @@ export default function PublicReceiptPage({
             <div key={b.id} className='r-row'>
               <span className='r-time' />
               <span className='r-drink'>{i === 0 ? 'Buy-in' : 'Re-buy'}</span>
-              <span className='r-price'>+${b.amount.toFixed(2)}</span>
+              <span className='r-price'>+${formatCents(b.amount_cents)}</span>
             </div>
           ))}
 
           {playerOrders.map((order) => (
             <div key={order.id} className='r-row'>
-              <span className='r-time'>{formatTime(order.timestamp)}</span>
-              <span className='r-drink'>{order.drinkName}</span>
-              <span className='r-price'>+${order.price.toFixed(2)}</span>
+              <span className='r-time'>{formatTime(order.created_at)}</span>
+              <span className='r-drink'>{order.drink_name}</span>
+              <span className='r-price'>+${formatCents(order.price_cents)}</span>
             </div>
           ))}
 
@@ -260,7 +225,7 @@ export default function PublicReceiptPage({
             <div className='r-row' style={{ color: '#22c55e' }}>
               <span className='r-time' />
               <span className='r-drink'>Cash out</span>
-              <span className='r-price'>−${cashoutAmount.toFixed(2)}</span>
+              <span className='r-price'>−${formatCents(cashoutCents)}</span>
             </div>
           )}
 
@@ -281,37 +246,22 @@ export default function PublicReceiptPage({
 
           <div className='r-total'>
             <span>Total owed</span>
-            <span>${total.toFixed(2)}</span>
+            <span>${formatCents(totalCents)}</span>
           </div>
 
           <p className='r-footer'>Good game</p>
         </div>
 
-        {venmoDeepLink && (
-          <button onClick={handleVenmo} className='venmo-btn'>
+        {venmo && (
+          <button onClick={() => openVenmo(venmo)} className='venmo-btn'>
             <svg width='20' height='20' viewBox='0 0 24 24' fill='white'>
               <path d='M19.07 3C19.82 4.27 20.16 5.58 20.16 7.22C20.16 12.23 15.68 18.72 12.05 22H4.27L1 4.36L8.19 3.67L9.84 15.05C11.42 12.36 13.38 8.19 13.38 5.42C13.38 3.97 13.1 2.97 12.68 2.14L19.07 3Z' />
             </svg>
             Pay on Venmo
-            <span className='venmo-amount'>${total.toFixed(2)}</span>
+            <span className='venmo-amount'>${formatCents(totalCents)}</span>
           </button>
         )}
 
-        {portalUrl && (
-          <a
-            href={portalUrl}
-            style={{
-              fontSize: '0.65rem',
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase',
-              color: 'var(--muted-foreground)',
-              textDecoration: 'none',
-              marginTop: '0.5rem',
-            }}
-          >
-            ← My Account
-          </a>
-        )}
       </div>
     </>
   );

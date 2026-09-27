@@ -485,7 +485,32 @@ does not fix the insert case.
 
 ### Phase 7 — Port the public surfaces to token RPCs
 
-**Status:** `PLANNED`. Lane A. Waits on phase 6.
+**Status:** `IN FLIGHT` 2026-09-27, on Opus 5.5 (the phase's stated Opus 5, same Default tier).
+Phase 6 satisfied (`BUILT`, `1ed5595`). `HANDOFF.md` step 25.
+
+> **Status note, 2026-09-27 — code done, `dev` proof half owed.** All six scope items are built
+> and every gate is green. What is proved on `dev` is listed in `HANDOFF.md` step 25: `/menu/<bar>`
+> rendering with no session, an anonymous `inventory_items` select refused, and an unknown token
+> rendering each page's error state. **Not `BUILT`**, because (1) `0003_venmo_note_template.sql`
+> (added this phase, below) is not applied to `dev`, and its types are hand-added; and (2) the
+> valid, revoked and expired token proofs need links that only a signed-in host can mint.
+>
+> **Changed by owner answers, 2026-09-27, asked in one batch before any code (R6):**
+> - Item 2 is built **per-bar**: `/menu/[barId]`, not `NEXT_PUBLIC_BAR_ID`. §3's dial is dead.
+>   A bare `/menu` sends a signed-in host to their own bar and shows the empty board to anyone
+>   else. The logged-out landing's Menu button is gone, because it had no bar to point at.
+> - Item 5 is **reuse plus replace**. Sending reuses the player's live link for that scope, and
+>   the player page gains **New link**, which revokes every live portal link and mints a fresh one.
+> - The receipt's `<title>`/`og:title` is a static `Receipt`, the same reasoning as G4.
+> - The Venmo note is host-editable (`DESIGN.md` `D20`, partially superseding `D12`). This added
+>   migration `0003`, built by an Opus subagent in its own worktree and merged here.
+>
+> **`BD-10` — the public routes carry the token and nothing else.** `/receipt/[token]`,
+> `/portal/[token]`, `/player-receipt/[token]`. Item 4 named only the last two, but the receipt
+> had no token at all, and adding one beside `[sessionId]/[playerId]` would recreate the
+> trust-the-URL problem item 4 removes. A page shown a link of the other scope renders its
+> error state (`requireScope`, `packages/core/src/shared-tab.ts`). *Reversal:* none sensible.
+> The old routes are dead under `D8` regardless.
 
 **Scope.**
 1. `/receipt/[sessionId]/[playerId]`, `/portal/*`, `/player-receipt/*` read through
@@ -647,7 +672,7 @@ they cannot subscribe under RLS at all (`H11`, `D7`), so they keep polling by de
 | Realtime tables | the six at `0001_init.sql:360` | `D7` |
 | Auth session lifetime | Supabase defaults | replaces a 10-year JWT |
 | Import tolerance | **0 cents** | a ledger off by a cent is wrong |
-| `NEXT_PUBLIC_BAR_ID` | the single bar's uuid, in env | `D14`/`BD-3`; `/menu` needs a bar without a session |
+| ~~`NEXT_PUBLIC_BAR_ID`~~ | ~~the single bar's uuid, in env~~ **Dead 2026-09-27 (phase 7, owner):** the bar is in the URL, `/menu/[barId]`, so no single-bar assumption ships | `D14`/`BD-3` |
 | Vitest include | `packages/core/**/*.test.ts` | phase 2; the gate must find files or it proves nothing |
 
 ---

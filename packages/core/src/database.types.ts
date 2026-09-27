@@ -51,6 +51,7 @@ export type Database = {
           name: string
           owner_id: string
           venmo_handle: string | null
+          venmo_note_template: string | null
         }
         Insert: {
           cashapp_handle?: string | null
@@ -59,6 +60,7 @@ export type Database = {
           name: string
           owner_id: string
           venmo_handle?: string | null
+          venmo_note_template?: string | null
         }
         Update: {
           cashapp_handle?: string | null
@@ -67,6 +69,7 @@ export type Database = {
           name?: string
           owner_id?: string
           venmo_handle?: string | null
+          venmo_note_template?: string | null
         }
         Relationships: []
       }

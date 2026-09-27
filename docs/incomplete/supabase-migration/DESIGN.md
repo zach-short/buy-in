@@ -619,6 +619,10 @@ uses the session name alone.
 
 *2026-09-16.*
 
+**Partially superseded 2026-09-27 by `D20`.** The fixed constant is dead: the host sets the note.
+Two parts stand. With no template set, a night's receipt still reads `Buy-In — <session name>`,
+and the single `venmoUrls()` builder in `packages/core` is unchanged.
+
 ### D13 — Suspend the Render service now
 
 **Decision.** The owner suspends `https://poker-bar.onrender.com` now, before any migration
@@ -737,6 +741,13 @@ data comes from; it does not change what the user sees or how the app behaves.
 - **The same routes stay public**: `/`, `/login`, `/menu`, `/receipt/*`, `/portal/*`,
   `/player-receipt/*` (`web/proxy.ts:8-14`). `D8` and `D14` change *how* they read, never *which*
   are reachable without a login.
+  **Amended 2026-09-27 (phase 7; owner answers, `HANDOFF.md` step 25).** The prefixes stay
+  public, but the paths inside them change. `/menu/[barId]` is per-bar, and the three token
+  routes carry only the token (`PLAN.md` `BD-10`). The logged-out landing loses its Menu button,
+  because it had no bar to point at. Two further behaviour changes are recorded here. The
+  receipt's Venmo button shows only when the player owes; the Go-era button sent a negative
+  amount to Venmo's pay screen. Menu prices render as `formatCents`, `1.00` where the Go page
+  printed the bare float `1`.
 - **The UI's one-cashout and unique-name guards stay** where they are; `D10` adds enforcement
   underneath them rather than removing them.
 - **PWA configuration stays as it is** — `cacheOnFrontEndNav` and `aggressiveFrontEndNavCaching`
@@ -994,3 +1005,36 @@ nothing in the ledger points at it" and the "created by mistake is empty" defens
 still refuses any other path), and everything `D18` says about players, bars and `auth.users`.
 
 *2026-09-26.*
+
+### D20 — The host sets the Venmo note; the amount appears only if they ask for it
+
+**Decision.** Taken 2026-09-27 at phase 7. It was asked because `D12` had no answer for a payment
+covering a whole balance rather than one night. The owner's words: *"Just Buy In but a user
+should be able to adjust what the default note says including a {{amount}} tag if that makes
+sense. But I don't want to show the balance by default in a venmo note."*
+
+- `bars.venmo_note_template` is added by migration `0003`, capped at 120 characters.
+- `renderVenmoNote` in `packages/core/src/venmo-note.ts` fills `{{amount}}` and `{{session}}`
+  into the template.
+- With no template set, a balance-wide payment (portal, player receipt, the host paying a player
+  out) reads `Buy-In`. A night's receipt keeps `D12`'s `Buy-In — <session name>`.
+- The amount never appears unless the host's template has `{{amount}}`.
+- The host edits the template on `/players`.
+- `get_shared_tab` returns the template in `bar`, because the anonymous pages can read nothing
+  else (`D8`).
+
+**Defense.** A Venmo note is visible to the payer's contacts on the feed by default, so an
+amount in it is a disclosure the host should opt into, not a default. Against: this adds a
+column and a settings field to a port whose premise is to change nothing else (§8.2).
+Answered: the owner asked for it, and the column sits on `bars` for the same reason `D6` put
+`venmo_handle` there — it is how the venue asks to be paid.
+
+**Not decided here.** The help text on the field was written in the plainest register, and
+two alternatives went to the owner (R7). Only the owner can edit the note; a co-host with the
+`host` role cannot, because `bars_owner_write` checks `owner_id` and `D16`'s `is_bar_staff`
+does not cover `bars`.
+
+**Supersedes.** `D12`, **partially**. Dead: the fixed constant. Alive: the receipt's default
+wording and the single URL builder.
+
+*2026-09-27.*

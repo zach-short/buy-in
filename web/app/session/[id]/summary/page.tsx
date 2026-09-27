@@ -3,12 +3,14 @@
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
+import { toast } from 'sonner';
 import { formatCents } from '@pb/core';
 import { sumCents } from '@/lib/ledger';
 import {
   fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
   type PlayerRow,
 } from '@/lib/supabase/queries';
+import { receiptUrl, shareToken } from '@/lib/supabase/share-links';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -56,11 +58,15 @@ export default function SummaryPage({
     setTextIndex(0);
   }
 
-  function openText(player: PlayerRow) {
-    const url = `${window.location.origin}/receipt/${id}/${player.id}`;
-    const body = encodeURIComponent(`${url}`);
-    window.location.href = `sms:${player.phone}&body=${body}`;
-    setTimeout(() => setTextIndex((i) => (i ?? 0) + 1), 500);
+  // A session-scoped link (D15): the text carries this night only, not the player's history.
+  async function openText(player: PlayerRow) {
+    try {
+      const url = receiptUrl(await shareToken(player, id));
+      window.location.href = `sms:${player.phone}&body=${encodeURIComponent(url)}`;
+      setTimeout(() => setTextIndex((i) => (i ?? 0) + 1), 500);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
   function skip() {

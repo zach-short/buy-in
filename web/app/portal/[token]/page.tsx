@@ -1,34 +1,24 @@
 'use client';
 
-import { use, useEffect } from 'react';
+import { use } from 'react';
 import useSWR from 'swr';
-import { fetcher, computeBalance, canMake, openVenmo, Order, BuyIn, Cashout, Payment, DrinkRecipe, InventoryItem, Player } from '@/lib/bar-api';
 
-export default function PortalPage({
-  params,
-}: {
-  params: Promise<{ playerId: string; token: string }>;
-}) {
-  const { playerId, token } = use(params);
+import { formatCents, isSettled, renderVenmoNote, venmoUrls } from '@pb/core';
+import { sharedBalanceCents } from '@/lib/ledger';
+import { fetchMenu, fetchSharedTab } from '@/lib/supabase/public';
+import { openVenmo } from '@/lib/venmo';
 
-  const { data: auth, error: authError } = useSWR<{ valid: boolean; player: Player }>(
-    `/api/portal/${playerId}/validate?token=${token}`,
-    fetcher,
-  );
+export default function PortalPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
 
-  useEffect(() => {
-    if (auth?.valid) localStorage.setItem(`portal_${playerId}`, token);
-  }, [auth, playerId, token]);
+  // A portal-scoped link (D15): the whole history, and the token alone decides whose (§9.1
+  // #7) — the old route's [playerId] segment is gone, so nothing on this page can trust a URL
+  // over the RPC.
+  const { data: tab, error } = useSWR(['shared_tab', token, 'portal'], ([, t]) => fetchSharedTab(t, 'portal'));
+  // The menu block reads the same get_menu the public /menu does (§9.1 #3), never raw stock.
+  const { data: menu = [] } = useSWR(tab ? ['menu', tab.bar.id] : null, ([, barId]) => fetchMenu(barId));
 
-  const enabled = auth?.valid ?? false;
-  const { data: orders = [] }    = useSWR<Order[]>(enabled ? '/api/orders' : null, fetcher);
-  const { data: buyIns = [] }    = useSWR<BuyIn[]>(enabled ? '/api/buyins' : null, fetcher);
-  const { data: cashouts = [] }  = useSWR<Cashout[]>(enabled ? '/api/cashouts' : null, fetcher);
-  const { data: payments = [] }  = useSWR<Payment[]>(enabled ? `/api/payments?playerId=${playerId}` : null, fetcher);
-  const { data: drinks = [] }    = useSWR<DrinkRecipe[]>(enabled ? '/api/drinks' : null, fetcher);
-  const { data: inventory = [] } = useSWR<InventoryItem[]>(enabled ? '/api/inventory' : null, fetcher);
-
-  if (authError) {
+  if (error) {
     return (
       <div className='min-h-screen flex items-center justify-center px-6'>
         <div className='text-center space-y-2'>
@@ -39,7 +29,7 @@ export default function PortalPage({
     );
   }
 
-  if (!auth) {
+  if (!tab) {
     return (
       <div className='min-h-screen flex items-center justify-center text-muted-foreground text-sm tracking-widest'>
         Loading…
@@ -47,9 +37,15 @@ export default function PortalPage({
     );
   }
 
-  const player = auth.player;
-  const balance = computeBalance(playerId, orders, buyIns, cashouts, payments);
-  const available = drinks.filter((d) => canMake(d, inventory));
+  const { player } = tab;
+  const balanceCents = sharedBalanceCents(tab);
+  const available = menu.filter((d) => d.available);
+  // The Go-era button paid the player's OWN Venmo handle (bar-api.ts openVenmo); D15 stopped
+  // returning it, and the recipient is always the host's (D6). The note for a whole balance
+  // is the host's template, plain "Buy-In" by default — never the amount unless the host's
+  // template asks for it (owner, 2026-09-27; 0003).
+  const handle = tab.bar.venmo_handle;
+  const note = renderVenmoNote(tab.bar.venmo_note_template, { amountCents: balanceCents });
 
   return (
     <>
@@ -104,28 +100,28 @@ export default function PortalPage({
 
         <div className='mx-6 border border-border rounded-md p-6 mb-8 text-center'>
           <p className='text-xs tracking-widest uppercase text-muted-foreground mb-3'>Your Balance</p>
-          {Math.abs(balance) < 0.01 ? (
+          {isSettled(balanceCents) ? (
             <p className='text-3xl font-bold text-muted-foreground'>All settled up</p>
-          ) : balance > 0 ? (
+          ) : balanceCents > 0 ? (
             <>
-              <p className='text-3xl font-bold text-destructive'>${balance.toFixed(2)}</p>
+              <p className='text-3xl font-bold text-destructive'>${formatCents(balanceCents)}</p>
               <p className='text-xs text-muted-foreground mt-2 tracking-wide'>outstanding</p>
-              {player.venmo && (
+              {handle && (
                 <button
-                  onClick={() => openVenmo(player.venmo!, balance)}
+                  onClick={() => openVenmo(venmoUrls(handle, balanceCents, note))}
                   className='mt-4 w-full flex items-center justify-center gap-2 py-3 rounded text-sm font-bold text-white'
                   style={{ background: '#3D95CE' }}
                 >
                   <svg width='16' height='16' viewBox='0 0 24 24' fill='white'>
                     <path d='M19.07 3C19.82 4.27 20.16 5.58 20.16 7.22C20.16 12.23 15.68 18.72 12.05 22H4.27L1 4.36L8.19 3.67L9.84 15.05C11.42 12.36 13.38 8.19 13.38 5.42C13.38 3.97 13.1 2.97 12.68 2.14L19.07 3Z' />
                   </svg>
-                  Pay ${balance.toFixed(2)} on Venmo
+                  Pay ${formatCents(balanceCents)} on Venmo
                 </button>
               )}
             </>
           ) : (
             <>
-              <p className='text-3xl font-bold text-green-500'>${Math.abs(balance).toFixed(2)}</p>
+              <p className='text-3xl font-bold text-green-500'>${formatCents(Math.abs(balanceCents))}</p>
               <p className='text-xs text-muted-foreground mt-2 tracking-wide'>in your favour</p>
             </>
           )}
@@ -139,7 +135,7 @@ export default function PortalPage({
               <div key={drink.id} className='portal-menu-item'>
                 <span className='portal-menu-name'>{drink.name}</span>
                 <span className='portal-menu-dots' />
-                <span className='portal-menu-price'>${drink.price.toFixed(2)}</span>
+                <span className='portal-menu-price'>${formatCents(drink.price_cents)}</span>
               </div>
             ))}
           </div>

@@ -1,4 +1,4 @@
-import { computeBalanceCents, type AmountLike, type OrderLike, type PaymentLike } from '@pb/core';
+import { computeBalanceCents, type AmountLike, type OrderLike, type PaymentLike, type SharedTab } from '@pb/core';
 
 import type { BuyInRow, CashoutRow, OrderRow, PaymentRow } from '@/lib/supabase/queries';
 
@@ -40,6 +40,23 @@ export function playerBalanceCents(
     buyIns.map(toAmountLike),
     cashouts.map(toAmountLike),
     payments.map(toPaymentLike),
+  );
+}
+
+/**
+ * The same balance over a share link's tab (phase 7). Every row in a tab is already this
+ * player's, because get_shared_tab filters by the token's player (D15), so the player id
+ * only satisfies computeBalanceCents' signature.
+ */
+export function sharedBalanceCents(tab: SharedTab): number {
+  const playerId = tab.player.id;
+  const amount = (row: { amount_cents: number }): AmountLike => ({ playerId, amountCents: row.amount_cents });
+  return computeBalanceCents(
+    playerId,
+    tab.orders.map((o) => ({ playerId, priceCents: o.price_cents })),
+    tab.buy_ins.map(amount),
+    tab.cashouts.map(amount),
+    tab.payments.map((p) => ({ playerId, amountCents: p.amount_cents, direction: p.direction })),
   );
 }
 

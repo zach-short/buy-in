@@ -16,14 +16,9 @@ function Landing() {
     <main className='min-h-screen flex flex-col items-center justify-center px-6'>
       <div className='w-full max-w-xs space-y-8 text-center'>
         <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
+        {/* No Menu button: a menu belongs to a bar, and a logged-out visitor has none. Guests
+            reach one through the /menu/<bar id> link a host shares (owner, 2026-09-27). */}
         <div className='flex flex-col gap-3'>
-          <Button
-            size='lg'
-            className='h-12 text-xs tracking-widest uppercase'
-            onClick={() => router.push('/menu')}
-          >
-            Menu
-          </Button>
           <Button
             size='lg'
             variant='outline'

@@ -3,11 +3,13 @@
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
+import { toast } from 'sonner';
 import { formatCents, formatDate, formatTime } from '@pb/core';
 import { sumCents } from '@/lib/ledger';
 import {
   fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
 } from '@/lib/supabase/queries';
+import { receiptUrl, shareToken } from '@/lib/supabase/share-links';
 import { Printer, Share2, MessageCircle } from 'lucide-react';
 
 export default function PlayerReceiptPage({
@@ -57,8 +59,16 @@ export default function PlayerReceiptPage({
     window.print();
   }
 
-  function handleShare() {
-    const url = `${window.location.origin}/receipt/${id}/${playerId}`;
+  // A session-scoped link (D15), reused if one is live, so sharing twice sends one link.
+  async function handleShare() {
+    if (!player) return;
+    let url: string;
+    try {
+      url = receiptUrl(await shareToken(player, id));
+    } catch (e) {
+      toast.error((e as Error).message);
+      return;
+    }
     const body = encodeURIComponent(url);
 
     if (player?.phone) {
