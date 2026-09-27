@@ -601,6 +601,25 @@ wrong for any value that was computed — `cost_estimate` and `$inc`'d quantitie
 **Status:** `PLANNED`. Lane A. Waits on phases 7 and 8, and on the owner (`prod`, and the backup
 question in §7).
 
+**Status note 2026-09-27 (`HANDOFF.md` step 28):** `IN FLIGHT`. No new project: the owner made
+`dev` (`rxvznjtpskendwhwwgin`) production (`DESIGN.md` `D3`, superseded 2026-09-27).
+
+**Corrected 2026-09-27 (R5, `HANDOFF.md` step 28) — the scope below is stale in four places:**
+1. ~~"Create `prod`"~~ — none is created; `rxvznjtpskendwhwwgin` is production.
+2. ~~"apply the frozen `0001`"~~ — it already carries `0001`, `0002`, `0003`, recorded in
+   `supabase_migrations.schema_migrations` (`HANDOFF.md` steps 15, 24, 26).
+3. ~~"run the import **once**"~~ — it does not run: the phase 8 rehearsal's rows are the
+   production rows, and the balance match this phase owes was run read-only on 2026-09-27
+   against them — 16/20 exact, 4/20 differ only by rows since 2026-09-26, 0 unexplained
+   (`DESIGN.md` `D9`, amended 2026-09-27). The `mongodump` is still taken before Atlas is
+   decommissioned (`D17`, amended).
+4. ~~"Regenerate the PWA workers"~~ cannot mean committing regenerated files: the worker
+   precaches build-ID paths (`/_next/static/<BUILD_ID>/_buildManifest.js`, read from a local
+   `next build --webpack`, 2026-09-27), so a locally built `sw.js` names a build Vercel never
+   produces and would never install. Next 16's `next build` is turbopack and next-pwa does not
+   run under it (`H7`), so the owner chose `web/package.json` `build` = `next build --webpack`,
+   making Vercel's own build write the worker.
+
 **Scope.** Create `prod` (`D3`, G2); apply the frozen `0001`; **take the `mongodump` first** —
 immediately after the last session played on Mongo and **before** the import, so the archive is
 provably what was imported (`D17`); run the import **once**; point the deployed web at `prod`.
