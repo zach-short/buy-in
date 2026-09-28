@@ -13,8 +13,14 @@ import { verifyAll, type VerifyContext } from './verify';
 
 const USAGE = `Mongo -> Supabase import (DESIGN.md D9, PLAN.md phase 8).
 
-Run from the repo root; both env files are read at runtime, never copied:
-  bun --env-file=web/.env --env-file=backend/.env scripts/import-mongo/main.ts <command> [options]
+Historical: the import already ran (HANDOFF.md steps 15-28) and the Mongo source is gone —
+backend/ was deleted and poker-bar was dropped from Atlas in phase 10 (HANDOFF.md step 29,
+DESIGN.md D17's 2026-09-28 amendment). This tool cannot be run again without restoring the
+off-repo mongodump to a reachable MongoDB first (D17's rollback path) and re-creating an env
+file with DATABASE_URL/DATABASE_NAME. It is kept for its verify/preflight logic as reference.
+
+Run from the repo root; env files are read at runtime, never copied:
+  bun --env-file=web/.env --env-file=<mongo-env-file> scripts/import-mongo/main.ts <command> [options]
 
 Commands
   ping        Mongo ping and per-collection counts; Supabase reachability. Writes nothing.

@@ -653,11 +653,19 @@ re-entered by hand.
 
 ### Phase 10 — Delete `backend/`
 
-**Status:** `PLANNED`. Lane A. Waits on phase 9, in the commit **after** cutover (`D11`).
+**Status:** `BUILT` 2026-09-28 (`HANDOFF.md` step 29). Lane A.
 
 **Scope.** Delete `backend/`, its env, the Go module, the CORS origins, the README sections, and
 the last `NEXT_PUBLIC_API_URL` reads. The owner decommissions the Render service and the Mongo
 Atlas cluster — recorded, not done by an agent, and **only once phase 9's dump exists** (`D17`).
+
+**As built:** the Render service was already gone (`HANDOFF.md` step 17, 2026-09-25). "Decommission
+the Mongo Atlas cluster" turned out to be the wrong shape for this cluster — it is shared with a
+second, unrelated live project (`D17`, amended 2026-09-28) — so what happened instead was
+`mongodump` (all 8 collections, real counts) kept off-repo, then
+`db.getSiblingDB('poker-bar').dropDatabase()` run scoped to `poker-bar` only. The cluster itself
+stays up. The `mongorestore --dryRun` proof this phase's done-when named did not run cleanly —
+see `DESIGN.md` `D17`'s 2026-09-28 amendment for what was verified instead.
 
 **Subagents.** None. Driver is **Sonnet 5**: by this point it is a deletion with citations.
 

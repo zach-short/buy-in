@@ -968,6 +968,29 @@ originally worded. Alive and unchanged: the big-bang shape, the import running a
 Mongo session, `backend/` deleted in the commit after cutover, and the pessimistic auto-deploy
 assumption.
 
+**Amended 2026-09-28 (`HANDOFF.md` step 29, phase 10) — "decommission the Mongo Atlas cluster"
+was wrong for this cluster.** The owner discovered mid-phase-10 that `backend/.env`'s
+`DATABASE_URL` credentials reach a cluster shared with a second, unrelated, still-live project —
+a `dump --uri` with no `--db` scoping pulled down both `poker-bar` (Buy-In's 8 collections) and
+a `live` database (`messages`, `users`, `friendships`) that belongs to that other project. "The
+Mongo Atlas cluster is decommissioned" therefore cannot mean the whole cluster or Atlas project —
+that would take the other project down too. What actually happened: the `mongodump` was taken
+(all 8 `poker-bar` collections, with real per-collection document counts — 120/70/37/74/35/20/
+19/15 — confirmed from the dump's own output), kept off-repo at
+`~/buy-in-mongo-backup-2026-09-28`, and then `db.getSiblingDB('poker-bar').dropDatabase()` was
+run against that URI, scoped explicitly to `poker-bar` so `live` is untouched. The cluster itself
+stays up — it is not this project's to decommission. This is the actual, narrower shape "Atlas
+decommission" takes here; a future session should not attempt to delete the cluster or Atlas
+project.
+
+The `mongorestore --dryRun` verification named as this decision's proof did not run cleanly: `-v
+--nsInclude="poker-bar.*" --dir=<dump>/poker-bar` found and listed all 8 `.bson`/`.metadata.json`
+pairs but reported "don't know what to do with" each one and skipped it — a tooling
+incompatibility (likely a `mongodump`/`mongorestore` version mismatch around the newer
+`prelude.json` manifest) that was not root-caused. The owner chose to proceed on the strength of
+`mongodump`'s own per-collection counts rather than resolve it. Recorded per R10: the dump's
+contents are verified by `mongodump`'s own output, not by a successful dry-run restore.
+
 *2026-09-16.*
 
 ### D18 — The ledger restricts deletion; only empty things can be deleted

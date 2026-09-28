@@ -11,7 +11,6 @@ COMMANDS=(
   "typecheck:Typecheck web/ and packages/core"
   "lint:Lint web/ (the only real lint gate in this repo)"
   "test:Run the root vitest command (currently a placeholder — no test files, always exits 1)"
-  "backend:Build and vet the legacy Go API in backend/"
   "gates:Run every gate, in the order CI would run them"
   "shell:Print the ~/.zshrc snippet for the buy-in function + completion"
   "help:List commands"
@@ -43,15 +42,10 @@ cmd_test() {
   bun run test
 }
 
-cmd_backend() {
-  (cd "$ROOT/backend" && go build ./... && go vet ./...)
-}
-
 cmd_gates() {
   cmd_build
   cmd_typecheck
   cmd_lint
-  cmd_backend
   cmd_test
 }
 
@@ -105,7 +99,6 @@ case "${1:-help}" in
   typecheck) cmd_typecheck ;;
   lint) cmd_lint ;;
   test) cmd_test ;;
-  backend) cmd_backend ;;
   gates) cmd_gates ;;
   shell) cmd_shell ;;
   --complete) cmd___complete ;;
