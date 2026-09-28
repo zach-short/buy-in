@@ -601,6 +601,13 @@ wrong for any value that was computed — `cost_estimate` and `$inc`'d quantitie
 **Status:** `PLANNED`. Lane A. Waits on phases 7 and 8, and on the owner (`prod`, and the backup
 question in §7).
 
+**Status:** `BUILT` 2026-09-27, `main` at `f956408` (`HANDOFF.md` step 28). Deployed on
+Vercel from `main`. The balance match was run read-only: 16/20 exact, 4/20 differ only by
+2026-09-26 rows, 0 unexplained. The live worker precaches Vercel's own build, and every file it
+names returns 200. The owner walked it on a phone: the PWA updated, a texted receipt showed only
+that night and player, **New link** killed the old portal link, and the receipt loaded logged
+out. Not seen: an expired link.
+
 **Status note 2026-09-27 (`HANDOFF.md` step 28):** `IN FLIGHT`. No new project: the owner made
 `dev` (`rxvznjtpskendwhwwgin`) production (`DESIGN.md` `D3`, superseded 2026-09-27).
 
