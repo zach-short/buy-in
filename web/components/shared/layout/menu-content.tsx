@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   User,
   Settings,
+  TrendingUp,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SignoutButton } from '../button/signout';
@@ -15,6 +16,7 @@ import { useAuthUser } from '@/hooks/use-auth-user';
 
 const menuItems = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { title: 'Performance', href: '/performance', icon: TrendingUp },
   { title: 'Profile', href: '/profile', icon: User },
   { title: 'Settings', href: '/settings', icon: Settings },
 ];

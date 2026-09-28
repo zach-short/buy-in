@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { toCents } from '@pb/core';
 import { fetchPlayers, type PlayerRow } from '@/lib/supabase/queries';
 import { createPlayer, startSession as writeStartSession } from '@/lib/supabase/writes';
+import { useDefaultBuyIn } from '@/hooks/use-default-buy-in';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -26,7 +27,10 @@ export default function NewSessionPage() {
   const [selected, setSelected] = useState<SelectedPlayer[]>([]);
   const [search, setSearch] = useState('');
   const [newPlayerName, setNewPlayerName] = useState('');
-  const [defaultBuyIn, setDefaultBuyIn] = useState('20');
+  // The bar's saved default, set on /players. An edit here is this session's only; it is never saved back.
+  const {
+    value: defaultBuyIn, setValue: setDefaultBuyIn, isLoading: defaultBuyInLoading, error: defaultBuyInError,
+  } = useDefaultBuyIn();
   const [creating, setCreating] = useState(false);
   const [starting, setStarting] = useState(false);
 
@@ -117,11 +121,16 @@ export default function NewSessionPage() {
               step='5'
               value={defaultBuyIn}
               onChange={(e) => setDefaultBuyIn(e.target.value)}
+              disabled={defaultBuyInLoading}
               className='h-11 pl-7'
-              placeholder='20'
+              placeholder={defaultBuyInLoading ? 'Loading…' : '20'}
             />
           </div>
-          <p className='text-xs text-muted-foreground mt-1'>Pre-fills for new additions — edit per player below</p>
+          {defaultBuyInError ? (
+            <p className='text-xs text-destructive mt-1'>Couldn&apos;t load your default buy-in: {defaultBuyInError.message}</p>
+          ) : (
+            <p className='text-xs text-muted-foreground mt-1'>Pre-fills for new additions — edit per player below</p>
+          )}
         </div>
 
         {selected.length > 0 && (

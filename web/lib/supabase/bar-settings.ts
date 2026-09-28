@@ -21,6 +21,8 @@ export interface BarSettings {
   barId: string;
   /** `null` means the default note (`Buy-In`). */
   venmoNoteTemplate: string | null;
+  /** What session/new pre-fills each player's buy-in with. */
+  defaultBuyInCents: number;
 }
 
 /**
@@ -28,10 +30,12 @@ export interface BarSettings {
  * enforces — a second fails loudly rather than editing whichever bar came back first.
  */
 export async function fetchBarSettings(): Promise<BarSettings> {
-  const { data, error } = await createClient().from('bars').select('id, venmo_note_template').limit(2);
+  const { data, error } = await createClient().from('bars')
+    .select('id, venmo_note_template, default_buy_in_cents').limit(2);
   if (error) fail(error);
   if (data.length !== 1) throw new Error(`Expected one bar for this account, found ${data.length}`);
-  return { barId: data[0].id, venmoNoteTemplate: data[0].venmo_note_template };
+  const [bar] = data;
+  return { barId: bar.id, venmoNoteTemplate: bar.venmo_note_template, defaultBuyInCents: bar.default_buy_in_cents };
 }
 
 /** Save the template; a blank one is stored as `null`, which renders the default. */
@@ -43,4 +47,13 @@ export async function updateVenmoNoteTemplate(barId: string, template: string): 
   // Under RLS only the owner may update a bar (0001 bars_owner_write); a host who is not
   // the owner matches zero rows and gets no error, so say so rather than toast "Saved".
   if (!data?.length) throw new Error('Only the bar owner can change the Venmo note');
+}
+
+/** Save the default buy-in; the caller has already refused a blank or negative amount. */
+export async function updateDefaultBuyInCents(barId: string, cents: number): Promise<void> {
+  const { data, error } = await createClient().from('bars')
+    .update({ default_buy_in_cents: cents }).eq('id', barId).select('id');
+  if (error) fail(error);
+  // Same zero-row refusal as updateVenmoNoteTemplate: RLS lets only the owner update a bar.
+  if (!data?.length) throw new Error('Only the bar owner can change the default buy-in');
 }

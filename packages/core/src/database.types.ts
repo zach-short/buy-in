@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      bar_invite_links: {
+        Row: {
+          bar_id: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          revoked_at: string | null
+          scheduled_game_id: string | null
+          token: string
+        }
+        Insert: {
+          bar_id: string
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          revoked_at?: string | null
+          scheduled_game_id?: string | null
+          token?: string
+        }
+        Update: {
+          bar_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          revoked_at?: string | null
+          scheduled_game_id?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bar_invite_links_bar_id_fkey"
+            columns: ["bar_id"]
+            isOneToOne: false
+            referencedRelation: "bars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bar_invite_links_scheduled_game_id_bar_id_fkey"
+            columns: ["scheduled_game_id", "bar_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_games"
+            referencedColumns: ["id", "bar_id"]
+          },
+        ]
+      }
       bar_members: {
         Row: {
           bar_id: string
@@ -47,6 +92,7 @@ export type Database = {
         Row: {
           cashapp_handle: string | null
           created_at: string
+          default_buy_in_cents: number
           id: string
           name: string
           owner_id: string
@@ -56,6 +102,7 @@ export type Database = {
         Insert: {
           cashapp_handle?: string | null
           created_at?: string
+          default_buy_in_cents?: number
           id?: string
           name: string
           owner_id: string
@@ -65,6 +112,7 @@ export type Database = {
         Update: {
           cashapp_handle?: string | null
           created_at?: string
+          default_buy_in_cents?: number
           id?: string
           name?: string
           owner_id?: string
@@ -245,6 +293,38 @@ export type Database = {
             columns: ["bar_id"]
             isOneToOne: false
             referencedRelation: "bars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_rsvps: {
+        Row: {
+          created_at: string
+          id: string
+          scheduled_game_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          scheduled_game_id: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          scheduled_game_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_rsvps_scheduled_game_id_fkey"
+            columns: ["scheduled_game_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_games"
             referencedColumns: ["id"]
           },
         ]
@@ -574,6 +654,54 @@ export type Database = {
           },
         ]
       }
+      scheduled_games: {
+        Row: {
+          bar_id: string
+          cancelled_at: string | null
+          created_at: string
+          host_user_id: string
+          id: string
+          name: string
+          scheduled_at: string
+          session_id: string | null
+        }
+        Insert: {
+          bar_id: string
+          cancelled_at?: string | null
+          created_at?: string
+          host_user_id: string
+          id?: string
+          name: string
+          scheduled_at: string
+          session_id?: string | null
+        }
+        Update: {
+          bar_id?: string
+          cancelled_at?: string | null
+          created_at?: string
+          host_user_id?: string
+          id?: string
+          name?: string
+          scheduled_at?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_games_bar_id_fkey"
+            columns: ["bar_id"]
+            isOneToOne: false
+            referencedRelation: "bars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_games_session_id_bar_id_fkey"
+            columns: ["session_id", "bar_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id", "bar_id"]
+          },
+        ]
+      }
       session_players: {
         Row: {
           bar_id: string
@@ -674,16 +802,45 @@ export type Database = {
         }
         Returns: string
       }
+      create_bar_invite: {
+        Args: { p_bar_id: string; p_scheduled_game_id?: string }
+        Returns: string
+      }
       create_order: {
         Args: { p_drink_id: string; p_player_id: string; p_session_id: string }
         Returns: Json
       }
+      create_scheduled_game: {
+        Args: { p_bar_id: string; p_name: string; p_scheduled_at: string }
+        Returns: string
+      }
       delete_order: { Args: { p_order_id: string }; Returns: undefined }
       delete_session: { Args: { p_session_id: string }; Returns: undefined }
       get_menu: { Args: { p_bar_id: string }; Returns: Json }
+      get_my_performance: {
+        Args: never
+        Returns: {
+          bar_id: string
+          bar_name: string
+          net_cents: number
+          played_on: string
+          session_id: string
+          session_name: string
+          stakes_cents: number
+        }[]
+      }
       get_shared_tab: { Args: { p_token: string }; Returns: Json }
       is_bar_member: { Args: { b: string }; Returns: boolean }
       is_bar_staff: { Args: { b: string }; Returns: boolean }
+      join_bar_as_player: {
+        Args: { p_name: string; p_token: string }
+        Returns: string
+      }
+      revoke_bar_invite: { Args: { p_token: string }; Returns: undefined }
+      rsvp_scheduled_game: {
+        Args: { p_status: string; p_token: string }
+        Returns: undefined
+      }
       save_drink: {
         Args: {
           p_bar_id: string
@@ -693,6 +850,10 @@ export type Database = {
           p_name: string
           p_price_cents: number
         }
+        Returns: string
+      }
+      start_scheduled_game: {
+        Args: { p_scheduled_game_id: string }
         Returns: string
       }
       start_session: {

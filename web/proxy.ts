@@ -5,10 +5,20 @@ import { passThrough, redirectTo, updateSession } from '@/lib/supabase/middlewar
 // DESIGN.md §8.2: exactly these stay reachable without a login — the same six predicates the
 // NextAuth proxy had (web/proxy.ts:8-14 as of 2026-09-16). D8 and D14 change how these pages
 // read their data, never which of them are public; adding a line here is an owner decision.
+//
+// 2026-09-28, onboarding feature: /signup, /join and /rsvp added. /join and /join/[token] must
+// be public — the whole point is a brand-new visitor with no account yet clicking an invite
+// link; each page does its own signed-in check client-side and bounces to /signup?redirect=...
+// when needed. Same reasoning for /rsvp/[token]. /invites, /schedule and /performance stay
+// behind login — they're host- or member-account-scoped, never link-only.
 function isPublicPath(pathname: string): boolean {
   return (
     pathname === '/' ||
     pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname === '/join' ||
+    pathname.startsWith('/join/') ||
+    pathname.startsWith('/rsvp/') ||
     pathname.startsWith('/menu') ||
     pathname.startsWith('/receipt') ||
     pathname.startsWith('/portal') ||
@@ -24,7 +34,7 @@ export async function proxy(request: NextRequest) {
     return redirectTo(request, '/login', write);
   }
 
-  if (pathname === '/login' && isSignedIn) {
+  if ((pathname === '/login' || pathname === '/signup') && isSignedIn) {
     return redirectTo(request, '/', write);
   }
 

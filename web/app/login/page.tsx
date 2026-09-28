@@ -1,13 +1,26 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
+import { safeRedirectPath } from '@/lib/safe-redirect';
 
+// useSearchParams() forces this subtree to opt out of static prerendering; Next.js
+// requires a Suspense boundary around it (https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout).
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,7 +38,7 @@ export default function LoginPage() {
     });
 
     if (!signInError) {
-      router.replace('/');
+      router.replace(safeRedirectPath(searchParams.get('redirect'), '/'));
     } else {
       setError('Invalid credentials.');
     }
@@ -62,6 +75,20 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Enter'}
           </Button>
         </form>
+
+        <p className='text-center text-xs text-muted-foreground tracking-wide'>
+          Don&apos;t have an account?{' '}
+          <Link
+            href={
+              searchParams.get('redirect')
+                ? `/signup?redirect=${encodeURIComponent(searchParams.get('redirect')!)}`
+                : '/signup'
+            }
+            className='text-primary underline-offset-4 hover:underline'
+          >
+            Sign up
+          </Link>
+        </p>
       </div>
     </main>
   );
