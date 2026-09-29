@@ -51,6 +51,13 @@ export async function proxy(request: NextRequest) {
 // The PWA worker files are static and must never redirect: a browser refuses to register a
 // service worker whose script answers 3xx, and /sw.js answered 307 → /login to every
 // logged-out visitor on the live site (HANDOFF step 28, 2026-09-27).
+//
+// 2026-09-29: static images and the web manifest are excluded by extension too. Chrome fetches
+// a manifest and its icons without cookies, and every /*.png, /*.svg and /site.webmanifest in
+// public/ answered 307 → /login to a signed-out request (checked with curl against the live
+// site), so the manifest's icons never loaded and Chrome never offered Install.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|icons|sw\\.js|swe-worker-|workbox-).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|manifest.json|icons|sw\\.js|swe-worker-|workbox-|.*\\.(?:png|svg|ico|jpg|jpeg|webp|webmanifest)$).*)',
+  ],
 };
