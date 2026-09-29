@@ -1,4 +1,4 @@
--- 0015 — delete_my_account() locks what its check reads (2026-09-29). UNAPPLIED: the owner applies it.
+-- 0015 — delete_my_account() locks what its check reads (2026-09-29). Applied to production 2026-09-29.
 --
 -- NUMBERING: written as 0011, renumbered the same day by the owner's call after
 -- 0011_drinks_stock.sql took 0011 too; 0012–0014 were claimed by other sessions meanwhile.

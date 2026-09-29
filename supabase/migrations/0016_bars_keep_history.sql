@@ -1,8 +1,8 @@
--- 0016 — a bar with game history cannot be deleted (2026-09-29). UNAPPLIED: the owner applies it.
+-- 0016 — a bar with game history cannot be deleted (2026-09-29). Applied to production 2026-09-29.
 --
 -- 0001_init.sql:209-211 says "a bar can only be deleted once it is empty" because the ledger
 -- RESTRICTs its session and player. That was never true. 0001 is applied and cannot carry the
--- disproof, so it is recorded here and in HANDOFF steps 40 and 44. Every ledger table also
+-- disproof, so it is recorded here and in HANDOFF steps 40 and 45. Every ledger table also
 -- references bars(id) ON DELETE CASCADE (0001_init.sql:215, :241, :254, :270). One
 -- `delete from bars` fires those cascades, and they all run before the RESTRICT checks they
 -- queue, so by the time a RESTRICT looks, the rows it protects are gone. Reproduced on a scratch
