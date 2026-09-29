@@ -82,7 +82,7 @@ function TableList({ records, onAnswer }: { records: TableWithGame[]; onAnswer: 
 function LogSessionButton() {
   return (
     <Button asChild variant='outline' size='lg' className='w-full h-11 mt-6 text-xs tracking-widest uppercase'>
-      <Link href={LOG_SESSION}><Plus aria-hidden='true' /> Log a session</Link>
+      <Link href={LOG_SESSION}><Plus aria-hidden='true' /> Log an event</Link>
     </Button>
   );
 }

@@ -103,7 +103,7 @@ const LOG_SESSION = '/results/log';
 function LogSessionButton() {
   return (
     <Button asChild variant='outline' size='lg' className='w-full h-11 mb-6 text-xs tracking-widest uppercase'>
-      <Link href={LOG_SESSION}><Plus aria-hidden='true' /> Log a session</Link>
+      <Link href={LOG_SESSION}><Plus aria-hidden='true' /> Log an event</Link>
     </Button>
   );
 }

@@ -142,6 +142,8 @@ phase. No subagent.
 
 ### Phase 2 — Writes and the log-an-event form
 
+**Status: `BUILT` 2026-09-29 — `HANDOFF.md` step 68; walked on the local stack at phone width with two accounts, not on a real phone; copy answered plain.** Deviations: Put in / Got back stack one per row (the long label wraps at 375 px); Delete sits outside the `<form>` because `ConfirmDialog`'s submit bubbles through the portal and saved first; Other's "Name" and the picker's "What" labels are provisional.
+
 **Scope:**
 1. **`web/lib/supabase/logged-events.ts`**: `createLoggedEvent`, `updateLoggedEvent`, `deleteLoggedEvent`, each `.select('id')` plus
    `requireRow`, errors through `writeErrorMessage` (the `logged-sessions.ts` precedent), and `fetchLoggedEvent(id)` with
