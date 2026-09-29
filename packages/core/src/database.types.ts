@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       bar_invite_links: {
@@ -264,6 +289,7 @@ export type Database = {
       }
       drinks: {
         Row: {
+          archived_at: string | null
           bar_id: string
           cost_estimate_cents: number
           created_at: string
@@ -272,6 +298,7 @@ export type Database = {
           price_cents: number
         }
         Insert: {
+          archived_at?: string | null
           bar_id: string
           cost_estimate_cents?: number
           created_at?: string
@@ -280,6 +307,7 @@ export type Database = {
           price_cents?: number
         }
         Update: {
+          archived_at?: string | null
           bar_id?: string
           cost_estimate_cents?: number
           created_at?: string
@@ -440,6 +468,64 @@ export type Database = {
             columns: ["session_id", "bar_id"]
             isOneToOne: false
             referencedRelation: "sessions"
+            referencedColumns: ["id", "bar_id"]
+          },
+        ]
+      }
+      payment_reports: {
+        Row: {
+          amount_cents: number
+          bar_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          note: string | null
+          payment_id: string | null
+          player_id: string
+          status: string
+        }
+        Insert: {
+          amount_cents: number
+          bar_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          note?: string | null
+          payment_id?: string | null
+          player_id: string
+          status?: string
+        }
+        Update: {
+          amount_cents?: number
+          bar_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          note?: string | null
+          payment_id?: string | null
+          player_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reports_bar_id_fkey"
+            columns: ["bar_id"]
+            isOneToOne: false
+            referencedRelation: "bars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reports_payment_id_bar_id_fkey"
+            columns: ["payment_id", "bar_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id", "bar_id"]
+          },
+          {
+            foreignKeyName: "payment_reports_player_id_bar_id_fkey"
+            columns: ["player_id", "bar_id"]
+            isOneToOne: false
+            referencedRelation: "players"
             referencedColumns: ["id", "bar_id"]
           },
         ]
@@ -666,6 +752,7 @@ export type Database = {
       }
       players: {
         Row: {
+          archived_at: string | null
           bar_id: string
           cashapp: string | null
           created_at: string
@@ -676,6 +763,7 @@ export type Database = {
           venmo: string | null
         }
         Insert: {
+          archived_at?: string | null
           bar_id: string
           cashapp?: string | null
           created_at?: string
@@ -686,6 +774,7 @@ export type Database = {
           venmo?: string | null
         }
         Update: {
+          archived_at?: string | null
           bar_id?: string
           cashapp?: string | null
           created_at?: string
@@ -849,6 +938,10 @@ export type Database = {
         Args: { p_bar_id: string }
         Returns: undefined
       }
+      confirm_payment_report: {
+        Args: { p_amount_cents?: number; p_id: string }
+        Returns: string
+      }
       create_bar: {
         Args: {
           p_cashapp_handle?: string
@@ -862,7 +955,12 @@ export type Database = {
         Returns: string
       }
       create_order: {
-        Args: { p_drink_id: string; p_player_id: string; p_session_id: string }
+        Args: {
+          p_allow_short?: boolean
+          p_drink_id: string
+          p_player_id: string
+          p_session_id: string
+        }
         Returns: Json
       }
       create_scheduled_game: {
@@ -876,6 +974,7 @@ export type Database = {
       delete_my_account: { Args: never; Returns: undefined }
       delete_order: { Args: { p_order_id: string }; Returns: undefined }
       delete_session: { Args: { p_session_id: string }; Returns: undefined }
+      dismiss_payment_report: { Args: { p_id: string }; Returns: undefined }
       email_has_account: { Args: { p_email: string }; Returns: boolean }
       get_account_deletion_check: { Args: never; Returns: Json }
       get_invite_preview: { Args: { p_token: string }; Returns: Json }
@@ -900,6 +999,18 @@ export type Database = {
           bar_name: string
         }[]
       }
+      get_rsvp_game: {
+        Args: { p_token: string }
+        Returns: {
+          bar_name: string
+          cancelled: boolean
+          game_name: string
+          host_name: string
+          my_status: string
+          scheduled_at: string
+          started: boolean
+        }[]
+      }
       get_shared_tab: { Args: { p_token: string }; Returns: Json }
       is_bar_member: { Args: { b: string }; Returns: boolean }
       is_bar_staff: { Args: { b: string }; Returns: boolean }
@@ -919,10 +1030,39 @@ export type Database = {
           name: string
         }[]
       }
+      merge_players: {
+        Args: { p_from: string; p_into: string }
+        Returns: undefined
+      }
+      my_payment_reports: { Args: { p_token: string }; Returns: Json }
+      payment_report_player: {
+        Args: { p_token: string }
+        Returns: {
+          archived_at: string | null
+          bar_id: string
+          cashapp: string | null
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+          user_id: string | null
+          venmo: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "players"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       player_balance_cents: { Args: { p_player_id: string }; Returns: number }
       reassign_player_account: {
         Args: { p_from: string; p_to: string }
         Returns: undefined
+      }
+      report_payment: {
+        Args: { p_amount_cents: number; p_note?: string; p_token: string }
+        Returns: string
       }
       request_player_claim: {
         Args: { p_player_id: string; p_token: string }
@@ -1085,6 +1225,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
