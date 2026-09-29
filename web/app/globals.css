@@ -91,6 +91,10 @@
   }
   html {
     scrollbar-gutter: stable;
+    /* iOS standalone PWAs (black-translucent status bar) size the fixed-position viewport short
+       by the top inset until the first scroll, so the bottom nav loads floating ~60pt high and
+       then jumps down. A root that already covers the inset makes WebKit size it right on load. */
+    min-height: calc(100% + env(safe-area-inset-top));
   }
   body {
     @apply bg-background text-foreground;
