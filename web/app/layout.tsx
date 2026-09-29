@@ -5,7 +5,9 @@ import { SWRProvider } from '@/context/swr-provider';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 
+import { AppShell } from '@/components/shared/layout/app-shell';
 import { siteEnv } from '@/lib/env/site';
+import { THEME_COLORS } from '@/lib/theme-colors';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteEnv.origin),
@@ -22,7 +24,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#111111',
+  themeColor: THEME_COLORS.background,
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -45,7 +47,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           forcedTheme='dark'
           disableTransitionOnChange
         >
-          <SWRProvider>{children}</SWRProvider>
+          <SWRProvider>
+            <AppShell>{children}</AppShell>
+          </SWRProvider>
         </ThemeProvider>
         <Toaster theme='dark' position='bottom-center' richColors />
       </body>
