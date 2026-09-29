@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
 import {
   ResponsiveContainer, LineChart, Line,
@@ -159,25 +161,49 @@ function PerformanceView({ rows }: { rows: readonly PerformanceRow[] }) {
   );
 }
 
+const ALL_TABLES = '/results?tab=poker';
+
+// ?table=<bar id> narrows the tab to one table — member Home's cards link here (member-home
+// SCOPE.md §3 O3(b)). The page is dynamic already, so reading the param here needs no Suspense.
+function TableFilter({ name }: { name: string }) {
+  return (
+    <div className='flex items-center justify-between gap-3 mb-6'>
+      <p className='text-sm font-medium truncate'>{name}</p>
+      <Link href={ALL_TABLES} className='shrink-0 text-xs tracking-widest uppercase text-primary hover:text-foreground transition-colors'>
+        All tables ›
+      </Link>
+    </div>
+  );
+}
+
+function NoSessions({ filtered }: { filtered: boolean }) {
+  if (filtered) {
+    return <EmptyResults title='No sessions yet' detail='Once you buy in at this table, each session you play there shows up here.' href={ALL_TABLES} action='All tables' />;
+  }
+  return (
+    <EmptyResults
+      title='No sessions yet'
+      detail='Once you buy in at a table, every session you play shows up here, with your running total across every host.'
+      href='/join'
+      action='Join a table'
+    />
+  );
+}
+
 /** The signed-in player's own winnings across every host's table (was /performance). */
 export function MyPoker() {
-  const { data: rows, error, mutate } = useSWR('get_my_performance', fetchMyPerformance);
+  const table = useSearchParams().get('table');
+  const { data, error, mutate } = useSWR('get_my_performance', fetchMyPerformance);
+  const rows = table ? data?.filter((row) => row.bar_id === table) : data;
 
   return (
-    <DataState
-      rows={rows}
-      error={error}
-      onRetry={() => mutate()}
-      empty={
-        <EmptyResults
-          title='No sessions yet'
-          detail='Once you buy in at a table, every session you play shows up here, with your running total across every host.'
-          href='/join'
-          action='Join a table'
-        />
-      }
-    >
-      {(loaded) => <PerformanceView rows={loaded} />}
+    <DataState rows={rows} error={error} onRetry={() => mutate()} empty={<NoSessions filtered={!!table} />}>
+      {(loaded) => (
+        <>
+          {table && <TableFilter name={loaded[0].bar_name} />}
+          <PerformanceView rows={loaded} />
+        </>
+      )}
     </DataState>
   );
 }

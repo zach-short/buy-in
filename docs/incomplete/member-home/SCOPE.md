@@ -1,6 +1,6 @@
 # Member home — a shell for players who are not hosts, and a view of the tables they play at — SCOPE
 
-**Status: `SCOPED` 2026-09-29 — gate answered in full (§7), every recommendation taken.** Opened by `/scope` on Sonnet 5.5.
+**Status: `BUILT` 2026-09-29, uncommitted — `HANDOFF.md` step 54.** Gate answered in full (§7), every recommendation taken; build-time answers and the stale-row disproof are in §7. Opened by `/scope` on Sonnet 5.5.
 Owner's ask, 2026-09-29: is there a difference between a member and a host, is there a view of the tables you
 play at, and "if someone doesn't own a table they probably should not see the same thing as a table host."
 Vocabulary is the repo's own: a **table** is a bar (`web/hooks/use-sign-up.ts:51`, "Name your table"), a **game**
@@ -192,6 +192,22 @@ Asked in chat 2026-09-29 as one batch; every recommendation was taken. Recorded 
 **Still open — copy (R7), for the design stage, not silently picked.** Not yet asked:
 the member Home empty state, the host-only screen sentence, and the Account link's label. The build session
 must offer 2–3 variants in different registers (plain, warm, terse) and ask before shipping any.
+
+**Build-time answers — asked 2026-09-29 by the item-19 build session, in one batch.**
+
+| Q | Answer (2026-09-29) | Consequence |
+|---|---|---|
+| Member Home empty copy (R7) | **Plain:** "You're not at any tables yet. Ask a host for an invite link." | `web/components/member/member-home.tsx` |
+| Host-only screen copy (R7) | **Plain:** "This page is for the table host." with a Home link | `web/components/shared/host-only.tsx` |
+| Host cards on `/account/settings` for a member | **Hide them** — a member sees What's new and Delete account only | `web/app/account/settings/page.tsx` added to this item's files (not on the board row) |
+| O3(b)'s per-table filter | **Build it now** | the poker tab reads `?table=<bar id>` itself (`web/components/results/my-poker.tsx`), so `web/app/results/page.tsx` — host-setup P2's in-flight file — is not touched |
+
+**Superseded 2026-09-29 by the build session's re-verification (R3, R5):** §1 row 12 ("a `get_my_tables`-shaped
+function does not exist") was stale — `0010_leave_table.sql:47` added `get_my_tables()` (bar id, name, balance,
+scoped to `players.user_id = auth.uid()`), and `get_my_performance()` (`0004_onboarding.sql:355`) already returns
+`bar_id` and `net_cents` per session. The per-table record is a client-side sum of the two, so **item 19 adds no
+migration** and O5 / §5 H5's Fable review has nothing to review. §1 row 11 is stale too: `/performance` is a
+redirect to `/results?tab=poker` (B11, `web/app/performance/page.tsx`), so O2's "Performance" tab is **Results**.
 
 **Nothing in `DESIGN.md` (`supabase-migration`) is reopened.** `D16` (membership is not authority) and BD-8
 (a claimant is not a member) are relied on, not changed.

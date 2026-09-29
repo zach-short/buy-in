@@ -4,14 +4,19 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { HostOnly } from '@/components/shared/host-only';
 import { useAuthUser } from '@/hooks/use-auth-user';
+import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
 import { cn } from '@/lib/utils';
-import { NAV_ITEMS, isActive, showsNav } from './nav-items';
+import { MEMBER_NAV_ITEMS, NAV_ITEMS, type NavItem, isActive, isHostOnly, showsNav } from './nav-items';
 
-function DesktopLinks({ pathname }: { pathname: string }) {
+// Literal classes, so Tailwind sees both.
+const GRID_COLS: Record<number, string> = { 3: 'grid-cols-3', 5: 'grid-cols-5' };
+
+function DesktopLinks({ items, pathname }: { items: readonly NavItem[]; pathname: string }) {
   return (
     <div className='hidden md:flex items-center gap-8'>
-      {NAV_ITEMS.map((item) => (
+      {items.map((item) => (
         <Link
           key={item.href}
           href={item.href}
@@ -28,27 +33,27 @@ function DesktopLinks({ pathname }: { pathname: string }) {
   );
 }
 
-function TopBar({ pathname }: { pathname: string }) {
+function TopBar({ items, pathname }: { items: readonly NavItem[]; pathname: string }) {
   return (
     <header className='hidden md:block fixed inset-x-0 top-0 z-40 h-14 border-b border-border bg-background/90 backdrop-blur'>
       <div className='mx-auto flex h-full max-w-3xl items-center justify-between px-6'>
         <Link href='/' className='text-sm font-semibold tracking-widest uppercase text-primary'>
           Buy-In
         </Link>
-        <DesktopLinks pathname={pathname} />
+        <DesktopLinks items={items} pathname={pathname} />
       </div>
     </header>
   );
 }
 
-function BottomBar({ pathname }: { pathname: string }) {
+function BottomBar({ items, pathname }: { items: readonly NavItem[]; pathname: string }) {
   return (
     <nav
       aria-label='Primary'
       className='md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur pb-(--nav-inset)'
     >
-      <ul className='grid grid-cols-5'>
-        {NAV_ITEMS.map((item) => {
+      <ul className={cn('grid', GRID_COLS[items.length])}>
+        {items.map((item) => {
           const active = isActive(item, pathname);
           return (
             <li key={item.href}>
@@ -76,7 +81,10 @@ function BottomBar({ pathname }: { pathname: string }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { status } = useAuthUser();
+  const isStaff = useIsBarStaff();
   const shown = showsNav(pathname) && status !== 'unauthenticated';
+  // H1: until the staff read returns, neither nav — a member must never see the host's.
+  const items = isStaff === undefined ? null : isStaff ? NAV_ITEMS : MEMBER_NAV_ITEMS;
 
   return (
     <div
@@ -90,13 +98,29 @@ export function AppShell({ children }: { children: ReactNode }) {
     >
       {/* Masks content scrolling up under the clock and battery. */}
       <div aria-hidden className='fixed inset-x-0 top-0 z-50 h-[env(safe-area-inset-top)] bg-background' />
-      {children}
-      {shown && status === 'authenticated' && (
+      <Guarded pathname={pathname} signedIn={status !== 'unauthenticated'} isStaff={isStaff}>
+        {children}
+      </Guarded>
+      {shown && status === 'authenticated' && items && (
         <>
-          <TopBar pathname={pathname} />
-          <BottomBar pathname={pathname} />
+          <TopBar items={items} pathname={pathname} />
+          <BottomBar items={items} pathname={pathname} />
         </>
       )}
     </div>
   );
+}
+
+// H3: a host-only screen must not mount for a member — its fetchBarId would throw before any
+// guard inside it ran — so it waits for the staff read. Signed out, the proxy has already sent
+// the visitor to /login, and nothing here stands in its way.
+function Guarded({ pathname, signedIn, isStaff, children }: {
+  pathname: string;
+  signedIn: boolean;
+  isStaff: boolean | undefined;
+  children: ReactNode;
+}) {
+  if (!signedIn || !isHostOnly(pathname)) return children;
+  if (isStaff === undefined) return null;
+  return isStaff ? children : <HostOnly />;
 }

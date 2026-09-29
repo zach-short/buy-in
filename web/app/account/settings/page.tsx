@@ -9,16 +9,28 @@ import { DeleteAccountSetting } from '@/components/shared/delete-account-setting
 import { HostFeaturesSetting } from '@/components/shared/host-features-setting';
 import { PaymentHandlesSetting } from '@/components/shared/payment-handles-setting';
 import { VenmoNoteSetting } from '@/components/shared/venmo-note-setting';
+import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
 
-export default function SettingsPage() {
+// The four bar cards read the account's own bar, which a member has none of — each would
+// render an error for them (member-home SCOPE.md §7, owner 2026-09-29: hide them).
+function BarSettings() {
   return (
-    <PageMain>
-      <PageHeader title='Settings' actions={<BackAction fallback='/account' />} />
-
+    <>
       <PaymentHandlesSetting />
       <VenmoNoteSetting />
       <DefaultBuyInSetting />
       <HostFeaturesSetting />
+    </>
+  );
+}
+
+export default function SettingsPage() {
+  const isStaff = useIsBarStaff();
+  return (
+    <PageMain>
+      <PageHeader title='Settings' actions={<BackAction fallback='/account' />} />
+
+      {isStaff && <BarSettings />}
       <Link
         href='/account/settings/whats-new'
         className='flex items-center justify-between border border-border rounded-md p-4 mb-6 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'

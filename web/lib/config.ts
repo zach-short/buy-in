@@ -16,3 +16,9 @@ export const SESSION_FALLBACK_POLL_MS = 15_000;
  * (§4 "Refetch debounce").
  */
 export const REALTIME_REFETCH_DEBOUNCE_MS = 250;
+
+/**
+ * How many tables member Home lists before a "Show all" (member-home SCOPE.md §4): a member sits
+ * at a handful of tables, so this is a fold, not pagination.
+ */
+export const MEMBER_HOME_TABLE_LIMIT = 5;
