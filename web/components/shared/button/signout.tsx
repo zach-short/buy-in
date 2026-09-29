@@ -7,7 +7,7 @@ export function SignoutButton({ className }: { className?: string }) {
   return (
     <Button
       onClick={signOutToLanding}
-      className={`w-full mx-auto ${className}`}
+      className={`w-full mx-auto ${className ?? ''}`}
       variant='outline'
     >
       <LogOut aria-hidden='true' />
