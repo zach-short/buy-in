@@ -22,10 +22,23 @@ async function readHomeSessions(supabase: ServerClient): Promise<HomeSessions | 
   }
 }
 
+// Supabase sends a sign-in back to the Site URL, this page, with a ?code= whenever the redirectTo
+// it was given is not in the project's redirect allow-list. Rendering here would paint Landing
+// for the moment before the browser client exchanges the code and useRefreshOnAuthChange swaps
+// in Home — the flash after logging in or signing up. The callback route exchanges it on the
+// server and redirects straight to the right screen. No `flow` is passed: the fallback cannot say
+// whether this was Google or a confirm link, so a failed exchange gets the generic /login error.
+function callbackForCode(code: string): string {
+  return `/auth/callback?${new URLSearchParams({ code })}`;
+}
+
 // Server-rendered, so a signed-out visitor gets Landing in the first response instead of a blank
 // page until the JS, the auth listener and the staff read had all run. proxy.ts has already
 // refreshed the session with getClaims on this request, and set the result on its cookies.
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
+  const { code } = await searchParams;
+  if (code) redirect(callbackForCode(code));
+
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const userId = data?.claims?.sub;
