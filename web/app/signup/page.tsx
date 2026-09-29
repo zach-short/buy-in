@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { GoogleButton, OrDivider } from '@/components/auth/google-button';
+import { PasswordInput } from '@/components/auth/password-input';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 import { useSignUp, type Role, type SignUpState } from '@/hooks/use-sign-up';
 import { cn } from '@/lib/utils';
@@ -91,11 +92,18 @@ function AccountFields({ fields, setField, accountCreated }: Pick<SignUpState, '
         required
         className='h-11'
       />
-      <Input
-        type='password'
+      <PasswordInput
         placeholder='Password'
         value={fields.password}
         onChange={(e) => setField('password', e.target.value)}
+        autoComplete='new-password'
+        required
+        className='h-11'
+      />
+      <PasswordInput
+        placeholder='Confirm password'
+        value={fields.confirmPassword}
+        onChange={(e) => setField('confirmPassword', e.target.value)}
         autoComplete='new-password'
         required
         className='h-11'

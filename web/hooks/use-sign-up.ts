@@ -11,6 +11,7 @@ import { safeRedirectPath } from '@/lib/safe-redirect';
 export type Role = 'host' | 'member';
 
 export interface SignUpFields extends AccountFields, BarFields {
+  confirmPassword: string;
   role: Role | null;
 }
 
@@ -31,7 +32,7 @@ export interface SignUpState {
   invited: boolean;
 }
 
-const EMPTY: SignUpFields = { name: '', email: '', password: '', role: null, barName: '', venmo: '', cashapp: '' };
+const EMPTY: SignUpFields = { name: '', email: '', password: '', confirmPassword: '', role: null, barName: '', venmo: '', cashapp: '' };
 
 // A host's new bar is the dashboard at `/`. A member belongs to no bar until an invite
 // code admits them, which `/join` asks for.
@@ -48,6 +49,7 @@ function messageOf(err: unknown): string {
 // `required` lets whitespace through, and a blank bar name would be stored as-is.
 function problemWith(fields: SignUpFields, role: Role): string | null {
   if (!fields.name.trim()) return 'Enter your name.';
+  if (fields.password !== fields.confirmPassword) return 'Passwords do not match.';
   if (role === 'host' && !fields.barName.trim()) return 'Name your table.';
   return null;
 }

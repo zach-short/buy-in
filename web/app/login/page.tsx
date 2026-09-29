@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { emailHasAccount } from '@/lib/supabase/email-lookup';
 import { completePendingBar } from '@/lib/supabase/pending-bar';
 import { GoogleButton, OrDivider } from '@/components/auth/google-button';
+import { PasswordInput } from '@/components/auth/password-input';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 
 // useSearchParams() forces this subtree to opt out of static prerendering; Next.js
@@ -107,8 +108,7 @@ function LoginForm() {
         ) : (
           <form onSubmit={handlePassword} className='space-y-3'>
             <p className='text-sm text-center break-all'>{email.trim()}</p>
-            <Input
-              type='password'
+            <PasswordInput
               placeholder='Password'
               value={password}
               onChange={(e) => setPassword(e.target.value)}
