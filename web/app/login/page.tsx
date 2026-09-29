@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
+import { GoogleButton, OrDivider } from '@/components/auth/google-button';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 
 // useSearchParams() forces this subtree to opt out of static prerendering; Next.js
@@ -31,7 +32,6 @@ function LoginForm() {
     setLoading(true);
     setError('');
 
-    // DESIGN.md D5: Supabase Auth, email and password only — no OAuth provider on the web.
     const { error: signInError } = await createClient().auth.signInWithPassword({
       email,
       password,
@@ -48,10 +48,10 @@ function LoginForm() {
   return (
     <main className='min-h-screen flex flex-col items-center justify-center px-6'>
       <div className='w-full max-w-xs space-y-8'>
-        <div className='text-center space-y-1'>
-          <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
-          <p className='text-xs text-muted-foreground tracking-widest uppercase'>Members only</p>
-        </div>
+        <h1 className='text-center text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
+
+        <GoogleButton next={safeRedirectPath(searchParams.get('redirect'), '/')} />
+        <OrDivider />
 
         <form onSubmit={handleSubmit} className='space-y-3'>
           <Input

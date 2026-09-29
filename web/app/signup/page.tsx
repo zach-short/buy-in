@@ -2,9 +2,12 @@
 
 import { Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { GoogleButton, OrDivider } from '@/components/auth/google-button';
+import { safeRedirectPath } from '@/lib/safe-redirect';
 import { useSignUp, type Role, type SignUpState } from '@/hooks/use-sign-up';
 import { cn } from '@/lib/utils';
 
@@ -128,6 +131,23 @@ function SignUpForm({ signUp }: { signUp: SignUpState }) {
   );
 }
 
+// The OAuth round trip leaves the page, so a host's table name cannot be collected and
+// create_bar cannot run afterwards; Google sign-up is for members and invited visitors only.
+function GoogleSignUp({ signUp }: { signUp: SignUpState }) {
+  const searchParams = useSearchParams();
+  const { fields, invited } = signUp;
+  const role = invited ? 'member' : fields.role;
+  const next = safeRedirectPath(searchParams.get('redirect'), '/join');
+  return (
+    <div className='space-y-2'>
+      <GoogleButton next={next} disabled={role !== 'member'} />
+      {!invited && role === 'host' && (
+        <p className='text-xs text-muted-foreground tracking-wide'>Hosts set up their table with email below.</p>
+      )}
+    </div>
+  );
+}
+
 // Unreachable while the project auto-confirms email (2026-09-28); signUp returns no session otherwise.
 function ConfirmEmail({ email }: { email: string }) {
   return (
@@ -165,7 +185,11 @@ function SignUpPageInner() {
         {signUp.status.kind === 'confirm-email' ? (
           <ConfirmEmail email={signUp.fields.email} />
         ) : (
-          <SignUpForm signUp={signUp} />
+          <>
+            <GoogleSignUp signUp={signUp} />
+            <OrDivider />
+            <SignUpForm signUp={signUp} />
+          </>
         )}
 
         <p className='text-center text-xs text-muted-foreground tracking-wide'>

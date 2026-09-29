@@ -20,6 +20,7 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/opengraph-image' ||
     pathname === '/login' ||
     pathname === '/signup' ||
+    pathname === '/auth/callback' ||
     pathname === '/join' ||
     pathname.startsWith('/join/') ||
     pathname.startsWith('/rsvp/') ||
