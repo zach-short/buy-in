@@ -3,9 +3,10 @@ import { join } from 'node:path';
 
 import { ImageResponse } from 'next/og';
 
+import { CARD_ALT, SITE_TAGLINE } from '@/lib/page-metadata';
 import { THEME_COLORS } from '@/lib/theme-colors';
 
-export const alt = 'Buy-In — home bar management for poker nights';
+export const alt = CARD_ALT;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -58,8 +59,8 @@ export default async function OpenGraphImage() {
             BUY-IN
           </div>
           <BrassRule />
-          <div style={{ fontSize: 30, letterSpacing: 8, paddingLeft: 8, color: THEME_COLORS.foreground }}>
-            HOME BAR MANAGEMENT FOR POKER NIGHTS
+          <div style={{ fontSize: 26, letterSpacing: 6, paddingLeft: 6, color: THEME_COLORS.foreground }}>
+            {SITE_TAGLINE.toUpperCase()}
           </div>
         </div>
       </div>

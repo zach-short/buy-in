@@ -8,6 +8,7 @@ import { Toaster } from 'sonner';
 
 import { AppShell } from '@/components/shared/layout/app-shell';
 import { siteEnv } from '@/lib/env/site';
+import { CARD_IMAGE, SITE_DESCRIPTION } from '@/lib/page-metadata';
 import { THEME_COLORS } from '@/lib/theme-colors';
 
 const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '500', '600'], display: 'swap', variable: '--font-cinzel' });
@@ -15,10 +16,10 @@ const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '500', '600'], displ
 export const metadata: Metadata = {
   metadataBase: new URL(siteEnv.origin),
   title: { default: 'Buy-In', template: '%s — Buy-In' },
-  description: 'Home bar management for poker nights',
+  description: SITE_DESCRIPTION,
   manifest: '/manifest.json',
-  openGraph: { siteName: 'Buy-In', type: 'website', title: 'Buy-In', description: 'Home bar management for poker nights' },
-  twitter: { card: 'summary_large_image', title: 'Buy-In', description: 'Home bar management for poker nights' },
+  openGraph: { siteName: 'Buy-In', type: 'website', url: '/', title: 'Buy-In', description: SITE_DESCRIPTION, images: [CARD_IMAGE] },
+  twitter: { card: 'summary_large_image', title: 'Buy-In', description: SITE_DESCRIPTION, images: [CARD_IMAGE.url] },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

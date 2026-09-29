@@ -4,7 +4,12 @@ export const SITE_NAME = 'Buy-In';
 
 // A child's openGraph/twitter object replaces the parent's wholesale — including the image the
 // root's opengraph-image file adds — so each page names the same image explicitly.
-const CARD_IMAGE = { url: '/opengraph-image', width: 1200, height: 630, alt: 'Buy-In — home bar management for poker nights' };
+export const SITE_TAGLINE = 'The bar and the bank for your poker night';
+export const SITE_DESCRIPTION =
+  'Run your home poker night: a live table, a drink menu and tab, one-tap settle-up, receipts, and game scheduling with RSVPs.';
+// The card image's alt lives here once so the root layout, every page and opengraph-image.tsx agree.
+export const CARD_ALT = `${SITE_NAME} — ${SITE_TAGLINE.toLowerCase()}`;
+export const CARD_IMAGE = { url: '/opengraph-image', width: 1200, height: 630, alt: CARD_ALT };
 
 interface PageMetadataInput {
   title: string;
