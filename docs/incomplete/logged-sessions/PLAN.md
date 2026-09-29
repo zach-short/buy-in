@@ -142,7 +142,7 @@ Results.
 
 ### Phase 2 — Writes and the form
 
-**Status: `BUILT` 2026-09-29 — `HANDOFF.md` step 58; commit pending (the owner commits).** `0021` was
+**Status: `BUILT` 2026-09-29, commit `fcadc3b` — `HANDOFF.md` step 58.** `0021` was
 already applied on the local stack. It is still **unapplied to production**, as at phase 1, and the owner applies it
 before either commit ships. The copy (scope step 7) was asked first, and plain was taken for all three
 (`DESIGN.md` "Still owed at build"). Deviations and build calls:
