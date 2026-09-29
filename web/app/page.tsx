@@ -8,30 +8,8 @@ import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { sumCents } from '@/lib/ledger';
 import { fetchSessions, fetchSessionOrders } from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
+import { Landing } from '@/components/landing/landing';
 import { useAuthUser } from '@/hooks/use-auth-user';
-
-function Landing() {
-  const router = useRouter();
-  return (
-    <main className='min-h-screen flex flex-col items-center justify-center px-6'>
-      <div className='w-full max-w-xs space-y-8 text-center'>
-        <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
-        {/* No Menu button: a menu belongs to a bar, and a logged-out visitor has none. Guests
-            reach one through the /menu/<bar id> link a host shares (owner, 2026-09-27). */}
-        <div className='flex flex-col gap-3'>
-          <Button
-            size='lg'
-            variant='outline'
-            className='h-12 text-xs tracking-widest uppercase'
-            onClick={() => router.push('/login')}
-          >
-            Login
-          </Button>
-        </div>
-      </div>
-    </main>
-  );
-}
 
 function Dashboard() {
   const router = useRouter();
