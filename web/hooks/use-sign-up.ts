@@ -65,6 +65,8 @@ export function useSignUp(): SignUpState {
   // Lazy initializer: read the param once, on mount, not on every render.
   const [fields, setFields] = useState<SignUpFields>(() => ({
     ...EMPTY,
+    // /login carries the address it already asked for.
+    email: searchParams.get('email') ?? '',
     role: invited ? 'member' : null,
   }));
   const [status, setStatus] = useState<SignUpStatus>({ kind: 'idle' });

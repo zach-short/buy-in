@@ -1,12 +1,12 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
-import { GoogleButton } from '@/components/auth/google-button';
+import { emailHasAccount } from '@/lib/supabase/email-lookup';
+import { GoogleButton, OrDivider } from '@/components/auth/google-button';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 
 // useSearchParams() forces this subtree to opt out of static prerendering; Next.js
@@ -19,30 +19,51 @@ export default function LoginPage() {
   );
 }
 
+function messageOf(err: unknown): string {
+  return err instanceof Error ? err.message : 'Something went wrong.';
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [step, setStep] = useState<'email' | 'password'>('email');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showEmail, setShowEmail] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  // No account for this address: hand off to the onboarding form with the email carried over.
+  function startOnboarding() {
+    const params = new URLSearchParams({ email: email.trim() });
+    if (redirect) params.set('redirect', redirect);
+    router.replace(`/signup?${params}`);
+  }
+
+  async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    try {
+      if (await emailHasAccount(email)) setStep('password');
+      else return startOnboarding();
+    } catch (err) {
+      setError(messageOf(err));
+    }
+    setLoading(false);
+  }
 
+  async function handlePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
     const { error: signInError } = await createClient().auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     });
-
-    if (!signInError) {
-      router.replace(safeRedirectPath(searchParams.get('redirect'), '/'));
-    } else {
-      setError('Invalid credentials.');
-    }
+    if (!signInError) return router.replace(safeRedirectPath(redirect, '/'));
+    // A Google-only account has no password, so it lands here too.
+    setError('Wrong password. If you signed up with Google, use the Google button.');
     setLoading(false);
   }
 
@@ -51,9 +72,9 @@ function LoginForm() {
       <div className='w-full max-w-xs space-y-8'>
         <h1 className='text-center text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
 
-        <div className='space-y-3'>
-          {showEmail ? (
-            <form onSubmit={handleSubmit} className='space-y-3'>
+        {step === 'email' ? (
+          <div className='space-y-3'>
+            <form onSubmit={handleEmail} className='space-y-3'>
               <Input
                 type='email'
                 placeholder='Email'
@@ -61,47 +82,44 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete='email'
                 autoFocus
-                className='h-11'
-              />
-              <Input
-                type='password'
-                placeholder='Password'
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete='current-password'
+                required
                 className='h-11'
               />
               {error && <p className='text-xs text-destructive tracking-wide'>{error}</p>}
-              <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={loading}>
-                {loading ? 'Signing in…' : 'Enter'}
+              <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={loading || !email.trim()}>
+                {loading ? 'Checking…' : 'Continue'}
               </Button>
             </form>
-          ) : (
+            <OrDivider />
+            <GoogleButton next={safeRedirectPath(redirect, '/')} />
+          </div>
+        ) : (
+          <form onSubmit={handlePassword} className='space-y-3'>
+            <p className='text-sm text-center break-all'>{email.trim()}</p>
+            <Input
+              type='password'
+              placeholder='Password'
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete='current-password'
+              autoFocus
+              required
+              className='h-11'
+            />
+            {error && <p className='text-xs text-destructive tracking-wide'>{error}</p>}
+            <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={loading}>
+              {loading ? 'Signing in…' : 'Enter'}
+            </Button>
             <Button
               type='button'
-              variant='outline'
-              onClick={() => setShowEmail(true)}
-              className='w-full h-11 tracking-widest uppercase text-xs'
+              variant='ghost'
+              onClick={() => { setStep('email'); setPassword(''); setError(''); }}
+              className='w-full text-xs text-muted-foreground'
             >
-              Continue with Email
+              Use a different email
             </Button>
-          )}
-          <GoogleButton next={safeRedirectPath(searchParams.get('redirect'), '/')} />
-        </div>
-
-        <p className='text-center text-xs text-muted-foreground tracking-wide'>
-          Don&apos;t have an account?{' '}
-          <Link
-            href={
-              searchParams.get('redirect')
-                ? `/signup?redirect=${encodeURIComponent(searchParams.get('redirect')!)}`
-                : '/signup'
-            }
-            className='text-primary underline-offset-4 hover:underline'
-          >
-            Sign up
-          </Link>
-        </p>
+          </form>
+        )}
       </div>
     </main>
   );
