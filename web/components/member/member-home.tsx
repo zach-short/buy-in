@@ -4,16 +4,20 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 import { formatCents, isSettled, type RsvpAnswer, type TableRecord, type TableWithGame } from '@pb/core';
-import { Plus } from 'lucide-react';
+import { Home, Plus, X } from 'lucide-react';
 import { NextGameRow } from '@/components/member/next-game';
 import { DataState } from '@/components/shared/data-state';
 import { Button } from '@/components/ui/button';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
+import { useHostPrompt } from '@/hooks/use-host-prompt';
 import { useTableRecords } from '@/hooks/use-table-records';
 import { MEMBER_HOME_TABLE_LIMIT } from '@/lib/config';
 
 // Copy chosen by the owner 2026-09-29, plain register (member-home SCOPE.md §7, build-time answers).
 const EMPTY = "You're not at any tables yet. Ask a host for an invite link.";
+
+// Account's Host your own table row goes here too (use-welcome.ts).
+const HOST_TABLE = '/welcome?role=host';
 
 // Results' own form route (fcadc3b); saving returns to Results → poker, not here.
 const LOG_SESSION = '/results/log';
@@ -83,12 +87,34 @@ function LogSessionButton() {
   );
 }
 
+// Above the tables so a signed-in account that hosts nowhere sees the way in first; the X is the
+// only way it goes, and it stays gone on this browser.
+function HostTableCard({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className='relative mb-10'>
+      <Button asChild size='lg' className='w-full h-12 text-sm tracking-widest uppercase font-medium'>
+        <Link href={HOST_TABLE}><Home aria-hidden='true' /> Host a table</Link>
+      </Button>
+      <button
+        type='button'
+        aria-label='Dismiss'
+        onClick={onDismiss}
+        className='absolute right-3 top-1/2 -translate-y-1/2 rounded-sm p-1 text-primary-foreground/70 hover:text-primary-foreground transition-colors'
+      >
+        <X aria-hidden='true' className='size-4' />
+      </button>
+    </div>
+  );
+}
+
 /** Home for an account that hosts nowhere: the tables it plays at, its record and next game at each. */
 export function MemberHome() {
   const { records, error, retry, answer } = useTableRecords();
+  const hostPrompt = useHostPrompt();
   return (
     <PageMain>
-      <PageHeader title='Buy-In' />
+      <PageHeader title='Home' />
+      {hostPrompt.show && <HostTableCard onDismiss={hostPrompt.dismiss} />}
       <p className='text-xs tracking-widest uppercase text-muted-foreground mb-3'>Your tables</p>
       <DataState
         rows={records}

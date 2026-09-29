@@ -35,7 +35,7 @@ function Dashboard() {
 
   return (
     <PageMain className='flex flex-col'>
-      <PageHeader title='Buy-In' />
+      <PageHeader title='Home' />
 
       <div className='flex flex-col gap-3 mb-10'>
         {activeSession ? (
