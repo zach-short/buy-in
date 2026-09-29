@@ -63,5 +63,5 @@ export default function JoinInvitePage({ params }: { params: Promise<{ token: st
     );
   }
 
-  return <JoinStatus>{flow.step === 'redirecting' ? 'Taking you to sign up…' : 'Loading…'}</JoinStatus>;
+  return <JoinStatus>{flow.step === 'redirecting' ? 'Taking you to sign in…' : 'Loading…'}</JoinStatus>;
 }

@@ -230,7 +230,12 @@
 @keyframes landing-stamp { from { opacity: 0; transform: scale(0.3) rotate(-30deg); } to { opacity: 1; transform: none; } }
 @keyframes landing-print { from { clip-path: inset(0 0 100% 0); transform: translateY(-24px); } to { clip-path: inset(0 0 -20px 0); transform: none; } }
 
+/* /login: the email field rising into the space Continue with Google leaves. */
+@keyframes auth-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.auth-rise { animation: auth-rise 300ms ease-out both; }
+
 @media (prefers-reduced-motion: reduce) {
+  .auth-rise { animation: none; }
   .landing-glow-a, .landing-glow-b, .landing-halo, .landing-shimmer, .landing-cta,
   .landing-flash, .landing-ticker-in, .landing-stamp, .landing-print { animation: none; }
   .landing-reveal { opacity: 1; transform: none; transition: none; }

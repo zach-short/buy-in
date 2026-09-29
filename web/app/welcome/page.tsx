@@ -1,14 +1,27 @@
 'use client';
 
-import { HostFields } from '@/components/auth/host-fields';
+import { Suspense } from 'react';
+
 import { RolePicker } from '@/components/auth/role-picker';
 import { Button } from '@/components/ui/button';
-import { useWelcome } from '@/hooks/use-welcome';
+import { Input } from '@/components/ui/input';
+import { useWelcome, type WelcomeFlow } from '@/hooks/use-welcome';
 
-// Where a first Google sign-in lands (see /auth/callback): the email form asks this at sign-up,
-// and OAuth cannot, since the round trip leaves the page before a table name could be collected.
+const PRIMARY = 'w-full h-11 tracking-widest uppercase text-xs';
+
+// useSearchParams() (in useWelcome, for ?next= and ?role=) forces this subtree to opt out of
+// static prerendering; Next.js requires a Suspense boundary around it
+// (https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout).
 export default function WelcomePage() {
-  const { role, bar, setField, choose, submit, submitting, error } = useWelcome();
+  return (
+    <Suspense fallback={null}>
+      <Welcome />
+    </Suspense>
+  );
+}
+
+function Welcome() {
+  const flow = useWelcome();
 
   return (
     <main className='min-h-dvh flex flex-col items-center justify-center px-6 py-12'>
@@ -17,18 +30,79 @@ export default function WelcomePage() {
           <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
           <p className='text-xs text-muted-foreground tracking-widest uppercase'>Welcome</p>
         </div>
-        <form onSubmit={submit} className='space-y-3'>
-          <RolePicker value={role} onChange={choose} />
-          {role === 'host' && <HostFields fields={bar} setField={setField} />}
-          {!role && <p className='text-xs text-muted-foreground tracking-wide'>Choose one to continue.</p>}
-          {error && <p role='alert' className='text-xs text-destructive tracking-wide'>{error}</p>}
-          {role === 'host' && (
-            <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={submitting}>
-              {submitting ? 'Creating table…' : 'Create table'}
-            </Button>
-          )}
-        </form>
+        {flow.step === 'role' && <RolePicker value={flow.role} onChange={flow.choose} />}
+        {flow.step === 'profile' && <ProfileStep flow={flow} />}
+        {flow.step === 'table' && <TableStep flow={flow} />}
       </div>
     </main>
+  );
+}
+
+function ErrorLine({ error }: { error: string }) {
+  if (!error) return null;
+  return <p role='alert' className='text-xs text-destructive tracking-wide'>{error}</p>;
+}
+
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button type='button' variant='ghost' onClick={onClick} className='w-full text-xs text-muted-foreground'>
+      Back
+    </Button>
+  );
+}
+
+function ProfileStep({ flow }: { flow: WelcomeFlow }) {
+  return (
+    <form onSubmit={flow.submitProfile} className='space-y-3'>
+      {flow.invited && (
+        <p className='text-xs text-muted-foreground tracking-wide'>
+          You&apos;ve been invited to join a table.
+        </p>
+      )}
+      <Input
+        placeholder='Your name'
+        value={flow.profile.name}
+        onChange={(e) => flow.setName(e.target.value)}
+        autoComplete='name'
+        autoFocus
+        required
+        className='h-11'
+      />
+      <Input
+        placeholder='Venmo handle (optional)'
+        value={flow.venmoInput}
+        onChange={(e) => flow.setVenmo(e.target.value)}
+        autoCapitalize='none'
+        autoCorrect='off'
+        className='h-11'
+      />
+      <ErrorLine error={flow.error} />
+      <Button type='submit' className={PRIMARY} disabled={flow.submitting}>
+        {flow.submitting ? 'Saving…' : 'Continue'}
+      </Button>
+      {!flow.invited && <BackButton onClick={() => flow.goTo('role')} />}
+    </form>
+  );
+}
+
+// The rest of a host's setup — drinks, default buy-in, players — is home's first-run guide.
+function TableStep({ flow }: { flow: WelcomeFlow }) {
+  return (
+    <form onSubmit={flow.submitTable} className='space-y-3'>
+      <p className='text-xs text-muted-foreground tracking-widest uppercase'>Your table</p>
+      <Input
+        placeholder='Table name'
+        value={flow.tableName}
+        onChange={(e) => flow.setTableName(e.target.value)}
+        autoFocus
+        required
+        className='h-11'
+      />
+      <ErrorLine error={flow.error} />
+      <Button type='submit' className={PRIMARY} disabled={flow.submitting}>
+        {flow.submitting ? 'Creating table…' : 'Create table'}
+      </Button>
+      <BackButton onClick={() => flow.goTo('profile')} />
+    </form>
   );
 }

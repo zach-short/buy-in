@@ -20,7 +20,7 @@ export type JoinResult = { ok: true; playerId: string } | { ok: false; reason: J
 export async function checkSignIn(): Promise<SignInCheck> {
   const { data, error } = await createClient().auth.getUser();
   if (data.user) return { status: 'signed-in', user: data.user };
-  // A dropped connection must not read as signed out, or a signed-in member is bounced to /signup.
+  // A dropped connection must not read as signed out, or a signed-in member is bounced to /login.
   return isAuthRetryableFetchError(error) ? { status: 'unreachable' } : { status: 'signed-out' };
 }
 
@@ -38,14 +38,14 @@ function classifyJoinError(code: string): JoinFailure {
   return code === '23505' ? 'name-taken' : 'invalid-invite';
 }
 
-/** The name the member gave at sign-up, as a starting point they can edit. */
+/** The name the member gave on /welcome (or Google's), as a starting point they can edit. */
 export function displayNameOf(user: User): string {
   // auth-js types user_metadata as { [key: string]: any }; narrow it rather than trust it (T1).
   const fullName: unknown = user.user_metadata.full_name;
   return typeof fullName === 'string' ? fullName.trim() : '';
 }
 
-/** Sign-up, returning to `returnTo` afterwards. The whole path rides inside `redirect`, query and all. */
-export function signupPath(returnTo: string): string {
-  return `/signup?${new URLSearchParams({ redirect: returnTo })}`;
+/** Sign-in or sign-up, returning to `returnTo` afterwards. The whole path rides inside `redirect`, query and all. */
+export function loginPath(returnTo: string): string {
+  return `/login?${new URLSearchParams({ redirect: returnTo })}`;
 }

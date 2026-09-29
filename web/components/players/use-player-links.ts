@@ -1,5 +1,4 @@
 import { toast } from 'sonner';
-import { formatCents } from '@pb/core';
 
 import type { ConfirmApi } from '@/hooks/use-confirm';
 import { copyText, shareOrCopy, smsHref } from '@/lib/share';
@@ -13,7 +12,7 @@ type LinkPlayer = Pick<PlayerRow, 'id' | 'bar_id' | 'name' | 'phone'>;
 export interface PlayerLinksApi {
   copyPortalLink: (replace: boolean) => Promise<void>;
   requestReceipt: () => Promise<void>;
-  /** Texts (with a phone) or shares a nudge carrying the portal link. Only for a positive balance. */
+  /** Texts (with a phone) or shares the portal link, bare. Only for a positive balance. */
   remind: (balanceCents: number) => Promise<void>;
 }
 
@@ -58,9 +57,8 @@ export function usePlayerLinks(player: LinkPlayer | undefined, confirm: ConfirmA
     if (!player || balanceCents <= 0) return;
     try {
       const url = portalUrl(await shareToken(player, null));
-      const text = `You owe $${formatCents(balanceCents)} for poker — pay/see details:`;
-      if (player.phone) window.location.href = smsHref(player.phone, `${text} ${url}`);
-      else reportShare(await shareOrCopy(url, text), 'Reminder copied');
+      if (player.phone) window.location.href = smsHref(player.phone, url);
+      else reportShare(await shareOrCopy(url), 'Reminder link copied');
     } catch (e) {
       toast.error((e as Error).message);
     }

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { createClient } from '@/lib/supabase/server';
-import { hasNoTableOrSeat } from '@/lib/supabase/new-account';
+import { afterSignIn } from '@/lib/supabase/new-account';
 import { completePendingBar } from '@/lib/supabase/pending-bar';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 
@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
     if (!error) {
       // Best effort: a failure leaves the fields in metadata for the next sign-in to retry.
       await completePendingBar(supabase).catch(() => undefined);
-      // A plain '/' means nobody chose a destination (no invite, no event link), so a first
-      // Google sign-in gets asked whether they host or play. Any other path is honoured as is.
-      const destination = next === '/' && (await hasNoTableOrSeat(supabase)) ? '/welcome' : next;
+      // A new account, from Google or a confirm link, goes through /welcome first and carries
+      // `next` (an invite, an event link) along; everyone else goes straight to `next`.
+      const destination = next.startsWith('/welcome') ? next : await afterSignIn(supabase, next);
       return NextResponse.redirect(`${origin}${destination}`);
     }
   }

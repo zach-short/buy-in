@@ -45,7 +45,7 @@ function Nav() {
           Log in
         </Link>
         <Button asChild size='sm' className='text-xs tracking-widest uppercase'>
-          <Link href='/signup'>Get started</Link>
+          <Link href='/login'>Get started</Link>
         </Button>
       </nav>
     </header>
@@ -56,7 +56,7 @@ function Actions() {
   return (
     <div className='flex flex-wrap items-center gap-3'>
       <Button asChild size='lg' className='h-12 px-7 text-xs tracking-widest uppercase landing-cta'>
-        <Link href='/signup'>Get started</Link>
+        <Link href='/login'>Get started</Link>
       </Button>
       <Button asChild size='lg' variant='outline' className='h-12 px-7 text-xs tracking-widest uppercase'>
         <Link href='/login'>Log in</Link>

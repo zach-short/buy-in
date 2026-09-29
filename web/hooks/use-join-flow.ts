@@ -3,9 +3,9 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { checkSignIn, displayNameOf, joinBarAsPlayer, signupPath, type JoinFailure } from '@/lib/supabase/join';
+import { checkSignIn, displayNameOf, joinBarAsPlayer, loginPath, type JoinFailure } from '@/lib/supabase/join';
 
-// A successful join stays on 'joining' and 'redirecting' is the detour to /signup: both hold
+// A successful join stays on 'joining' and 'redirecting' is the detour to /login: both hold
 // the screen still while router.replace navigates, so nothing can be resubmitted mid-unload.
 export type JoinStep = 'idle' | 'checking' | 'redirecting' | 'naming' | 'joining';
 
@@ -32,7 +32,7 @@ export function useJoinFlow(initialStep: JoinStep = 'idle') {
       const check = await checkSignIn();
       if (check.status === 'signed-out') {
         setStep('redirecting');
-        router.replace(signupPath(returnTo));
+        router.replace(loginPath(returnTo));
       } else if (check.status === 'unreachable') {
         setStep('idle');
         setError(UNREACHABLE);

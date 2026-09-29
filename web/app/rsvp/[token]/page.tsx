@@ -56,8 +56,8 @@ function InviteLine() {
   return <p className='text-center text-sm'>You&apos;ve been invited to a poker game night.</p>;
 }
 
-// Links rather than a redirect, so the token survives: login and signup bring the visitor back
-// here through `redirect`. get_rsvp_game (0012) needs an account, so the game's details wait too.
+// A link rather than a redirect, so the token survives: /login brings the visitor back here
+// through `redirect`, whether they sign in or sign up. get_rsvp_game (0012) needs an account, so the game's details wait too.
 function SignInPrompt({ token }: { token: string }) {
   const redirect = encodeURIComponent(`/rsvp/${token}`);
   return (
@@ -68,10 +68,7 @@ function SignInPrompt({ token }: { token: string }) {
       </div>
       <div className='space-y-3'>
         <Button asChild className='w-full h-11 tracking-widest uppercase text-xs'>
-          <Link href={`/signup?redirect=${redirect}`}>Create an account</Link>
-        </Button>
-        <Button asChild variant='outline' className='w-full h-11 tracking-widest uppercase text-xs'>
-          <Link href={`/login?redirect=${redirect}`}>I already have an account</Link>
+          <Link href={`/login?redirect=${redirect}`}>Continue</Link>
         </Button>
       </div>
     </div>

@@ -11,7 +11,7 @@ import { useJoinFlow } from '@/hooks/use-join-flow';
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 // The typed-code way in; /join/[token] is the same flow for a clicked link. A signed-out
-// visitor is sent to /signup and returned here with ?code= set, so the code survives the detour.
+// visitor is sent to /login and returned here with ?code= set, so the code survives the detour.
 export default function JoinPage({ searchParams }: { searchParams: SearchParams }) {
   const { code: codeParam } = use(searchParams);
   const [code, setCode] = useState(typeof codeParam === 'string' ? codeParam : '');

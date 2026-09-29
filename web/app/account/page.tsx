@@ -46,7 +46,7 @@ export default function AccountPage() {
 
       {isHost === false && (
         <Link
-          href='/welcome'
+          href='/welcome?role=host'
           className='flex items-center justify-between py-4 mb-10 border-y border-border text-sm tracking-widest uppercase hover:text-primary transition-colors'
         >
           Host your own table

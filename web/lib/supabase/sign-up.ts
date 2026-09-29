@@ -1,13 +1,9 @@
 import { createClient } from '@/lib/supabase/client';
 
-// DESIGN.md D5's named reversal: self-service sign-up. Hosting is a separate step after it —
-// /welcome runs create_bar, whose owner membership comes from 0001's bars_owner_membership trigger.
-
-export interface AccountFields {
-  name: string;
-  email: string;
-  password: string;
-}
+// DESIGN.md D5's named reversal: self-service sign-up. Only the email and password are asked
+// here; the name, Venmo and host-or-member choice come after, on /welcome, for email and
+// Google accounts alike. Hosting runs create_bar there, whose owner membership comes from
+// 0001's bars_owner_membership trigger.
 
 /** `signed-in` when the project auto-confirms email; `confirm-email` when it does not. */
 export type AccountResult = 'signed-in' | 'confirm-email';
@@ -19,14 +15,11 @@ export function confirmRedirectUrl(next: string): string {
   return `${window.location.origin}/auth/callback?flow=signup&next=${encodeURIComponent(next)}`;
 }
 
-export async function createAccount(fields: AccountFields, next: string): Promise<AccountResult> {
+export async function createAccount(email: string, password: string, next: string): Promise<AccountResult> {
   const { data, error } = await createClient().auth.signUp({
-    email: fields.email.trim(),
-    password: fields.password,
-    options: {
-      emailRedirectTo: confirmRedirectUrl(next),
-      data: { full_name: fields.name.trim() },
-    },
+    email: email.trim(),
+    password,
+    options: { emailRedirectTo: confirmRedirectUrl(next) },
   });
   if (error) throw new Error(error.message);
   // With Confirm email on, Supabase returns a user and no session, and for an address that

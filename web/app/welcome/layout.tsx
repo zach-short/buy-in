@@ -4,7 +4,7 @@ import { pageMetadata } from '@/lib/page-metadata';
 
 export const metadata = pageMetadata({
   title: 'Welcome',
-  description: 'Choose whether you are hosting a poker night or joining a table.',
+  description: 'Set up your Buy-In account: host a poker night or join a table.',
 });
 
 export default function Layout({ children }: { children: ReactNode }) {

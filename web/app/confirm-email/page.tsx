@@ -97,7 +97,7 @@ function ConfirmEmail() {
 
         <p className='text-center text-xs text-muted-foreground tracking-wide'>
           Wrong address?{' '}
-          <Link href='/signup' className='text-primary underline-offset-4 hover:underline'>
+          <Link href='/login' className='text-primary underline-offset-4 hover:underline'>
             Start over
           </Link>
         </p>

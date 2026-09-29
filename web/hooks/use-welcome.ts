@@ -1,53 +1,103 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { User } from '@supabase/supabase-js';
 
 import type { Role } from '@/components/auth/role-picker';
+import { useAuthUser } from '@/hooks/use-auth-user';
 import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
-import { createClient } from '@/lib/supabase/client';
-import { createBarWith, type BarFields } from '@/lib/supabase/pending-bar';
+import { safeRedirectPath } from '@/lib/safe-redirect';
+import { displayNameOf } from '@/lib/supabase/join';
+import { normalizeVenmo, validateHandles } from '@/lib/supabase/payment-handles';
+import { createHostTable, saveProfile, type Profile } from '@/lib/supabase/welcome';
 
-const EMPTY_BAR: BarFields = { barName: '', venmo: '', cashapp: '' };
+// A new account's first steps, after /login or Google (owner, 2026-09-29): host or member,
+// then name and optional Venmo, then — for a host — the table, after which home's setup guide
+// takes over. A `next` (an invite or event link) means they came to join, so the role is
+// member and the choice is skipped. Account's "Host your own table" arrives with ?role=host.
+export type WelcomeStep = 'role' | 'profile' | 'table';
 
-/** The host-or-player choice for a signed-in account with neither: a host names a table, a player enters a code. */
+function metaVenmo(user: User | null): string {
+  const venmo: unknown = user?.user_metadata.venmo;
+  return typeof venmo === 'string' ? venmo : '';
+}
+
+function profileProblem(profile: Profile): string | null {
+  if (!profile.name.trim()) return 'Enter your name.';
+  return validateHandles(profile.venmo, '');
+}
+
 export function useWelcome() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeRedirectPath(searchParams.get('next'), '/');
+  const invited = next !== '/';
+  const presetRole: Role | null = invited ? 'member' : searchParams.get('role') === 'host' ? 'host' : null;
+  const { user } = useAuthUser();
   const isHost = useIsBarStaff();
-  const [role, setRole] = useState<Role | null>(null);
-  const [bar, setBar] = useState<BarFields>(EMPTY_BAR);
-  const [submitting, setSubmitting] = useState(false);
+  const [role, setRole] = useState<Role | null>(presetRole);
+  const [step, setStep] = useState<WelcomeStep>(presetRole ? 'profile' : 'role');
+  // null until typed in, so what Google or an earlier visit saved shows without an effect.
+  const [name, setName] = useState<string | null>(null);
+  const [venmo, setVenmo] = useState<string | null>(null);
+  const [tableName, setTableName] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const venmoInput = venmo ?? metaVenmo(user);
+  const profile: Profile = { name: name ?? (user ? displayNameOf(user) : ''), venmo: normalizeVenmo(venmoInput) };
 
   // Someone who already runs a table has nothing to choose; a second one is not what they came for.
   useEffect(() => {
     if (isHost) router.replace('/');
   }, [isHost, router]);
 
-  function setField<K extends keyof BarFields>(key: K, value: BarFields[K]): void {
-    setBar((prev) => ({ ...prev, [key]: value }));
+  function goTo(target: WelcomeStep): void {
+    setError('');
+    setStep(target);
   }
 
-  function choose(next: Role): void {
-    setError('');
-    if (next === 'member') return router.replace('/join');
-    setRole(next);
+  function choose(picked: Role): void {
+    setRole(picked);
+    goTo('profile');
   }
 
   // Stays `submitting` on success so the button holds still while the route changes.
-  async function submit(e: FormEvent): Promise<void> {
-    e.preventDefault();
-    if (!bar.barName.trim()) return setError('Name your table.');
+  async function run(work: () => Promise<void>): Promise<void> {
     setSubmitting(true);
     setError('');
     try {
-      await createBarWith(createClient(), bar);
-      router.replace('/');
+      await work();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
       setSubmitting(false);
     }
   }
 
-  return { role, bar, setField, choose, submit, submitting, error };
+  async function submitProfile(e: FormEvent): Promise<void> {
+    e.preventDefault();
+    const problem = profileProblem(profile);
+    if (problem) return setError(problem);
+    if (role === 'host') return goTo('table');
+    await run(async () => {
+      await saveProfile(profile);
+      router.replace(invited ? next : '/join');
+    });
+  }
+
+  async function submitTable(e: FormEvent): Promise<void> {
+    e.preventDefault();
+    if (!tableName.trim()) return setError('Name your table.');
+    await run(async () => {
+      await createHostTable(profile, tableName);
+      router.replace('/');
+    });
+  }
+
+  return {
+    step, role, invited, profile, venmoInput, setName, setVenmo, tableName, setTableName,
+    choose, goTo, submitProfile, submitTable, submitting, error,
+  };
 }
+
+export type WelcomeFlow = ReturnType<typeof useWelcome>;
