@@ -96,16 +96,17 @@ interface ClaimRowProps {
 
 // PASSOFF item 17: who asked is the email and name their account had when they asked (0008
 // copies both), because a host cannot read accounts and would otherwise approve a stranger.
-// Wording is provisional (R7).
+// The email leads because the name is self-asserted — the claimant's own profile name, which
+// can be anything, including the very player they are claiming. Wording is provisional (R7).
 function ClaimRow({ claim, deciding, onDecide }: ClaimRowProps) {
-  const who = claim.requesterName ?? claim.requesterEmail ?? 'Someone';
+  const who = claim.requesterEmail ?? claim.requesterName ?? 'Someone';
   return (
     <div className='border border-border rounded-md px-4 py-3 space-y-2'>
       <p className='text-sm'>
-        <span className='font-medium'>{who}</span> says they&apos;re <span className='font-medium'>{claim.playerName}</span>
+        <span className='font-medium break-all'>{who}</span> says they&apos;re <span className='font-medium'>{claim.playerName}</span>
       </p>
-      {claim.requesterName && claim.requesterEmail && (
-        <p className='text-xs text-muted-foreground break-all'>{claim.requesterEmail}</p>
+      {claim.requesterEmail && claim.requesterName && (
+        <p className='text-xs text-muted-foreground'>{claim.requesterName}</p>
       )}
       <div className='flex items-center justify-between gap-3'>
         <span className='text-xs text-muted-foreground'>Asked {formatDate(claim.createdAt)}</span>

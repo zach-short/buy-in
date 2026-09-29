@@ -41,6 +41,8 @@ create table player_claim_requests (
   -- cannot read auth.users and would otherwise be approving an anonymous uuid. A copy, not a
   -- live value: the email the account had when it asked is what the host judged.
   requester_email text,
+  -- Self-asserted: the claimant's own profile full_name, which they can set to anything
+  -- (another player's name included). Hosts should judge a request by requester_email.
   requester_name  text,
   status      text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
   created_at  timestamptz not null default now(),
@@ -61,14 +63,29 @@ create index player_claim_requests_bar_status_idx on player_claim_requests (bar_
 
 alter table player_claim_requests enable row level security;
 
--- Staff read and decide their bar's requests. The claimant reads their own rows — player_id,
--- status, dates — which is enough to show "waiting for your host" across a reload and
--- nothing else: a player_id opens no players row until user_id is set (players_self_read).
--- There is no claimant write policy; requests are made only through request_player_claim,
--- which checks the token.
-create policy claim_requests_staff     on player_claim_requests for all
+-- Staff read and decide their bar's requests. The claimant reads their own rows, which is
+-- enough to show "waiting for your host" across a reload and nothing else: a player_id opens
+-- no players row until user_id is set (players_self_read).
+--
+-- Exactly what a claimant learns before approval, through claim_requests_self_read: the row's
+-- player_id, bar_id, status, created_at and decided_at, and their own copied requester_email
+-- and requester_name. Through bar_id, the bar's menu via get_menu (0001), which anyone holding
+-- a bar_id can already call. No balance, no history, no contact details of the player row.
+--
+-- No INSERT or DELETE policy for anyone. Requests are inserted only by request_player_claim
+-- (security definer, checks the token), and deleted only by the foreign-key cascades on bars,
+-- players and auth.users, which run as the table owner and bypass RLS. Every invoker function
+-- below (decide_player_claim, close_stale_claim_requests, and through it swap_player_accounts
+-- and reassign_player_account) only UPDATEs this table; unlink_player does not touch it.
+--
+-- Staff can still UPDATE status directly, without going through decide_player_claim, so a
+-- request with status = 'approved' is NOT proof that the account was ever linked to the row.
+-- players.user_id is the only fact about who holds a row.
+create policy claim_requests_staff_read   on player_claim_requests for select
+  using (is_bar_staff(bar_id));
+create policy claim_requests_staff_update on player_claim_requests for update
   using (is_bar_staff(bar_id)) with check (is_bar_staff(bar_id));
-create policy claim_requests_self_read on player_claim_requests for select
+create policy claim_requests_self_read    on player_claim_requests for select
   using (user_id = (select auth.uid()));
 
 -- ── list_claimable_players ───────────────────────────────────────────────────
@@ -204,7 +221,7 @@ $$;
 --
 -- security invoker, and it cannot be revoked from authenticated: an invoker function calls it
 -- with the caller's privileges. It is harmless called directly — it writes only through
--- claim_requests_staff, so a non-host updates nothing, and a host can only close requests
+-- claim_requests_staff_update, so a non-host updates nothing, and a host can only close requests
 -- that are already stale.
 
 create function close_stale_claim_requests(p_bar_id uuid) returns void
@@ -223,7 +240,7 @@ $$;
 
 -- ── decide_player_claim ──────────────────────────────────────────────────────
 -- Decision 1: the host's approve or reject. security invoker — players_staff admits the
--- user_id write and claim_requests_staff the status write. The explicit staff test is on the
+-- user_id write and claim_requests_staff_update the status write. The explicit staff test is on the
 -- request's own bar_id; a request the caller cannot see and one of another bar share one
 -- message (0004, revoke_bar_invite).
 --
@@ -250,6 +267,12 @@ declare
   v_player    players%rowtype;
   v_req       player_claim_requests%rowtype;
 begin
+  -- `not p_approve` below is null for a null argument, and plpgsql takes a null condition as
+  -- false, so a null would fall through to the approve path.
+  if p_approve is null then
+    raise exception 'p_approve is required' using errcode = 'null_value_not_allowed';
+  end if;
+
   select r.player_id, r.bar_id into v_player_id, v_bar_id
     from player_claim_requests r where r.id = p_request_id;
   if not found or not is_bar_staff(v_bar_id) then
