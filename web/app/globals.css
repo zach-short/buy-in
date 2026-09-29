@@ -58,6 +58,10 @@
   --border:             oklch(1 0 0 / 8%);
   --input:              oklch(1 0 0 / 8%);
   --ring:               oklch(0.72 0.12 75);
+
+  /* The full home-indicator inset (34px) under the tab row left the tabs floating well above
+     the bottom edge; the indicator only needs about half of it clear. */
+  --nav-inset: max(0.25rem, calc(env(safe-area-inset-bottom) - 1rem));
 }
 
 .dark {

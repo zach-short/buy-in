@@ -45,7 +45,7 @@ function BottomBar({ pathname }: { pathname: string }) {
   return (
     <nav
       aria-label='Primary'
-      className='md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom)]'
+      className='md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur pb-(--nav-inset)'
     >
       <ul className='grid grid-cols-5'>
         {NAV_ITEMS.map((item) => {
@@ -56,7 +56,7 @@ function BottomBar({ pathname }: { pathname: string }) {
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex h-16 flex-col items-center justify-center gap-1 text-[10px] tracking-widest uppercase transition-colors',
+                  'flex h-14 flex-col items-center justify-center gap-1 text-[10px] tracking-widest uppercase transition-colors',
                   active ? 'text-primary' : 'text-muted-foreground',
                 )}
               >
@@ -81,12 +81,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        'flex min-h-dvh flex-col',
-        // Pages size themselves with min-h-dvh; with the bar's padding that would always
-        // overflow by the bar's height, so their minimum is dropped and they flex to fill instead.
-        shown && 'pb-16 md:pb-0 md:pt-14 *:min-h-0! *:flex-1',
+        // The installed PWA draws under a translucent status bar (viewportFit cover), so the
+        // shell starts below it. Pages size themselves with min-h-dvh; with the shell's padding
+        // that would always overflow, so their minimum is dropped and they flex to fill instead.
+        'flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] *:min-h-0! *:flex-1',
+        shown && 'pb-[calc(3.5rem+var(--nav-inset))] md:pb-0 md:pt-14',
       )}
     >
+      {/* Masks content scrolling up under the clock and battery. */}
+      <div aria-hidden className='fixed inset-x-0 top-0 z-50 h-[env(safe-area-inset-top)] bg-background' />
       {children}
       {shown && status === 'authenticated' && (
         <>
