@@ -16,7 +16,7 @@ import {
 import {
   addSessionPlayer, closeSession, createBuyIn, createCashout, createPlayer, pourDrink, setTabPaid, undoOrder,
 } from '@/lib/supabase/writes';
-import { DrinkPickerModal } from '@/components/DrinkPickerModal';
+import { DrinkPickerModal } from '@/components/drink-picker-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash2 } from 'lucide-react';
