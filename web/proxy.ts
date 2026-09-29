@@ -12,7 +12,7 @@ import { passThrough, redirectTo, updateSession } from '@/lib/supabase/middlewar
 // 2026-09-28, onboarding feature: /signup, /join and /rsvp added. /join and /join/[token] must
 // be public — the whole point is a brand-new visitor with no account yet clicking an invite
 // link; each page does its own signed-in check client-side and bounces to /signup?redirect=...
-// when needed. Same reasoning for /rsvp/[token]. /invites, /schedule and /performance stay
+// when needed. Same reasoning for /rsvp/[token]. /invites, /schedule and /results stay
 // behind login — they're host- or member-account-scoped, never link-only.
 function isPublicPath(pathname: string): boolean {
   return (
@@ -52,12 +52,12 @@ export async function proxy(request: NextRequest) {
 // service worker whose script answers 3xx, and /sw.js answered 307 → /login to every
 // logged-out visitor on the live site (HANDOFF step 28, 2026-09-27).
 //
-// 2026-09-29: static images and the web manifest are excluded by extension too. Chrome fetches
-// a manifest and its icons without cookies, and every /*.png, /*.svg and /site.webmanifest in
-// public/ answered 307 → /login to a signed-out request (checked with curl against the live
-// site), so the manifest's icons never loaded and Chrome never offered Install.
+// 2026-09-29: static images are excluded by extension too. Chrome fetches a manifest and its
+// icons without cookies, and every /*.png and /*.svg in public/ answered 307 → /login to a
+// signed-out request (checked with curl against the live site), so the manifest's icons never
+// loaded and Chrome never offered Install. The manifest itself is /manifest.json, excluded above.
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest.json|icons|sw\\.js|swe-worker-|workbox-|.*\\.(?:png|svg|ico|jpg|jpeg|webp|webmanifest)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.json|icons|sw\\.js|swe-worker-|workbox-|.*\\.(?:png|svg|ico|jpg|jpeg|webp)$).*)',
   ],
 };

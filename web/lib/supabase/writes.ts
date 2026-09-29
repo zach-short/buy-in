@@ -152,17 +152,22 @@ export async function createCashout(session: SessionRef, playerId: string, amoun
 }
 
 /**
- * POST /api/payments (ledger.go CreatePayment). No session_id: Go's Payment had none, and
- * D19's delete_session relies on no screen writing one.
+ * POST /api/payments (ledger.go CreatePayment). Go's Payment had no session, and by default
+ * none is written. Settle-up passes `sessionId` so a night's receipt (get_shared_tab filters
+ * a session link's payments by it) shows what was paid against that night. A tagged payment
+ * restricts its session (0001's foreign key), so delete_session (D19) refuses a night that
+ * has one — which is the point of the restrict: a night with money in it does not vanish.
  */
 export async function createPayment(
   player: Pick<PlayerRow, 'id' | 'bar_id'>,
   amountCents: number,
   note: string,
   direction: 'received' | 'sent',
+  sessionId: string | null = null,
 ): Promise<void> {
-  const { error } = await createClient().from('payments')
-    .insert({ bar_id: player.bar_id, player_id: player.id, amount_cents: amountCents, note, direction });
+  const { error } = await createClient().from('payments').insert({
+    bar_id: player.bar_id, session_id: sessionId, player_id: player.id, amount_cents: amountCents, note, direction,
+  });
   if (error) fail(error);
 }
 

@@ -1,14 +1,15 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import type { PostgrestError } from '@supabase/supabase-js';
 
+import { formatDate, formatTime } from '@pb/core';
 import { Button } from '@/components/ui/button';
 import { useAuthUser } from '@/hooks/use-auth-user';
-import { createClient } from '@/lib/supabase/client';
+import { buildIcs, icsDataUrl, type IcsEvent } from '@/lib/ics';
+import { submitRsvp, type RsvpError, type RsvpGame, type RsvpStatus } from '@/lib/supabase/rsvp';
 
-type RsvpStatus = 'yes' | 'no' | 'maybe';
+import { useRsvpGame } from './use-rsvp-game';
 
 interface Choice {
   status: RsvpStatus;
@@ -22,37 +23,10 @@ const CHOICES: readonly Choice[] = [
   { status: 'maybe', label: 'Maybe', confirmation: 'Marked as maybe.' },
 ];
 
-// A dead link fails identically on every click, so it replaces the buttons; any other failure
-// may be a dropped connection, so the buttons stay for another try.
-interface RsvpError {
-  fatal: boolean;
-  message: string;
-}
-
 interface RsvpState {
   saved: RsvpStatus | null;
   pending: RsvpStatus | null;
   error: RsvpError | null;
-}
-
-// No RPC looks a token up without answering it, so a bad link only surfaces on the first click.
-// The match is loose because the raise wording belongs to the schema: 0001's share links say
-// 'invalid or expired link', and a standing-table invite opened here says 'not an event invite'.
-function rsvpError(error: PostgrestError): RsvpError {
-  const message = error.message.toLowerCase();
-  if (message.includes('not an event invite')) {
-    return { fatal: true, message: "This link invites you to join a table, not to a game night. Ask the host for the game night's link." };
-  }
-  if (/invalid|expired|revoked|not found/.test(message)) {
-    return { fatal: true, message: 'This invite link is invalid or has expired. Ask the host for a new one.' };
-  }
-  return { fatal: false, message: "Couldn't save your answer. Try again in a moment." };
-}
-
-// rsvp_scheduled_game upserts, so changing an answer is the same call with another status.
-async function submitRsvp(token: string, status: RsvpStatus): Promise<RsvpError | null> {
-  const { error } = await createClient().rpc('rsvp_scheduled_game', { p_token: token, p_status: status });
-  return error ? rsvpError(error) : null;
 }
 
 export default function RsvpPage({ params }: { params: Promise<{ token: string }> }) {
@@ -60,20 +34,22 @@ export default function RsvpPage({ params }: { params: Promise<{ token: string }
   const auth = useAuthUser();
 
   return (
-    <main className='min-h-screen flex flex-col items-center justify-center px-6'>
+    <main className='min-h-dvh flex flex-col items-center justify-center px-6'>
       <div className='w-full max-w-xs space-y-8'>
         <div className='text-center space-y-1'>
           <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
           <p className='text-xs text-muted-foreground tracking-widest uppercase'>Game night</p>
         </div>
-        {auth.status === 'loading' && (
-          <p className='text-center text-muted-foreground text-sm tracking-widest'>Loading…</p>
-        )}
+        {auth.status === 'loading' && <Loading />}
         {auth.status === 'unauthenticated' && <SignInPrompt token={token} />}
-        {auth.status === 'authenticated' && <RsvpChoices token={token} />}
+        {auth.status === 'authenticated' && <RsvpForGame token={token} />}
       </div>
     </main>
   );
+}
+
+function Loading() {
+  return <p className='text-center text-muted-foreground text-sm tracking-widest'>Loading…</p>;
 }
 
 function InviteLine() {
@@ -81,7 +57,7 @@ function InviteLine() {
 }
 
 // Links rather than a redirect, so the token survives: login and signup bring the visitor back
-// here through `redirect`, and this page has nothing to show about the game until they do.
+// here through `redirect`. get_rsvp_game (0012) needs an account, so the game's details wait too.
 function SignInPrompt({ token }: { token: string }) {
   const redirect = encodeURIComponent(`/rsvp/${token}`);
   return (
@@ -102,21 +78,77 @@ function SignInPrompt({ token }: { token: string }) {
   );
 }
 
-function RsvpChoices({ token }: { token: string }) {
-  const [state, setState] = useState<RsvpState>({ saved: null, pending: null, error: null });
+// `unknown` is 0012 unapplied (or unreachable): the page as it was before, a bare invite line
+// with nothing preselected, where a bad link only surfaces on the first click.
+function RsvpForGame({ token }: { token: string }) {
+  const result = useRsvpGame(token);
+  if (!result) return <Loading />;
+  if (result.kind === 'invalid') return <InvalidInvite message={result.error.message} />;
+  if (result.kind === 'unknown') return <RsvpChoices token={token} intro={<InviteLine />} initial={null} calendar={null} />;
+
+  const { game } = result;
+  if (game.cancelled) {
+    return (
+      <div className='space-y-6'>
+        <GameDetails game={game} />
+        <p role='status' className='text-center text-sm font-medium text-destructive'>This game was cancelled.</p>
+      </div>
+    );
+  }
+  const intro = (
+    <div className='space-y-3'>
+      <GameDetails game={game} />
+      {game.started && <p className='text-center text-xs text-muted-foreground'>This game is already under way.</p>}
+    </div>
+  );
+  return <RsvpChoices token={token} intro={intro} initial={game.myStatus} calendar={game.started ? null : calendarEvent(game)} />;
+}
+
+function calendarEvent(game: RsvpGame): IcsEvent {
+  const host = game.hostName ? `, hosted by ${game.hostName}` : '';
+  return { title: game.name, start: game.scheduledAt, description: `Poker at ${game.barName}${host}.` };
+}
+
+// Shown in the guest's own timezone: this renders in their browser, after sign-in.
+function GameDetails({ game }: { game: RsvpGame }) {
+  return (
+    <div className='text-center space-y-1'>
+      <p className='text-lg font-semibold'>{game.name}</p>
+      <p className='text-sm'>{formatDate(game.scheduledAt)} · {formatTime(game.scheduledAt)}</p>
+      <p className='text-xs text-muted-foreground'>
+        {game.barName}
+        {game.hostName && <> · Hosted by {game.hostName}</>}
+      </p>
+    </div>
+  );
+}
+
+interface RsvpChoicesProps {
+  token: string;
+  intro: ReactNode;
+  initial: RsvpStatus | null;
+  /** Offered once the answer is yes; null where there is nothing to put in a calendar. */
+  calendar: IcsEvent | null;
+}
+
+function RsvpChoices({ token, intro, initial, calendar }: RsvpChoicesProps) {
+  const [state, setState] = useState<RsvpState>({ saved: initial, pending: null, error: null });
+  // The saved answer arrives with the page, so no confirmation shows until the guest taps.
+  const [answered, setAnswered] = useState(false);
 
   async function answer(status: RsvpStatus) {
     setState((s) => ({ ...s, pending: status, error: null }));
     const error = await submitRsvp(token, status);
     setState((s) => ({ saved: error ? s.saved : status, pending: null, error }));
+    if (!error) setAnswered(true);
   }
 
   if (state.error?.fatal) return <InvalidInvite message={state.error.message} />;
-  const confirmation = CHOICES.find((c) => c.status === state.saved)?.confirmation;
+  const confirmation = answered ? CHOICES.find((c) => c.status === state.saved)?.confirmation : undefined;
 
   return (
     <div className='space-y-6'>
-      <InviteLine />
+      {intro}
       <div className='space-y-3'>
         {CHOICES.map((choice) => (
           <Button
@@ -137,10 +169,23 @@ function RsvpChoices({ token }: { token: string }) {
           <p className='text-xs text-muted-foreground'>Plans change? Pick another answer anytime.</p>
         </div>
       )}
+      {calendar && state.saved === 'yes' && <CalendarLink event={calendar} />}
       {state.error && (
         <p role='alert' className='text-center text-xs text-destructive tracking-wide'>{state.error.message}</p>
       )}
     </div>
+  );
+}
+
+function CalendarLink({ event }: { event: IcsEvent }) {
+  // Keyed on the fields, not the object: buildIcs stamps a fresh UID, which a re-render that
+  // rebuilds an identical event should not change.
+  const { title, start, description } = event;
+  const href = useMemo(() => icsDataUrl(buildIcs({ title, start, description })), [title, start, description]);
+  return (
+    <Button asChild variant='outline' className='w-full h-11 tracking-widest uppercase text-xs'>
+      <a href={href} download='game-night.ics'>Add to calendar</a>
+    </Button>
   );
 }
 

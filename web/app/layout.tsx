@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Cinzel } from 'next/font/google';
 import './globals.css';
 import { ReactNode } from 'react';
 import { SWRProvider } from '@/context/swr-provider';
@@ -8,6 +9,8 @@ import { Toaster } from 'sonner';
 import { AppShell } from '@/components/shared/layout/app-shell';
 import { siteEnv } from '@/lib/env/site';
 import { THEME_COLORS } from '@/lib/theme-colors';
+
+const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '500', '600'], display: 'swap', variable: '--font-cinzel' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteEnv.origin),
@@ -27,15 +30,13 @@ export const viewport: Viewport = {
   themeColor: THEME_COLORS.background,
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang='en' suppressHydrationWarning>
+    <html lang='en' className={cinzel.variable} suppressHydrationWarning>
       <head>
-        <link rel='manifest' href='/site.webmanifest' />
         <link rel='apple-touch-icon' href='/apple-touch-icon.png' />
         <link rel='icon' href='/favicon.ico' sizes='32x32' />
         <link rel='icon' href='/favicon-96x96.png' sizes='96x96' type='image/png' />

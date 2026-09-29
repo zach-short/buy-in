@@ -1,4 +1,10 @@
+import { Cinzel } from 'next/font/google';
+
 import { formatCents, type MenuItem } from '@pb/core';
+
+// Self-hosted at build time by next/font, in place of a runtime Google Fonts @import: no request
+// to Google from a guest's phone, and no flash of the fallback serif while it loads.
+const cinzel = Cinzel({ weight: ['400', '600'], subsets: ['latin'], display: 'swap', variable: '--font-menu' });
 
 // The /menu board, shared by /menu/[barId] and the bare /menu a logged-out visitor lands on.
 // Markup and styles are the pre-migration page's, unchanged (DESIGN.md §8.2); only the rows'
@@ -10,8 +16,6 @@ export function MenuBoard({ items }: { items: readonly MenuItem[] }) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&display=swap');
-
         .menu-root {
           min-height: 100vh;
           background: #000;
@@ -20,7 +24,7 @@ export function MenuBoard({ items }: { items: readonly MenuItem[] }) {
           align-items: center;
           justify-content: center;
           padding: 3rem 2rem;
-          font-family: 'Cinzel', serif;
+          font-family: var(--font-menu), serif;
         }
 
         .menu-title {
@@ -92,7 +96,7 @@ export function MenuBoard({ items }: { items: readonly MenuItem[] }) {
 
       `}</style>
 
-      <div className='menu-root'>
+      <div className={`menu-root ${cinzel.variable}`}>
         <h1 className='menu-title'>Menu</h1>
         <hr className='menu-rule' />
 
@@ -107,7 +111,7 @@ export function MenuBoard({ items }: { items: readonly MenuItem[] }) {
         </ul>
 
         {available.length === 0 && (
-          <p style={{ color: '#c9a84c55', fontFamily: 'Cinzel, serif', fontSize: '0.8rem', letterSpacing: '0.2em' }}>
+          <p style={{ color: '#c9a84c55', fontSize: '0.8rem', letterSpacing: '0.2em' }}>
             NO DRINKS AVAILABLE
           </p>
         )}

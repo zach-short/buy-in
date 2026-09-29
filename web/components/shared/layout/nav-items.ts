@@ -18,7 +18,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: 'Account',
     href: '/account',
     icon: CircleUser,
-    owns: ['/account', '/invites', '/stats', '/performance', '/inventory', '/drinks', '/menu'],
+    owns: ['/account', '/invites', '/results', '/inventory', '/drinks', '/menu'],
   },
 ];
 

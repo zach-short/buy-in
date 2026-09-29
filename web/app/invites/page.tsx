@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { formatDate } from '@pb/core';
 import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useClaimRequests } from '@/hooks/use-claim-requests';
+import { useConfirm } from '@/hooks/use-confirm';
+import { shareOrCopy } from '@/lib/share';
 import type { PendingClaim } from '@/lib/supabase/claims';
 import { fetchBarId } from '@/lib/supabase/queries';
 import {
@@ -40,15 +42,14 @@ function statusLine({ status, expires_at, revoked_at }: StandingInvite): string 
   return `${status === 'live' ? 'Expires' : 'Expired'} ${formatDate(expires_at)}`;
 }
 
-// The link stays on screen with `select-all`, so a refused clipboard (a plain-http origin,
-// a denied permission) still leaves the host a way to copy it by hand.
-async function copyInvite(token: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(joinUrl(token));
-    toast.success('Invite link copied');
-  } catch {
-    toast.error("Couldn't copy. Select the link and copy it by hand.");
-  }
+// The row no longer shows the raw link, so a share sheet and a clipboard that both fail (a
+// plain-http origin, a denied permission) put the link in the error toast instead: the host
+// still has a way to copy it by hand. A dismissed sheet is the host's answer — no toast.
+async function shareInvite(token: string): Promise<void> {
+  const url = joinUrl(token);
+  const result = await shareOrCopy({ url, text: 'Join my table on Buy-In', title: 'Buy-In invite' });
+  if (result === 'copied') toast.success('Invite link copied');
+  if (result === 'failed') toast.error("Couldn't share or copy. Here's the link:", { description: url, duration: 20000 });
 }
 
 interface InviteRowProps {
@@ -61,13 +62,13 @@ function InviteRow({ invite, revoking, onRevoke }: InviteRowProps) {
   const live = invite.status === 'live';
   return (
     <div className={`border border-border rounded-md px-4 py-3 space-y-2 ${live ? '' : 'opacity-60'}`}>
-      <p className='text-xs font-mono break-all select-all'>{joinUrl(invite.token)}</p>
+      <p className='text-sm font-medium'>Invite link · made {formatDate(invite.created_at)}</p>
       <div className='flex items-center justify-between gap-3'>
         <span className='text-xs text-muted-foreground'>{statusLine(invite)}</span>
         {live && (
           <div className='flex gap-2 shrink-0'>
-            <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={() => copyInvite(invite.token)}>
-              Copy
+            <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={() => void shareInvite(invite.token)}>
+              Share
             </Button>
             <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={onRevoke} disabled={revoking}>
               {revoking ? 'Revoking…' : 'Revoke'}
@@ -131,6 +132,7 @@ export default function InvitesPage() {
   const claims = useClaimRequests(barId);
   const [creating, setCreating] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
 
   async function handleCreate() {
     if (!barId) return;
@@ -147,7 +149,13 @@ export default function InvitesPage() {
   }
 
   async function handleRevoke(token: string) {
-    if (!window.confirm("Revoke this invite link? It stops working for anyone who hasn't joined yet.")) return;
+    const ok = await confirm({
+      title: 'Revoke this invite link?',
+      description: "It stops working for anyone who hasn't joined yet.",
+      confirmLabel: 'Revoke',
+      destructive: true,
+    });
+    if (!ok) return;
     setRevoking(token);
     try {
       await revokeInvite(token);
@@ -162,6 +170,7 @@ export default function InvitesPage() {
 
   return (
     <PageMain>
+      {confirmDialog}
       <PageHeader
         title='Invites'
         subtitle='Anyone with a live link can join your table'

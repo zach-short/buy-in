@@ -9,6 +9,7 @@ import { sumCents } from '@/lib/ledger';
 import { fetchSessions, fetchSessionOrders } from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
 import { Landing } from '@/components/landing/landing';
+import { NextGameCard } from '@/components/shared/next-game-card';
 import { useAuthUser } from '@/hooks/use-auth-user';
 
 function Dashboard() {
@@ -49,10 +50,12 @@ function Dashboard() {
         )}
       </div>
 
+      <NextGameCard canStart={!activeSession} />
+
       {lastClosed && (
         <div>
           <p className='text-xs tracking-widest uppercase text-muted-foreground mb-4'>Last Session</p>
-          <button className='w-full border border-border rounded-md p-4 text-left hover:border-primary/50 transition-colors' onClick={() => router.push(`/session/${lastClosed.id}`)}>
+          <button className='w-full border border-border rounded-md p-4 text-left hover:border-primary/50 transition-colors' onClick={() => router.push(`/session/${lastClosed.id}/summary`)}>
             <p className='text-sm font-medium mb-3'>{lastClosed.name}</p>
             <div className='grid grid-cols-3 gap-2 text-center'>
               <div>

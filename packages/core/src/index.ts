@@ -11,6 +11,14 @@ export {
   type AmountLike,
   type PaymentLike,
 } from './balance';
+export {
+  nightNet,
+  describeNet,
+  type NightRows,
+  type NightNet,
+  type NetKind,
+  type NetDisplay,
+} from './night-net';
 export { settle, type PlayerBalance, type Transfer } from './settlement';
 export { leaveTableVerdict, type LeaveTableVerdict } from './leave-table';
 export {

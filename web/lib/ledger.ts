@@ -1,4 +1,6 @@
-import { computeBalanceCents, type AmountLike, type OrderLike, type PaymentLike, type SharedTab } from '@pb/core';
+import {
+  computeBalanceCents, nightNet, type AmountLike, type NightNet, type OrderLike, type PaymentLike, type SharedTab,
+} from '@pb/core';
 
 import type { BuyInRow, CashoutRow, OrderRow, PaymentRow } from '@/lib/supabase/queries';
 
@@ -58,6 +60,46 @@ export function sharedBalanceCents(tab: SharedTab): number {
     tab.cashouts.map(amount),
     tab.payments.map((p) => ({ playerId, amountCents: p.amount_cents, direction: p.direction })),
   );
+}
+
+/**
+ * One player's night — drinks, buy-ins, every cash-out, payments — over rows as Postgres
+ * returns them. Other players' rows are ignored, but not other nights': pass one session's
+ * orders, buy-ins and cash-outs, and only the payments whose `session_id` is that session.
+ * `netCents` is the same number playerBalanceCents gives for those rows.
+ */
+export function nightNetFromRows(
+  playerId: string,
+  orders: readonly OrderRow[],
+  buyIns: readonly BuyInRow[],
+  cashouts: readonly CashoutRow[],
+  payments: readonly PaymentRow[],
+): NightNet {
+  return nightNet(playerId, {
+    orders: orders.map(toOrderLike),
+    buyIns: buyIns.map(toAmountLike),
+    cashouts: cashouts.map(toAmountLike),
+    payments: payments.map(toPaymentLike),
+  });
+}
+
+/**
+ * One night of a share link's tab. A session link's rows are all that night already
+ * (get_shared_tab, D15); a portal link's span every night, so each row is kept only if its
+ * `session_id` is this one. A payment with no session belongs to no night — it counts in
+ * sharedBalanceCents and nowhere here.
+ */
+export function sharedNightNet(tab: SharedTab, sessionId: string): NightNet {
+  const playerId = tab.player.id;
+  const inNight = <Row extends { session_id: string | null }>(rows: readonly Row[]) =>
+    rows.filter((row) => row.session_id === sessionId);
+  const amount = (row: { amount_cents: number }): AmountLike => ({ playerId, amountCents: row.amount_cents });
+  return nightNet(playerId, {
+    orders: inNight(tab.orders).map((o) => ({ playerId, priceCents: o.price_cents })),
+    buyIns: inNight(tab.buy_ins).map(amount),
+    cashouts: inNight(tab.cashouts).map(amount),
+    payments: inNight(tab.payments).map((p) => ({ playerId, amountCents: p.amount_cents, direction: p.direction })),
+  });
 }
 
 /** Sum of `price_cents` or `amount_cents` over rows — the per-screen subtotals, in cents. */

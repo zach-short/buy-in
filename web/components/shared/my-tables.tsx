@@ -3,6 +3,7 @@
 import { formatCents, leaveTableVerdict } from '@pb/core';
 import { Button } from '@/components/ui/button';
 import { DataState } from '@/components/shared/data-state';
+import { useConfirm } from '@/hooks/use-confirm';
 import { useMyTables } from '@/hooks/use-my-tables';
 import type { MyTable } from '@/lib/supabase/tables';
 
@@ -44,9 +45,11 @@ function TableRow({ table, busy, onLeave }: TableRowProps) {
 
 /** The tables this account is seated at, each with a Leave button the balance can disable. */
 export function MyTables() {
-  const { tables, leaving, leave } = useMyTables();
+  const { confirm, confirmDialog } = useConfirm();
+  const { tables, leaving, leave } = useMyTables(confirm);
   return (
     <div className='mb-10'>
+      {confirmDialog}
       <p className='text-xs tracking-widest uppercase text-muted-foreground mb-3'>Your tables</p>
       <DataState
         rows={tables.data}

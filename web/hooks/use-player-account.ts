@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import type { ConfirmApi } from '@/hooks/use-confirm';
 import { reassignPlayerAccount, swapPlayerAccounts, unlinkPlayer } from '@/lib/supabase/claims';
 import type { PlayerRow } from '@/lib/supabase/queries';
 
@@ -14,13 +15,13 @@ import type { PlayerRow } from '@/lib/supabase/queries';
 
 type Action = 'unlink' | 'swap' | 'move';
 
-/** Unlink, swap and move for one player row; `onChanged` refetches the roster. */
-export function usePlayerAccount(player: PlayerRow, onChanged: () => Promise<unknown>) {
+/** Unlink, swap and move for one player row; `onChanged` refetches the roster, `confirm` is the page's `useConfirm`. */
+export function usePlayerAccount(player: PlayerRow, onChanged: () => Promise<unknown>, confirm: ConfirmApi['confirm']) {
   const router = useRouter();
   const [busy, setBusy] = useState<Action | null>(null);
 
   async function run(action: Action, prompt: string, write: () => Promise<void>, done: string) {
-    if (!window.confirm(prompt)) return false;
+    if (!(await confirm({ title: 'Are you sure?', description: prompt, confirmLabel: 'Continue' }))) return false;
     setBusy(action);
     try {
       await write();

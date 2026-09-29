@@ -3,18 +3,19 @@
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
-import { toast } from 'sonner';
 import { formatCents } from '@pb/core';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
+import { StatusScreen } from '@/components/shared/status-screen';
+import { sendReceipt } from '@/components/settle/send-receipt';
+import { SettleUp } from '@/components/settle/settle-up';
 import { sumCents } from '@/lib/ledger';
 import {
-  fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
+  fetchPayments, fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
   type PlayerRow,
 } from '@/lib/supabase/queries';
-import { receiptUrl, shareToken } from '@/lib/supabase/share-links';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
 export default function SummaryPage({
   params,
@@ -24,32 +25,47 @@ export default function SummaryPage({
   const { id } = use(params);
   const router = useRouter();
 
-  const { data: sessions = [] } = useSWR('sessions', fetchSessions);
+  const sessionsQuery = useSWR('sessions', fetchSessions);
+  const playersQuery = useSWR('players', fetchPlayers);
+  const ordersQuery = useSWR(['orders', id], ([, sessionId]) => fetchSessionOrders(sessionId));
+  const buyInsQuery = useSWR(['buy_ins', id], ([, sessionId]) => fetchSessionBuyIns(sessionId));
+  const cashoutsQuery = useSWR(['cashouts', id], ([, sessionId]) => fetchSessionCashouts(sessionId));
+  // Bar-wide, under the same key the players list uses; the night's are the ones settle-up
+  // tagged with this session. Untagged payments settle a player's whole balance, not a night.
+  const paymentsQuery = useSWR('payments', fetchPayments);
+
+  // Settle-up prefills "Record payment" with the net, so a net computed before every ledger
+  // list has arrived (an empty payments list, say) would invite recording a debt twice. The
+  // page renders nothing money-shaped until all of them are in; the `?? []` below only
+  // satisfies the derivations that run before that gate.
+  const queries = [sessionsQuery, playersQuery, ordersQuery, buyInsQuery, cashoutsQuery, paymentsQuery];
+  const failed = queries.some((q) => q.error !== undefined);
+  const loaded = queries.every((q) => q.data !== undefined);
+
+  const sessions = sessionsQuery.data ?? [];
   const session = sessions.find((s) => s.id === id);
-  const { data: players = [] } = useSWR('players', fetchPlayers);
-  const { data: orders = [] } = useSWR(
-    ['orders', id],
-    ([, sessionId]) => fetchSessionOrders(sessionId),
-  );
-  const { data: buyIns = [] } = useSWR(
-    ['buy_ins', id],
-    ([, sessionId]) => fetchSessionBuyIns(sessionId),
-  );
-  const { data: cashouts = [] } = useSWR(
-    ['cashouts', id],
-    ([, sessionId]) => fetchSessionCashouts(sessionId),
-  );
+  const players = playersQuery.data ?? [];
+  const orders = ordersQuery.data ?? [];
+  const buyIns = buyInsQuery.data ?? [];
+  const cashouts = cashoutsQuery.data ?? [];
+  const payments = paymentsQuery.data ?? [];
+  const nightPayments = payments.filter((p) => p.session_id === id);
 
   const sessionPlayers = players.filter((p) =>
     session?.player_ids.includes(p.id),
   );
+  // Anyone with money in the night settles, even if they are no longer at the table.
+  const nightPlayerIds = new Set([
+    ...sessionPlayers.map((p) => p.id),
+    ...[...orders, ...buyIns, ...cashouts, ...nightPayments].map((row) => row.player_id),
+  ]);
+  const nightPlayers = players.filter((p) => nightPlayerIds.has(p.id));
   const playersWithPhone = sessionPlayers.filter((p) => p.phone);
 
   const totalRevenueCents = sumCents(orders, (o) => o.price_cents);
   const totalCogsCents = sumCents(orders, (o) => o.cost_estimate_cents);
   const totalProfitCents = totalRevenueCents - totalCogsCents;
 
-  const [carouselIndex, setCarouselIndex] = useState(0);
   const [textIndex, setTextIndex] = useState<number | null>(null);
   const isDone = textIndex !== null && textIndex >= playersWithPhone.length;
   const current =
@@ -61,101 +77,41 @@ export default function SummaryPage({
 
   // A session-scoped link (D15): the text carries this night only, not the player's history.
   async function openText(player: PlayerRow) {
-    try {
-      const url = receiptUrl(await shareToken(player, id));
-      window.location.href = `sms:${player.phone}&body=${encodeURIComponent(url)}`;
-      setTimeout(() => setTextIndex((i) => (i ?? 0) + 1), 500);
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+    if (await sendReceipt(player, id)) setTimeout(() => setTextIndex((i) => (i ?? 0) + 1), 500);
   }
 
   function skip() {
     setTextIndex((i) => (i ?? 0) + 1);
   }
 
+  if (failed) {
+    return (
+      <StatusScreen
+        kind='error'
+        title='Could not load this session'
+        action={{ label: 'Try again', onClick: () => queries.forEach((q) => void q.mutate()) }}
+      />
+    );
+  }
+  if (!loaded) return <StatusScreen kind='loading' />;
+  if (!session) {
+    return <StatusScreen kind='error' title='Session not found' action={{ label: 'Back to sessions', href: '/sessions' }} />;
+  }
+
   return (
     <PageMain>
       <PageHeader title='Session Complete' subtitle={session?.name} />
 
-      {sessionPlayers.length > 0 && (() => {
-        const idx = Math.min(carouselIndex, sessionPlayers.length - 1);
-        const player = sessionPlayers[idx];
-        const playerBuyIns = buyIns.filter((b) => b.player_id === player.id);
-        const playerCashout = cashouts.find((c) => c.player_id === player.id);
-        const buyInTotalCents = sumCents(playerBuyIns, (b) => b.amount_cents);
-        const cashoutCents = playerCashout?.amount_cents ?? 0;
-        const netCents = buyInTotalCents - cashoutCents;
-
-        return (
-          <div className='border border-border rounded-md mb-6'>
-            <div className='flex items-center justify-between px-4 pt-4 pb-1'>
-              <p className='text-xs tracking-widest uppercase text-muted-foreground'>Players</p>
-              <p className='text-xs text-muted-foreground'>{idx + 1} / {sessionPlayers.length}</p>
-            </div>
-
-            <div className='flex items-center gap-2 px-2 pb-4'>
-              <button
-                onClick={() => setCarouselIndex((i) => Math.max(0, i - 1))}
-                disabled={idx === 0}
-                className='p-2 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors'
-              >
-                <ChevronLeft size={18} />
-              </button>
-
-              <div className='flex-1 text-center px-2'>
-                <p className='text-sm font-semibold tracking-wide uppercase mb-3'>{player.name}</p>
-                <div className='space-y-1.5 text-sm'>
-                  {playerBuyIns.map((b, i) => (
-                    <div key={b.id} className='flex justify-between text-muted-foreground'>
-                      <span>{i === 0 ? 'Buy-in' : 'Re-buy'}</span>
-                      <span className='tabular-nums'>+${formatCents(b.amount_cents)}</span>
-                    </div>
-                  ))}
-                  {buyInTotalCents === 0 && (
-                    <div className='flex justify-between text-muted-foreground'>
-                      <span>Buy-in</span>
-                      <span className='tabular-nums'>—</span>
-                    </div>
-                  )}
-                  <div className='flex justify-between text-green-500'>
-                    <span>Cash out</span>
-                    <span className='tabular-nums'>
-                      {playerCashout ? `−$${formatCents(cashoutCents)}` : '—'}
-                    </span>
-                  </div>
-                  <div className='flex justify-between font-semibold pt-1.5 border-t border-border'>
-                    <span>{netCents > 0 ? 'They owe' : netCents < 0 ? 'You owe' : 'Even'}</span>
-                    <span className={`tabular-nums ${netCents > 0 ? 'text-destructive' : netCents < 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
-                      {netCents === 0 ? '—' : `$${formatCents(Math.abs(netCents))}`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setCarouselIndex((i) => Math.min(sessionPlayers.length - 1, i + 1))}
-                disabled={idx === sessionPlayers.length - 1}
-                className='p-2 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors'
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-
-            {sessionPlayers.length > 1 && (
-              <div className='flex justify-center gap-1 pb-3'>
-                {sessionPlayers.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCarouselIndex(i)}
-                    className={`h-1 rounded-full transition-all ${i === idx ? 'w-4 bg-primary' : 'w-1.5 bg-border'}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
+      {nightPlayers.length > 0 && (
+        <SettleUp
+          sessionId={id}
+          players={nightPlayers}
+          orders={orders}
+          buyIns={buyIns}
+          cashouts={cashouts}
+          payments={nightPayments}
+        />
+      )}
 
       <div className='border border-border rounded-md p-5 mb-8'>
         <p className='text-xs tracking-widest uppercase text-muted-foreground mb-4'>

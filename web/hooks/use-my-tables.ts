@@ -5,6 +5,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 
 import { formatCents, leaveTableVerdict } from '@pb/core';
+import type { ConfirmApi } from '@/hooks/use-confirm';
 import { fetchMyTables, leaveTable, type MyTable } from '@/lib/supabase/tables';
 
 // Provisional copy in the plain register (R7): the owner picks the wording of both prompts.
@@ -15,14 +16,15 @@ function confirmText(table: MyTable): string {
   return `Leave ${table.barName}? You'd need a new invite to come back.`;
 }
 
-/** The Account screen's list of tables, and the one action on each. */
-export function useMyTables() {
+/** The Account screen's list of tables, and the one action on each. `confirm` comes from the page's `useConfirm`. */
+export function useMyTables(confirm: ConfirmApi['confirm']) {
   const { mutate } = useSWRConfig();
   const tables = useSWR('my_tables', fetchMyTables);
   const [leaving, setLeaving] = useState<string | null>(null);
 
   async function leave(table: MyTable) {
-    if (!window.confirm(confirmText(table))) return;
+    const ok = await confirm({ title: `Leave ${table.barName}?`, description: confirmText(table), confirmLabel: 'Leave', destructive: true });
+    if (!ok) return;
     setLeaving(table.barId);
     try {
       await leaveTable(table.barId, leaveTableVerdict(table.balanceCents) === 'owed');

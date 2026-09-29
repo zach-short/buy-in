@@ -34,14 +34,14 @@ interface Listener {
 // Keys match the page's useSWR calls (web/lib/supabase/queries.ts:10-14). A DELETE cannot be
 // filtered at default replica identity (Supabase Postgres Changes docs, "Delete events"), and
 // FULL is ruled out (0001_init.sql:865-867), so the tables whose deletes this screen shows —
-// an undone pour, a deleted session — also get an unfiltered DELETE listener: any delete of
+// an undone pour, a deleted buy-in or cash-out, a deleted session — also get an unfiltered DELETE listener: any delete of
 // that table anywhere refetches this screen's key. At one bar's volume that is a few reads.
 function sessionListeners(sessionId: string, barId: string): Listener[] {
   const bySession = `session_id=eq.${sessionId}`;
   return [
     { table: 'orders', filter: bySession, keys: [['orders', sessionId]], deletes: true },
-    { table: 'buy_ins', filter: bySession, keys: [['buy_ins', sessionId]] },
-    { table: 'cashouts', filter: bySession, keys: [['cashouts', sessionId]] },
+    { table: 'buy_ins', filter: bySession, keys: [['buy_ins', sessionId]], deletes: true },
+    { table: 'cashouts', filter: bySession, keys: [['cashouts', sessionId]], deletes: true },
     { table: 'sessions', filter: `id=eq.${sessionId}`, keys: [['session', sessionId]], deletes: true },
     // The page names seated players from the whole-bar 'players' list, and a player added
     // mid-night may have been created on the other device; players is not published (Q1), so

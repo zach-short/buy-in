@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 // w-full because the app shell is a flex column and mx-auto turns off its stretch: without it
 // the page shrink-wraps to its widest row and a phone scrolls sideways.
 export function PageMain({ children, className }: { children: ReactNode; className?: string }) {
-  return <main className={cn('min-h-screen w-full px-6 pt-10 pb-24 max-w-3xl mx-auto', className)}>{children}</main>;
+  return <main className={cn('min-h-dvh w-full px-6 pt-10 pb-24 max-w-3xl mx-auto', className)}>{children}</main>;
 }
 
 // The subtitle line is always reserved, so a page without one starts its content at the same
@@ -41,7 +41,7 @@ export function HeaderAction({ className, type = 'button', ...props }: ButtonHTM
     <button
       type={type}
       className={cn(
-        '-my-3 py-3 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors',
+        '-my-3.5 py-3.5 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors',
         className,
       )}
       {...props}

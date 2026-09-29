@@ -1,14 +1,13 @@
-'use client';
-
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/hooks/use-confirm';
 import { usePlayerAccount } from '@/hooks/use-player-account';
 import type { PlayerRow } from '@/lib/supabase/queries';
 
 const LABEL = 'text-xs tracking-widest uppercase text-muted-foreground';
-const SELECT = 'flex-1 min-w-0 h-10 rounded-md border border-input bg-transparent px-3 text-sm';
-const ACTION = 'h-10 text-xs tracking-widest uppercase shrink-0';
+const SELECT = 'flex-1 min-w-0 h-11 rounded-md border border-input bg-transparent px-3 text-sm';
+const ACTION = 'h-11 text-xs tracking-widest uppercase shrink-0';
 
 interface PickProps {
   label: string;
@@ -17,7 +16,7 @@ interface PickProps {
   onPick: (player: PlayerRow) => void;
 }
 
-// A select plus its button. Nothing happens until the host confirms (window.confirm in the hook).
+// A select plus its button. Nothing happens until the host confirms (the hook asks through useConfirm).
 function PickAndAct({ label, options, busy, onPick }: PickProps) {
   const [id, setId] = useState('');
   const chosen = options.find((p) => p.id === id);
@@ -47,7 +46,8 @@ export function PlayerAccountPanel({ player, players, onChanged }: {
   players: PlayerRow[];
   onChanged: () => Promise<unknown>;
 }) {
-  const account = usePlayerAccount(player, onChanged);
+  const { confirm, confirmDialog } = useConfirm();
+  const account = usePlayerAccount(player, onChanged, confirm);
   const others = players.filter((p) => p.id !== player.id && p.bar_id === player.bar_id);
   const linked = player.user_id !== null;
   const swappable = linked ? others : others.filter((p) => p.user_id !== null);
@@ -57,7 +57,7 @@ export function PlayerAccountPanel({ player, players, onChanged }: {
       <div className='flex items-center justify-between gap-3'>
         <p className={LABEL}>{linked ? 'Linked to an account' : 'Not linked to an account'}</p>
         {linked && (
-          <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={() => void account.unlink()} disabled={account.busy !== null}>
+          <Button variant='outline' className='h-11 text-xs tracking-widest uppercase' onClick={() => void account.unlink()} disabled={account.busy !== null}>
             {account.busy === 'unlink' ? 'Unlinking…' : 'Unlink'}
           </Button>
         )}
@@ -66,6 +66,7 @@ export function PlayerAccountPanel({ player, players, onChanged }: {
       {linked && (
         <PickAndAct label='Move to' options={others.filter((p) => p.user_id === null)} busy={account.busy !== null} onPick={(p) => void account.move(p)} />
       )}
+      {confirmDialog}
     </div>
   );
 }

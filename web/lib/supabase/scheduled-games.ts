@@ -1,6 +1,7 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
 import { writeErrorMessage, type Tables } from '@pb/core';
+import { copyText, shareOrCopy, type ShareResult } from '@/lib/share';
 import { createClient } from '@/lib/supabase/client';
 import { fetchBarId } from '@/lib/supabase/queries';
 
@@ -34,6 +35,44 @@ export async function fetchUpcomingGames(): Promise<ScheduledGameRow[]> {
     .order('scheduled_at').order('id');
   if (error) throw error;
   return data;
+}
+
+export type RsvpStatus = 'yes' | 'maybe' | 'no';
+
+export interface GameRsvp {
+  userId: string;
+  /** The guest's name at this table, or null when they answered without joining it. */
+  name: string | null;
+  status: RsvpStatus;
+}
+
+// The column is plain text with a check constraint, so the generated type is `string`.
+function toRsvpStatus(status: string): RsvpStatus {
+  return status === 'yes' || status === 'maybe' ? status : 'no';
+}
+
+/**
+ * Every answer to one game, oldest first, with the guest's name where one is readable.
+ *
+ * An RSVP is keyed to the auth user, not a players row (0004), and the only name a host can
+ * read is the claimed player that join_bar_as_player made for that account in this bar. A
+ * guest who answered without joining the table has none — their sign-up name lives in
+ * auth.users, which no staff policy reaches — so their name comes back null.
+ */
+export async function fetchGameRsvps(game: GameRef): Promise<GameRsvp[]> {
+  const { data, error } = await createClient().from('game_rsvps').select('user_id, status')
+    .eq('scheduled_game_id', game.id).order('created_at').order('id');
+  if (error) throw error;
+  const names = await fetchPlayerNames(game.bar_id, data.map((r) => r.user_id));
+  return data.map((r) => ({ userId: r.user_id, name: names.get(r.user_id) ?? null, status: toRsvpStatus(r.status) }));
+}
+
+async function fetchPlayerNames(barId: string, userIds: string[]): Promise<Map<string, string>> {
+  if (userIds.length === 0) return new Map();
+  const { data, error } = await createClient().from('players').select('user_id, name')
+    .eq('bar_id', barId).in('user_id', userIds);
+  if (error) throw error;
+  return new Map(data.flatMap((p) => (p.user_id ? [[p.user_id, p.name] as const] : [])));
 }
 
 /** Guests who answered yes. A head count, not rows, so no row cap can under-count it. */
@@ -84,6 +123,50 @@ export async function startScheduledGame(gameId: string): Promise<string> {
   return data;
 }
 
+// An update RLS refuses, or one whose filter matches nothing, is not an error to PostgREST —
+// it just returns no rows. Selecting the id back is how a no-op becomes a sentence.
+async function updateUnstartedGame(gameId: string, patch: Partial<ScheduledGameRow>): Promise<void> {
+  const { data, error } = await createClient().from('scheduled_games').update(patch)
+    .eq('id', gameId).is('cancelled_at', null).is('session_id', null).select('id');
+  if (error) fail(error);
+  if (data.length === 0) throw new Error('This game has already started or been cancelled');
+}
+
+/**
+ * Sets cancelled_at, which drops the game from the upcoming list. The invite is left live on
+ * purpose: a guest who opens it then sees the night is cancelled (0012, get_rsvp_game) rather
+ * than a dead link.
+ */
+export async function cancelScheduledGame(gameId: string): Promise<void> {
+  await updateUnstartedGame(gameId, { cancelled_at: new Date().toISOString() });
+}
+
+/** Renames or reschedules a game not yet started. `scheduledAt` is an ISO timestamp. */
+export async function updateScheduledGame(gameId: string, name: string, scheduledAt: string): Promise<void> {
+  await updateUnstartedGame(gameId, { name, scheduled_at: scheduledAt });
+}
+
 export function rsvpUrl(token: string): string {
   return `${window.location.origin}/rsvp/${token}`;
+}
+
+/** "Fri Oct 3, 7:00 PM", in the viewer's own time zone. */
+function shortWhen(scheduledAt: string): string {
+  const d = new Date(scheduledAt);
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+  const day = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return `${weekday} ${day}, ${time}`;
+}
+
+/**
+ * Shares the invite as a ready-to-paste message: the share sheet where there is one, the
+ * clipboard otherwise. Not shareOrCopy's own fallback, which copies the bare link — a host
+ * pasting into a group chat wants the name and time with it.
+ */
+export async function shareGameInvite(game: Pick<ScheduledGameRow, 'name' | 'scheduled_at'>, token: string): Promise<ShareResult> {
+  const url = rsvpUrl(token);
+  const text = `${game.name} ${shortWhen(game.scheduled_at)} — RSVP:`;
+  if (typeof navigator.share === 'function') return shareOrCopy({ url, text, title: game.name });
+  return copyText(`${text} ${url}`);
 }

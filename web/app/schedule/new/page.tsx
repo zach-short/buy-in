@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
+import { PageHeader, PageMain } from '@/components/shared/layout/page';
+import { announceShare } from '@/app/schedule/announce-share';
 import { useScheduleGame, type ScheduleGameForm } from '@/hooks/use-schedule-game';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,14 +12,13 @@ import { Input } from '@/components/ui/input';
 const LABEL = 'text-xs tracking-widest uppercase text-muted-foreground mb-2 block';
 
 export default function ScheduleGamePage() {
-  const router = useRouter();
   const form = useScheduleGame();
 
   return (
     <PageMain>
-      <PageHeader title='Schedule Game' actions=<HeaderAction onClick={() => router.back()}>Back</HeaderAction> />
+      <PageHeader title='Schedule Game' />
 
-      {form.inviteUrl ? <InviteReady name={form.name.trim()} url={form.inviteUrl} /> : <ScheduleForm form={form} />}
+      {form.inviteUrl ? <InviteReady form={form} url={form.inviteUrl} /> : <ScheduleForm form={form} />}
     </PageMain>
   );
 }
@@ -80,26 +79,17 @@ function ScheduleForm({ form }: { form: ScheduleGameForm }) {
   );
 }
 
-function InviteReady({ name, url }: { name: string; url: string }) {
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success('Invite link copied');
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  }
-
+function InviteReady({ form, url }: { form: ScheduleGameForm; url: string }) {
   return (
     <div className='space-y-6'>
       <div>
-        <p className={LABEL}>{name} — invite link</p>
+        <p className={LABEL}>{form.name.trim()} — invite link</p>
         <p className='border border-border rounded-md px-4 py-3 text-sm break-all select-all'>{url}</p>
         <p className='text-xs text-muted-foreground mt-1'>Send it to the group — guests RSVP through it before the night</p>
       </div>
 
-      <Button size='lg' className='w-full h-12 text-xs tracking-widest uppercase' onClick={copy}>
-        Copy Link
+      <Button size='lg' className='w-full h-12 text-xs tracking-widest uppercase' onClick={async () => announceShare(await form.shareInvite())}>
+        Share Invite
       </Button>
       <Button asChild size='lg' variant='outline' className='w-full h-12 text-xs tracking-widest uppercase'>
         <Link href='/schedule'>Done</Link>

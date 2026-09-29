@@ -75,7 +75,7 @@ function ConfirmEmail() {
   const resend = useResendConfirmation(email, next);
 
   return (
-    <main className='min-h-screen flex flex-col items-center justify-center px-6 py-12'>
+    <main className='min-h-dvh flex flex-col items-center justify-center px-6 py-12'>
       <div className='w-full max-w-xs space-y-8'>
         <div className='text-center space-y-1'>
           <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>

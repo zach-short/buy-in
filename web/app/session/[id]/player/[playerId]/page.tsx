@@ -3,13 +3,14 @@
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
-import { toast } from 'sonner';
 import { formatCents, formatDate, formatTime } from '@pb/core';
-import { sumCents } from '@/lib/ledger';
+import { netParts, paidLine } from '@/components/settle/net-copy';
+import { sendReceipt } from '@/components/settle/send-receipt';
+import { StatusScreen } from '@/components/shared/status-screen';
+import { nightNetFromRows } from '@/lib/ledger';
 import {
-  fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
+  fetchPlayerPayments, fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
 } from '@/lib/supabase/queries';
-import { receiptUrl, shareToken } from '@/lib/supabase/share-links';
 import { Printer, Share2, MessageCircle } from 'lucide-react';
 
 export default function PlayerReceiptPage({
@@ -20,10 +21,10 @@ export default function PlayerReceiptPage({
   const { id, playerId } = use(params);
   const router = useRouter();
 
-  const { data: sessions = [] } = useSWR('sessions', fetchSessions);
+  const { data: sessions = [], isLoading: sessionsLoading } = useSWR('sessions', fetchSessions);
   const session = sessions.find((s) => s.id === id);
 
-  const { data: players = [] } = useSWR('players', fetchPlayers);
+  const { data: players = [], isLoading: playersLoading } = useSWR('players', fetchPlayers);
   const player = players.find((p) => p.id === playerId);
 
   const { data: orders = [] } = useSWR(
@@ -38,6 +39,11 @@ export default function PlayerReceiptPage({
     ['cashouts', id],
     ([, sessionId]) => fetchSessionCashouts(sessionId),
   );
+  // The player page's key. Only payments settle-up tagged with this night count on its receipt.
+  const { data: payments = [] } = useSWR(
+    ['payments', playerId],
+    ([, pid]) => fetchPlayerPayments(pid),
+  );
 
   const playerOrders = orders
     .filter((o) => o.player_id === playerId)
@@ -48,47 +54,20 @@ export default function PlayerReceiptPage({
   const playerBuyIns = buyIns
     .filter((b) => b.player_id === playerId)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  const playerCashout = cashouts.find((c) => c.player_id === playerId);
+  const playerCashouts = cashouts.filter((c) => c.player_id === playerId);
+  const nightPayments = payments.filter((p) => p.session_id === id);
 
-  const drinkTotalCents = sumCents(playerOrders, (o) => o.price_cents);
-  const buyInTotalCents = sumCents(playerBuyIns, (b) => b.amount_cents);
-  const cashoutCents = playerCashout?.amount_cents ?? 0;
-  const totalCents = drinkTotalCents + buyInTotalCents - cashoutCents;
+  const night = nightNetFromRows(playerId, orders, buyIns, cashouts, nightPayments);
+  const total = netParts(night.netCents, 'player');
+  const paid = paidLine(night.paidCents, 'player');
 
   function handlePrint() {
     window.print();
   }
 
-  // A session-scoped link (D15), reused if one is live, so sharing twice sends one link.
-  async function handleShare() {
-    if (!player) return;
-    let url: string;
-    try {
-      url = receiptUrl(await shareToken(player, id));
-    } catch (e) {
-      toast.error((e as Error).message);
-      return;
-    }
-    const body = encodeURIComponent(url);
-
-    if (player?.phone) {
-      window.location.href = `sms:${player.phone}&body=${body}`;
-    } else if (navigator.share) {
-      navigator
-        .share({ title: `${player?.name} Receipt`, url })
-        .catch(() => {});
-    } else {
-      navigator.clipboard.writeText(url);
-      alert('Link copied to clipboard');
-    }
-  }
-
+  if (sessionsLoading || playersLoading) return <StatusScreen kind='loading' />;
   if (!session || !player) {
-    return (
-      <div className='min-h-screen flex items-center justify-center text-muted-foreground text-sm tracking-widest'>
-        Loading…
-      </div>
-    );
+    return <StatusScreen kind='error' title='Receipt not found' action={{ label: 'Back', onClick: () => router.back() }} />;
   }
 
   return (
@@ -97,7 +76,7 @@ export default function PlayerReceiptPage({
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
 
         .receipt-page {
-          min-height: 100vh;
+          min-height: 100dvh;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -303,26 +282,33 @@ export default function PlayerReceiptPage({
               </div>
             ))
           )}
-          {playerCashout && (
-            <div className='receipt-row' style={{ color: 'var(--muted-foreground)' }}>
+          {playerCashouts.map((c) => (
+            <div key={c.id} className='receipt-row' style={{ color: 'var(--muted-foreground)' }}>
               <span className='receipt-row-time' />
               <span className='receipt-row-name'>Cash out</span>
               <span className='receipt-row-price' style={{ color: '#22c55e' }}>
-                −${formatCents(cashoutCents)}
+                −${formatCents(c.amount_cents)}
               </span>
+            </div>
+          ))}
+          {nightPayments.length > 0 && (
+            <div className='receipt-row' style={{ color: 'var(--muted-foreground)' }}>
+              <span className='receipt-row-time' />
+              <span className='receipt-row-name'>{paid.label}</span>
+              <span className='receipt-row-price'>{paid.amount}</span>
             </div>
           )}
           <hr className='receipt-divider' />
           <div className='receipt-total-row'>
-            <span>Total owed</span>
-            <span>${formatCents(totalCents)}</span>
+            <span>{total.label}</span>
+            {total.amount && <span>{total.amount}</span>}
           </div>
           <p className='receipt-footer'>Thank you · Good game</p>
         </div>
       </div>
 
       <div className='action-bar'>
-        <button className='action-btn action-btn-outline' onClick={handleShare}>
+        <button className='action-btn action-btn-outline' onClick={() => void sendReceipt(player, id)}>
           {player.phone ? <MessageCircle size={14} /> : <Share2 size={14} />}
           {player.phone ? 'Text' : 'Share'}
         </button>

@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 
-import { toCents } from '@pb/core';
 import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { fetchPlayers, type PlayerRow } from '@/lib/supabase/queries';
 import { createPlayer, startSession as writeStartSession } from '@/lib/supabase/writes';
 import { useDefaultBuyIn } from '@/hooks/use-default-buy-in';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MoneyInput, parseMoneyInput } from '@/components/ui/money-input';
+import { useDefaultSessionName } from './use-default-session-name';
+import { useQuickRosters } from './use-quick-rosters';
 
 interface SelectedPlayer {
   // `selected` holds both a PlayerRow from the list below and createPlayer's id-and-name
@@ -24,7 +26,10 @@ export default function NewSessionPage() {
   const router = useRouter();
   const { data: players = [], mutate } = useSWR('players', fetchPlayers);
 
-  const [name, setName] = useState('Poker');
+  // null until the host types, so the dated default shows without an effect copying it in.
+  const defaultName = useDefaultSessionName();
+  const [nameDraft, setName] = useState<string | null>(null);
+  const name = nameDraft ?? defaultName;
   const [selected, setSelected] = useState<SelectedPlayer[]>([]);
   const [search, setSearch] = useState('');
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -34,6 +39,7 @@ export default function NewSessionPage() {
   } = useDefaultBuyIn();
   const [creating, setCreating] = useState(false);
   const [starting, setStarting] = useState(false);
+  const { lastTime, tonight } = useQuickRosters(players);
 
   const filtered = players.filter(
     (p) =>
@@ -44,6 +50,14 @@ export default function NewSessionPage() {
   function addPlayer(player: Pick<PlayerRow, 'id' | 'name'>) {
     setSelected((prev) => [...prev, { player, buyIn: defaultBuyIn }]);
     setSearch('');
+  }
+
+  // Adds whoever is not seated yet; a player already picked keeps the buy-in typed for them.
+  function addPlayers(list: Pick<PlayerRow, 'id' | 'name'>[]) {
+    setSelected((prev) => [
+      ...prev,
+      ...list.filter((p) => !prev.some((s) => s.player.id === p.id)).map((player) => ({ player, buyIn: defaultBuyIn })),
+    ]);
   }
 
   function removePlayer(id: string) {
@@ -79,7 +93,7 @@ export default function NewSessionPage() {
       // Go-era `parseFloat(s.buyIn) > 0` filter did.
       const sessionId = await writeStartSession(
         name.trim(),
-        selected.map((s) => ({ playerId: s.player.id, buyInCents: toCents(parseFloat(s.buyIn) || 0) })),
+        selected.map((s) => ({ playerId: s.player.id, buyInCents: parseMoneyInput(s.buyIn) ?? 0 })),
       );
       router.push(`/session/${sessionId}`);
     } catch (e) {
@@ -90,7 +104,7 @@ export default function NewSessionPage() {
 
   return (
     <PageMain>
-      <PageHeader title='New Session' actions=<HeaderAction onClick={() => router.back()}>Back</HeaderAction> />
+      <PageHeader title='New Session' actions={<HeaderAction onClick={() => router.back()}>Back</HeaderAction>} />
 
       <div className='space-y-6'>
         <div>
@@ -99,31 +113,39 @@ export default function NewSessionPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className='h-11'
-            placeholder='Poker Night — Apr 11'
+            placeholder='Poker — Fri Oct 3'
           />
         </div>
 
         <div>
           <label className='text-xs tracking-widest uppercase text-muted-foreground mb-2 block'>Default buy-in</label>
-          <div className='relative'>
-            <span className='absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm'>$</span>
-            <Input
-              type='number'
-              min='0'
-              step='5'
-              value={defaultBuyIn}
-              onChange={(e) => setDefaultBuyIn(e.target.value)}
-              disabled={defaultBuyInLoading}
-              className='h-11 pl-7'
-              placeholder={defaultBuyInLoading ? 'Loading…' : '20'}
-            />
-          </div>
+          <MoneyInput
+            value={defaultBuyIn}
+            onValueChange={setDefaultBuyIn}
+            disabled={defaultBuyInLoading}
+            placeholder={defaultBuyInLoading ? 'Loading…' : '20'}
+          />
           {defaultBuyInError ? (
             <p className='text-xs text-destructive mt-1'>Couldn&apos;t load your default buy-in: {defaultBuyInError.message}</p>
           ) : (
             <p className='text-xs text-muted-foreground mt-1'>Pre-fills for new additions — edit per player below</p>
           )}
         </div>
+
+        {(lastTime.length > 0 || (tonight && tonight.players.length > 0)) && (
+          <div className='flex flex-wrap gap-2'>
+            {lastTime.length > 0 && (
+              <Button variant='outline' className='h-11 text-xs tracking-widest uppercase' onClick={() => addPlayers(lastTime)}>
+                Same players as last time ({lastTime.length})
+              </Button>
+            )}
+            {tonight && tonight.players.length > 0 && (
+              <Button variant='outline' className='h-11 text-xs tracking-widest uppercase' onClick={() => addPlayers(tonight.players)}>
+                Tonight&apos;s yes RSVPs ({tonight.players.length})
+              </Button>
+            )}
+          </div>
+        )}
 
         {selected.length > 0 && (
           <div>
@@ -134,17 +156,13 @@ export default function NewSessionPage() {
               {selected.map(({ player, buyIn }) => (
                 <div key={player.id} className='flex items-center gap-3 px-4 py-3'>
                   <span className='flex-1 text-sm font-medium truncate'>{player.name}</span>
-                  <div className='relative w-24 shrink-0'>
-                    <span className='absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs'>$</span>
-                    <Input
-                      type='number'
-                      min='0'
-                      step='5'
-                      value={buyIn}
-                      onChange={(e) => updateBuyIn(player.id, e.target.value)}
-                      className='h-8 pl-6 text-sm text-right pr-2'
-                    />
-                  </div>
+                  <MoneyInput
+                    value={buyIn}
+                    onValueChange={(value) => updateBuyIn(player.id, value)}
+                    aria-label={`${player.name}'s buy-in`}
+                    containerClassName='w-24 shrink-0'
+                    className='text-right pr-2'
+                  />
                   <button
                     onClick={() => removePlayer(player.id)}
                     className='text-muted-foreground hover:text-destructive transition-colors text-lg leading-none shrink-0'

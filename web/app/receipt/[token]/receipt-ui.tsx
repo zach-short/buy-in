@@ -4,7 +4,9 @@ import { use } from 'react';
 import useSWR from 'swr';
 
 import { formatCents, formatDate, formatTime, renderVenmoNote, VENMO_NOTE_PREFIX, venmoUrls } from '@pb/core';
-import { sumCents } from '@/lib/ledger';
+import { netParts, paidLine } from '@/components/settle/net-copy';
+import { StatusScreen } from '@/components/shared/status-screen';
+import { sharedNightNet } from '@/lib/ledger';
 import { fetchSharedTab } from '@/lib/supabase/public';
 import { openVenmo } from '@/lib/venmo';
 
@@ -19,40 +21,32 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
   // nothing is filtered here — the RPC already did it.
   const { data: tab, error } = useSWR(['shared_tab', token, 'session'], ([, t]) => fetchSharedTab(t, 'session'));
 
-  if (!tab && !error) {
-    return (
-      <div className='min-h-screen flex items-center justify-center text-muted-foreground text-sm tracking-widest'>
-        Loading…
-      </div>
-    );
-  }
+  if (!tab && !error) return <StatusScreen kind='loading' />;
 
   const session = tab?.sessions[0];
   const player = tab?.player;
 
   if (!tab || !session || !player) {
-    return (
-      <div className='min-h-screen flex items-center justify-center text-muted-foreground text-sm tracking-widest'>
-        Receipt not found
-      </div>
-    );
+    return <StatusScreen kind='error' title='Receipt not found' message='This link may be outdated. Ask for a new one.' />;
   }
 
   const playerOrders = [...tab.orders].sort(byCreatedAt);
   const playerBuyIns = [...tab.buy_ins].sort(byCreatedAt);
-  const playerCashout = tab.cashouts[0];
+  const playerCashouts = [...tab.cashouts].sort(byCreatedAt);
 
-  const cashoutCents = playerCashout?.amount_cents ?? 0;
-  const totalCents =
-    sumCents(playerOrders, (o) => o.price_cents) + sumCents(playerBuyIns, (b) => b.amount_cents) - cashoutCents;
+  // Payments count only if settle-up tagged them with this night; the RPC returns no others.
+  const night = sharedNightNet(tab, session.id);
+  const total = netParts(night.netCents, 'player');
+  const paid = paidLine(night.paidCents, 'player');
 
   // The host's handle from bars (D6), not an env var. The note is the host's template (0003,
   // owner 2026-09-27); with none set, a night's receipt keeps D12's `Buy-In — <session>`.
-  // Offered only when the player owes: the Go-era button sent a negative amount to Venmo.
+  // Offered only when the player owes, for what is still owed: the Go-era button sent a
+  // negative amount to Venmo. When the host owes, the player has nothing to press.
   const handle = tab.bar.venmo_handle;
   const template = tab.bar.venmo_note_template ?? `${VENMO_NOTE_PREFIX} — {{session}}`;
-  const note = renderVenmoNote(template, { amountCents: totalCents, sessionName: session.name });
-  const venmo = handle && totalCents > 0 ? venmoUrls(handle, totalCents, note) : null;
+  const note = renderVenmoNote(template, { amountCents: night.netCents, sessionName: session.name });
+  const venmo = handle && total.kind === 'owes' ? venmoUrls(handle, night.netCents, note) : null;
 
   return (
     <>
@@ -60,7 +54,7 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
 
         .receipt-wrap {
-          min-height: 100vh;
+          min-height: 100dvh;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -182,6 +176,14 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
 
         .venmo-btn:active { opacity: 0.8; }
 
+        .r-owed-note {
+          width: 100%;
+          max-width: 340px;
+          text-align: center;
+          font-size: 0.8rem;
+          color: #22c55e;
+        }
+
         .venmo-amount {
           font-size: 1rem;
           font-weight: 700;
@@ -221,11 +223,19 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
             </div>
           ))}
 
-          {playerCashout && (
-            <div className='r-row' style={{ color: '#22c55e' }}>
+          {playerCashouts.map((c) => (
+            <div key={c.id} className='r-row' style={{ color: '#22c55e' }}>
               <span className='r-time' />
               <span className='r-drink'>Cash out</span>
-              <span className='r-price'>−${formatCents(cashoutCents)}</span>
+              <span className='r-price'>−${formatCents(c.amount_cents)}</span>
+            </div>
+          ))}
+
+          {tab.payments.some((p) => p.session_id === session.id) && (
+            <div className='r-row'>
+              <span className='r-time' />
+              <span className='r-drink'>{paid.label}</span>
+              <span className='r-price'>{paid.amount}</span>
             </div>
           )}
 
@@ -245,8 +255,8 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
           <hr className='r-divider' />
 
           <div className='r-total'>
-            <span>Total owed</span>
-            <span>${formatCents(totalCents)}</span>
+            <span>{total.label}</span>
+            {total.amount && <span>{total.amount}</span>}
           </div>
 
           <p className='r-footer'>Good game</p>
@@ -258,9 +268,11 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
               <path d='M19.07 3C19.82 4.27 20.16 5.58 20.16 7.22C20.16 12.23 15.68 18.72 12.05 22H4.27L1 4.36L8.19 3.67L9.84 15.05C11.42 12.36 13.38 8.19 13.38 5.42C13.38 3.97 13.1 2.97 12.68 2.14L19.07 3Z' />
             </svg>
             Pay on Venmo
-            <span className='venmo-amount'>${formatCents(totalCents)}</span>
+            <span className='venmo-amount'>{total.amount}</span>
           </button>
         )}
+
+        {total.kind === 'owed' && <p className='r-owed-note'>The host owes you {total.amount}</p>}
 
       </div>
     </>

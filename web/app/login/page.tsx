@@ -75,7 +75,7 @@ function LoginForm() {
   }
 
   return (
-    <main className='min-h-screen flex flex-col items-center justify-center px-6'>
+    <main className='min-h-dvh flex flex-col items-center justify-center px-6'>
       <div className='w-full max-w-xs space-y-8'>
         <h1 className='text-center text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
         {searchParams.get('confirmed') && (

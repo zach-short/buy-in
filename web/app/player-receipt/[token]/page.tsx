@@ -4,10 +4,12 @@ import { use } from 'react';
 import useSWR from 'swr';
 
 import {
-  formatCents, formatDate, formatTime, isSettled, renderVenmoNote, venmoTxnFor, venmoUrls,
-  type SharedTab,
+  describeNet, formatCents, formatDate, formatTime, isSettled, renderVenmoNote, venmoTxnFor, venmoUrls,
+  type NetKind, type SharedTab,
 } from '@pb/core';
-import { sharedBalanceCents, sumCents } from '@/lib/ledger';
+import { paidLine } from '@/components/settle/net-copy';
+import { StatusScreen } from '@/components/shared/status-screen';
+import { sharedBalanceCents, sharedNightNet } from '@/lib/ledger';
 import { fetchSharedTab } from '@/lib/supabase/public';
 import { openVenmo } from '@/lib/venmo';
 
@@ -15,23 +17,41 @@ function byCreatedAt(a: { created_at: string }, b: { created_at: string }): numb
   return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
 }
 
-// One card per night the player has a drink or a buy-in in, newest night first — the Go-era
-// page's filter and order, kept (DESIGN.md §8.2). Every row is already this player's.
-function sessionGroups(tab: SharedTab) {
-  return tab.sessions
-    .filter((s) => tab.orders.some((o) => o.session_id === s.id) || tab.buy_ins.some((b) => b.session_id === s.id))
-    .sort((a, b) => new Date(b.played_on).getTime() - new Date(a.played_on).getTime())
-    .map((session) => {
-      const sessionOrders = tab.orders.filter((o) => o.session_id === session.id).sort(byCreatedAt);
-      const sessionBuyIns = tab.buy_ins.filter((b) => b.session_id === session.id);
-      const sessionCashout = tab.cashouts.find((c) => c.session_id === session.id);
-      const drinkCents = sumCents(sessionOrders, (o) => o.price_cents);
-      const buyInCents = sumCents(sessionBuyIns, (b) => b.amount_cents);
-      const cashoutCents = sessionCashout?.amount_cents ?? 0;
-      const netCents = drinkCents + buyInCents - cashoutCents;
-      return { session, sessionOrders, sessionBuyIns, sessionCashout, drinkCents, buyInCents, cashoutCents, netCents };
-    });
+// Every session any row points at — not only tab.sessions entries with a drink or buy-in —
+// so a night whose only row is a tagged payment, or whose session the RPC did not describe,
+// is listed rather than counted in the balance and missing here (as portal/night-history.tsx
+// does). Newest first; played_on is a date, so ISO strings sort, and undescribed nights sort
+// last. Every row is already this player's. A night's net counts every cash-out and the
+// payments tagged with that night; payments with no night are in the running balance only,
+// so a night can read "you owed" after it was paid.
+function sessionIdsWithRows(tab: SharedTab): string[] {
+  const ids = new Set<string>();
+  for (const rows of [tab.orders, tab.buy_ins, tab.cashouts]) rows.forEach((r) => ids.add(r.session_id));
+  tab.payments.forEach((p) => p.session_id && ids.add(p.session_id));
+  return [...ids];
 }
+
+function sessionGroups(tab: SharedTab) {
+  const described = new Map(tab.sessions.map((s) => [s.id, s]));
+  return sessionIdsWithRows(tab)
+    .map((id) => ({ id, name: described.get(id)?.name ?? 'A night at the table', played_on: described.get(id)?.played_on ?? null }))
+    .sort((a, b) => (b.played_on ?? '').localeCompare(a.played_on ?? ''))
+    .map((session) => ({
+      session,
+      sessionOrders: tab.orders.filter((o) => o.session_id === session.id).sort(byCreatedAt),
+      sessionBuyIns: tab.buy_ins.filter((b) => b.session_id === session.id),
+      sessionCashouts: tab.cashouts.filter((c) => c.session_id === session.id),
+      hasPayments: tab.payments.some((p) => p.session_id === session.id),
+      night: sharedNightNet(tab, session.id),
+    }));
+}
+
+const NIGHT_NET_LABEL: Readonly<Record<NetKind, string>> = { owes: 'you owed', owed: 'owed to you', even: 'net' };
+const NIGHT_NET_COLOR: Readonly<Record<NetKind, string>> = {
+  owes: 'var(--destructive)',
+  owed: '#22c55e',
+  even: 'var(--muted-foreground)',
+};
 
 function VenmoIcon() {
   return (
@@ -48,23 +68,10 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
   const { data: tab, error } = useSWR(['shared_tab', token, 'portal'], ([, t]) => fetchSharedTab(t, 'portal'));
 
   if (error) {
-    return (
-      <div className='min-h-screen flex items-center justify-center px-6'>
-        <div className='text-center space-y-2'>
-          <p className='text-sm font-medium text-destructive'>Invalid link</p>
-          <p className='text-xs text-muted-foreground'>This link may be outdated. Ask for a new one.</p>
-        </div>
-      </div>
-    );
+    return <StatusScreen kind='error' title='Invalid link' message='This link may be outdated. Ask for a new one.' />;
   }
 
-  if (!tab) {
-    return (
-      <div className='min-h-screen flex items-center justify-center text-muted-foreground text-sm tracking-widest'>
-        Loading…
-      </div>
-    );
-  }
+  if (!tab) return <StatusScreen kind='loading' />;
 
   const { player } = tab;
   const balanceCents = sharedBalanceCents(tab);
@@ -86,7 +93,7 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
         .pr-wrap {
-          min-height: 100vh;
+          min-height: 100dvh;
           padding: 2.5rem 1.25rem 4rem;
           max-width: 420px;
           margin: 0 auto;
@@ -246,49 +253,59 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
         {groups.length === 0 ? (
           <p className='pr-empty'>No history yet</p>
         ) : (
-          groups.map(({ session, sessionOrders, sessionBuyIns, sessionCashout, drinkCents, buyInCents, cashoutCents, netCents }) => (
-            <div key={session.id} className='pr-session'>
-              <div className='pr-session-head'>
-                <div>
-                  <p className='pr-session-name'>{session.name}</p>
-                  <p className='pr-session-date'>{formatDate(session.played_on)}</p>
+          groups.map(({ session, sessionOrders, sessionBuyIns, sessionCashouts, hasPayments, night }) => {
+            const net = describeNet(night.netCents);
+            const paid = paidLine(night.paidCents, 'player');
+            return (
+              <div key={session.id} className='pr-session'>
+                <div className='pr-session-head'>
+                  <div>
+                    <p className='pr-session-name'>{session.name}</p>
+                    {session.played_on && <p className='pr-session-date'>{formatDate(session.played_on)}</p>}
+                  </div>
+                  <div>
+                    <p className='pr-session-net' style={{ color: NIGHT_NET_COLOR[net.kind] }}>
+                      {net.kind === 'even' ? 'Even' : `$${formatCents(net.amountCents)}`}
+                    </p>
+                    <p className='pr-session-net-label'>{NIGHT_NET_LABEL[net.kind]}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className='pr-session-net' style={{ color: netCents > 0 ? 'var(--destructive)' : netCents < 0 ? '#22c55e' : 'var(--muted-foreground)' }}>
-                    {netCents > 0 ? `+$${formatCents(netCents)}` : netCents < 0 ? `-$${formatCents(Math.abs(netCents))}` : 'Even'}
-                  </p>
-                  <p className='pr-session-net-label'>net</p>
+                <div className='pr-session-body'>
+                  {sessionBuyIns.map((b, i) => (
+                    <div key={b.id} className='pr-row'>
+                      <span className='pr-row-name'>{i === 0 ? 'Buy-in' : 'Re-buy'}</span>
+                      <span className='pr-row-amount'>+${formatCents(b.amount_cents)}</span>
+                    </div>
+                  ))}
+                  {sessionOrders.map((o) => (
+                    <div key={o.id} className='pr-row'>
+                      <span className='pr-row-name'>
+                        {o.drink_name}
+                        <span className='pr-row-time'>{formatTime(o.created_at)}</span>
+                      </span>
+                      <span className='pr-row-amount'>+${formatCents(o.price_cents)}</span>
+                    </div>
+                  ))}
+                  {sessionCashouts.map((c) => (
+                    <div key={c.id} className='pr-row pr-cashout'>
+                      <span className='pr-row-name'>Cashout</span>
+                      <span className='pr-row-amount'>−${formatCents(c.amount_cents)}</span>
+                    </div>
+                  ))}
+                  {hasPayments && (
+                    <div className='pr-row'>
+                      <span className='pr-row-name'>{paid.label}</span>
+                      <span className='pr-row-amount'>{paid.amount}</span>
+                    </div>
+                  )}
+                  <div className='pr-total-row'>
+                    <span>Session total</span>
+                    <span>${formatCents(night.drinksCents + night.buyInsCents)} in · ${formatCents(night.cashoutsCents)} out</span>
+                  </div>
                 </div>
               </div>
-              <div className='pr-session-body'>
-                {sessionBuyIns.map((b, i) => (
-                  <div key={b.id} className='pr-row'>
-                    <span className='pr-row-name'>{i === 0 ? 'Buy-in' : 'Re-buy'}</span>
-                    <span className='pr-row-amount'>+${formatCents(b.amount_cents)}</span>
-                  </div>
-                ))}
-                {sessionOrders.map((o) => (
-                  <div key={o.id} className='pr-row'>
-                    <span className='pr-row-name'>
-                      {o.drink_name}
-                      <span className='pr-row-time'>{formatTime(o.created_at)}</span>
-                    </span>
-                    <span className='pr-row-amount'>+${formatCents(o.price_cents)}</span>
-                  </div>
-                ))}
-                {sessionCashout && (
-                  <div className='pr-row pr-cashout'>
-                    <span className='pr-row-name'>Cashout</span>
-                    <span className='pr-row-amount'>−${formatCents(cashoutCents)}</span>
-                  </div>
-                )}
-                <div className='pr-total-row'>
-                  <span>Session total</span>
-                  <span>${formatCents(drinkCents + buyInCents)} in · ${formatCents(cashoutCents)} out</span>
-                </div>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </>

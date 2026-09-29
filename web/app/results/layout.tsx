@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import { pageMetadata } from '@/lib/page-metadata';
 
 export const metadata = pageMetadata({
-  title: 'Stats',
-  description: 'Totals and trends across all your poker sessions.',
+  title: 'Results',
+  description: 'Your poker results across every table, and your bar’s profit night by night.',
   private: true,
 });
 

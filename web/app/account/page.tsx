@@ -11,8 +11,7 @@ import { useAuthUser } from '@/hooks/use-auth-user';
 const MORE_LINKS = [
   { label: 'Settings', href: '/account/settings' },
   { label: 'Invites', href: '/invites' },
-  { label: 'Stats', href: '/stats' },
-  { label: 'Performance', href: '/performance' },
+  { label: 'Results', href: '/results' },
   { label: 'Inventory', href: '/inventory' },
   { label: 'Drinks', href: '/drinks' },
   { label: 'Menu', href: '/menu' },

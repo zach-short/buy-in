@@ -82,7 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div
       className={cn(
         'flex min-h-dvh flex-col',
-        // Pages size themselves with min-h-screen; with the bar's padding that would always
+        // Pages size themselves with min-h-dvh; with the bar's padding that would always
         // overflow by the bar's height, so their minimum is dropped and they flex to fill instead.
         shown && 'pb-16 md:pb-0 md:pt-14 *:min-h-0! *:flex-1',
       )}
