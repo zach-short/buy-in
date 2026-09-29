@@ -3,7 +3,9 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { createAccount, createBar, type AccountFields, type BarFields } from '@/lib/supabase/sign-up';
+import { createAccount, type AccountFields, type BarFields } from '@/lib/supabase/sign-up';
+import { createClient } from '@/lib/supabase/client';
+import { completePendingBar } from '@/lib/supabase/pending-bar';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 
 export type Role = 'host' | 'member';
@@ -15,8 +17,7 @@ export interface SignUpFields extends AccountFields, BarFields {
 export type SignUpStatus =
   | { kind: 'idle' }
   | { kind: 'submitting' }
-  | { kind: 'error'; message: string }
-  | { kind: 'confirm-email' };
+  | { kind: 'error'; message: string };
 
 export interface SignUpState {
   fields: SignUpFields;
@@ -36,6 +37,10 @@ const EMPTY: SignUpFields = { name: '', email: '', password: '', role: null, bar
 // code admits them, which `/join` asks for.
 const NEXT_PATH: Record<Role, string> = { host: '/', member: '/join' };
 
+function confirmEmailPath(email: string, next: string): string {
+  return `/confirm-email?${new URLSearchParams({ email: email.trim(), next })}`;
+}
+
 function messageOf(err: unknown): string {
   return err instanceof Error ? err.message : 'Something went wrong.';
 }
@@ -47,9 +52,11 @@ function problemWith(fields: SignUpFields, role: Role): string | null {
   return null;
 }
 
-async function createBarForNewAccount(fields: BarFields): Promise<void> {
+// The table's fields went into the account's metadata at sign-up; this reads them back, creates
+// the table and clears them, so a later sign-in does not create a second one.
+async function createBarForNewAccount(): Promise<void> {
   try {
-    await createBar(fields);
+    await completePendingBar(createClient());
   } catch (err) {
     throw new Error(`Your account is ready, but the table was not set up: ${messageOf(err)} Try again.`);
   }
@@ -78,13 +85,17 @@ export function useSignUp(): SignUpState {
     setFields((prev) => ({ ...prev, [key]: value }));
   }
 
+  // Status stays `submitting` on the confirm-email hand-off too: the route is changing.
   async function run(role: Role): Promise<void> {
+    const next = safeRedirectPath(searchParams.get('redirect'), NEXT_PATH[role]);
     if (!accountCreated) {
-      if ((await createAccount(fields)) === 'confirm-email') return setStatus({ kind: 'confirm-email' });
+      const pendingBar = role === 'host' ? { barName: fields.barName, venmo: fields.venmo, cashapp: fields.cashapp } : null;
+      const result = await createAccount(fields, { next, pendingBar });
+      if (result === 'confirm-email') return router.replace(confirmEmailPath(fields.email, next));
       setAccountCreated(true);
     }
-    if (role === 'host') await createBarForNewAccount(fields);
-    router.replace(safeRedirectPath(searchParams.get('redirect'), NEXT_PATH[role]));
+    if (role === 'host') await createBarForNewAccount();
+    router.replace(next);
   }
 
   // Status stays `submitting` on success, so the button stays disabled while the route changes.

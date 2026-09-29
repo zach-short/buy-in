@@ -148,18 +148,6 @@ function GoogleSignUp({ signUp }: { signUp: SignUpState }) {
   );
 }
 
-// Unreachable while the project auto-confirms email (2026-09-28); signUp returns no session otherwise.
-function ConfirmEmail({ email }: { email: string }) {
-  return (
-    <div className='space-y-2 text-center'>
-      <p className='text-sm font-medium'>Check your email</p>
-      <p className='text-xs text-muted-foreground tracking-wide'>
-        We sent a confirmation link to {email.trim()}. Confirm it, then sign in.
-      </p>
-    </div>
-  );
-}
-
 // useSearchParams() (in useSignUp, for ?redirect=) forces this subtree to opt out of
 // static prerendering; Next.js requires a Suspense boundary around it
 // (https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout).
@@ -182,15 +170,9 @@ function SignUpPageInner() {
           <p className='text-xs text-muted-foreground tracking-widest uppercase'>New account</p>
         </div>
 
-        {signUp.status.kind === 'confirm-email' ? (
-          <ConfirmEmail email={signUp.fields.email} />
-        ) : (
-          <>
-            <GoogleSignUp signUp={signUp} />
-            <OrDivider />
-            <SignUpForm signUp={signUp} />
-          </>
-        )}
+        <GoogleSignUp signUp={signUp} />
+        <OrDivider />
+        <SignUpForm signUp={signUp} />
 
         <p className='text-center text-xs text-muted-foreground tracking-wide'>
           Already have an account?{' '}

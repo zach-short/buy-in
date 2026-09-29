@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import { emailHasAccount } from '@/lib/supabase/email-lookup';
+import { completePendingBar } from '@/lib/supabase/pending-bar';
 import { GoogleButton, OrDivider } from '@/components/auth/google-button';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 
@@ -57,11 +58,16 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const { error: signInError } = await createClient().auth.signInWithPassword({
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
-    if (!signInError) return router.replace(safeRedirectPath(redirect, '/'));
+    if (!signInError) {
+      // A host who confirmed their email on another device has no table yet; see pending-bar.ts.
+      await completePendingBar(supabase).catch(() => undefined);
+      return router.replace(safeRedirectPath(redirect, '/'));
+    }
     // A Google-only account has no password, so it lands here too.
     setError('Wrong password. If you signed up with Google, use the Google button.');
     setLoading(false);
@@ -71,6 +77,11 @@ function LoginForm() {
     <main className='min-h-screen flex flex-col items-center justify-center px-6'>
       <div className='w-full max-w-xs space-y-8'>
         <h1 className='text-center text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
+        {searchParams.get('confirmed') && (
+          <p className='text-center text-xs text-muted-foreground tracking-wide'>
+            Your email is confirmed. Sign in to continue.
+          </p>
+        )}
 
         {step === 'email' ? (
           <div className='space-y-3'>

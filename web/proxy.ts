@@ -20,6 +20,7 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/opengraph-image' ||
     pathname === '/login' ||
     pathname === '/signup' ||
+    pathname === '/confirm-email' ||
     pathname === '/auth/callback' ||
     pathname === '/join' ||
     pathname.startsWith('/join/') ||
@@ -39,7 +40,7 @@ export async function proxy(request: NextRequest) {
     return redirectTo(request, '/login', write);
   }
 
-  if ((pathname === '/login' || pathname === '/signup') && isSignedIn) {
+  if ((pathname === '/login' || pathname === '/signup' || pathname === '/confirm-email') && isSignedIn) {
     return redirectTo(request, '/', write);
   }
 
