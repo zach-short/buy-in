@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useWelcome, type WelcomeFlow } from '@/hooks/use-welcome';
 
-const PRIMARY = 'w-full h-11 tracking-widest uppercase text-xs';
+const PRIMARY = 'relative w-full h-11 tracking-widest uppercase text-xs';
 
 // useSearchParams() (in useWelcome, for ?next= and ?role=) forces this subtree to opt out of
 // static prerendering; Next.js requires a Suspense boundary around it
@@ -27,15 +27,17 @@ function Welcome() {
 
   return (
     <main className='min-h-dvh flex flex-col items-center justify-center px-6 py-12'>
-      <div className='w-full max-w-xs space-y-8'>
+      <div className='w-full max-w-sm space-y-8'>
         <div className='text-center space-y-1'>
           <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
           <p className='text-xs text-muted-foreground tracking-widest uppercase'>Welcome</p>
         </div>
         <WelcomeProgressBar {...flow.progress} />
-        {flow.step === 'role' && <RolePicker value={flow.role} onChange={flow.choose} />}
-        {flow.step === 'profile' && <ProfileStep flow={flow} />}
-        {flow.step === 'table' && <TableStep flow={flow} />}
+        <div className='rounded-lg border bg-card/40 p-5 shadow-xs'>
+          {flow.step === 'role' && <RolePicker value={flow.role} onChange={flow.choose} />}
+          {flow.step === 'profile' && <ProfileStep flow={flow} />}
+          {flow.step === 'table' && <TableStep flow={flow} />}
+        </div>
       </div>
     </main>
   );
@@ -82,8 +84,8 @@ function ProfileStep({ flow }: { flow: WelcomeFlow }) {
       />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.submitting}>
-        <ArrowRight aria-hidden='true' />
         {flow.submitting ? 'Saving…' : 'Continue'}
+        <ArrowRight aria-hidden='true' className='absolute right-4' />
       </Button>
       {!flow.invited && <BackButton onClick={() => flow.goTo('role')} />}
     </form>
