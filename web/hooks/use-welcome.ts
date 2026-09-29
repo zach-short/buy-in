@@ -24,9 +24,10 @@ function metaVenmo(user: User | null): string {
   return typeof venmo === 'string' ? venmo : '';
 }
 
-function profileProblem(profile: Profile): string | null {
-  if (!profile.name.trim()) return 'Enter your name.';
-  return validateHandles(profile.venmo, '');
+function profileProblem(profile: Profile): { message: string; field: ErrorField } | null {
+  if (!profile.name.trim()) return { message: 'Enter your name.', field: 'name' };
+  const message = validateHandles(profile.venmo, '');
+  return message ? { message, field: 'venmo' } : null;
 }
 
 // A host has all three steps and a member has no table; an invite or ?role=host skips the role
@@ -35,8 +36,12 @@ function progressOf(step: WelcomeStep, role: Role | null, skipsRole: boolean): W
   const steps: WelcomeStep[] = ['role', 'profile'];
   if (role !== 'member') steps.push('table');
   const shown = skipsRole ? steps.slice(1) : steps;
-  return { current: shown.indexOf(step) + 1, total: shown.length };
+  return { steps: shown, current: shown.indexOf(step) };
 }
+
+// Which input a message belongs to, so the page can mark it; a failure from the server, which
+// names no field, marks none.
+export type ErrorField = 'name' | 'venmo' | 'table';
 
 export function useWelcome() {
   const router = useRouter();
@@ -53,6 +58,7 @@ export function useWelcome() {
   const [venmo, setVenmo] = useState<string | null>(null);
   const [tableName, setTableName] = useState('');
   const [error, setError] = useState('');
+  const [errorField, setErrorField] = useState<ErrorField | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const venmoInput = venmo ?? metaVenmo(user);
   const profile: Profile = { name: name ?? (user ? displayNameOf(user) : ''), venmo: normalizeVenmo(venmoInput) };
@@ -62,8 +68,13 @@ export function useWelcome() {
     if (isHost) router.replace('/');
   }, [isHost, router]);
 
+  function fail(message: string, field: ErrorField | null): void {
+    setError(message);
+    setErrorField(field);
+  }
+
   function goTo(target: WelcomeStep): void {
-    setError('');
+    fail('', null);
     setStep(target);
   }
 
@@ -75,11 +86,11 @@ export function useWelcome() {
   // Stays `submitting` on success so the button holds still while the route changes.
   async function run(work: () => Promise<void>): Promise<void> {
     setSubmitting(true);
-    setError('');
+    fail('', null);
     try {
       await work();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      fail(err instanceof Error ? err.message : 'Something went wrong.', null);
       setSubmitting(false);
     }
   }
@@ -87,7 +98,7 @@ export function useWelcome() {
   async function submitProfile(e: FormEvent): Promise<void> {
     e.preventDefault();
     const problem = profileProblem(profile);
-    if (problem) return setError(problem);
+    if (problem) return fail(problem.message, problem.field);
     if (role === 'host') return goTo('table');
     await run(async () => {
       await saveProfile(profile);
@@ -97,7 +108,7 @@ export function useWelcome() {
 
   async function submitTable(e: FormEvent): Promise<void> {
     e.preventDefault();
-    if (!tableName.trim()) return setError('Name your table.');
+    if (!tableName.trim()) return fail('Name your table.', 'table');
     await run(async () => {
       await createHostTable(profile, tableName);
       router.replace('/');
@@ -106,7 +117,7 @@ export function useWelcome() {
 
   return {
     step, role, invited, progress: progressOf(step, role, presetRole !== null), profile, venmoInput, setName, setVenmo, tableName, setTableName,
-    choose, goTo, submitProfile, submitTable, submitting, error,
+    choose, goTo, submitProfile, submitTable, submitting, error, errorField,
   };
 }
 

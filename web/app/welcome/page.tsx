@@ -1,13 +1,19 @@
 'use client';
 
 import { Suspense, type ComponentProps } from 'react';
-import { ArrowLeft, ArrowRight, AtSign, Plus, Spade, User, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, AtSign, Loader2, Plus, Spade, User, type LucideIcon } from 'lucide-react';
 
 import { RolePicker } from '@/components/auth/role-picker';
 import { WelcomeProgressBar } from '@/components/auth/welcome-progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useFadedValue } from '@/hooks/use-faded-value';
 import { useWelcome, type WelcomeFlow } from '@/hooks/use-welcome';
+import { cn } from '@/lib/utils';
+import { signOutToLanding } from '@/lib/supabase/sign-out';
+
+// Matches .auth-fall's duration in globals.css.
+const FADE_MS = 200;
 
 const PRIMARY = 'relative w-full h-11 tracking-widest uppercase text-xs';
 
@@ -24,21 +30,22 @@ export default function WelcomePage() {
 
 function Welcome() {
   const flow = useWelcome();
+  const { shown, leaving } = useFadedValue(flow.step, FADE_MS);
 
   return (
     <main className='min-h-dvh flex flex-col items-center justify-center px-6 py-12'>
       <div className='relative w-full max-w-sm space-y-8'>
         <div aria-hidden='true' className='pointer-events-none absolute -inset-x-16 -inset-y-10 -z-10 bg-[radial-gradient(closest-side,color-mix(in_oklch,var(--primary)_14%,transparent),transparent)] blur-2xl' />
-        <div className='text-center space-y-1'>
-          <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
-          <p className='text-xs text-muted-foreground tracking-widest uppercase'>Welcome</p>
-        </div>
+        <h1 className='text-center text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
         <WelcomeProgressBar {...flow.progress} />
-        <div key={flow.step} className='auth-rise rounded-lg border bg-card/40 p-5 shadow-xs'>
-          {flow.step === 'role' && <RoleStep flow={flow} />}
-          {flow.step === 'profile' && <ProfileStep flow={flow} />}
-          {flow.step === 'table' && <TableStep flow={flow} />}
+        <div key={shown} className={cn(leaving ? 'auth-fall pointer-events-none' : 'auth-rise', 'rounded-lg border bg-card/40 p-5 shadow-xs')}>
+          {shown === 'role' && <RoleStep flow={flow} />}
+          {shown === 'profile' && <ProfileStep flow={flow} />}
+          {shown === 'table' && <TableStep flow={flow} />}
         </div>
+        <Button type='button' variant='ghost' onClick={signOutToLanding} className='w-full text-xs text-muted-foreground'>
+          Wrong account? Sign out
+        </Button>
       </div>
     </main>
   );
@@ -76,18 +83,25 @@ function ErrorLine({ error }: { error: string }) {
   return <p role='alert' className='text-xs text-destructive tracking-wide'>{error}</p>;
 }
 
-function BackButton({ onClick }: { onClick: () => void }) {
+function BackLink({ onClick }: { onClick: () => void }) {
   return (
-    <Button type='button' variant='ghost' onClick={onClick} className='w-full text-xs text-muted-foreground'>
+    <Button type='button' variant='ghost' size='sm' onClick={onClick} className='-ml-2 mb-3 h-7 text-xs text-muted-foreground'>
       <ArrowLeft aria-hidden='true' />
       Back
     </Button>
   );
 }
 
+// Swaps a button's icon for a spinner while it saves.
+function SubmitIcon({ icon: Icon, submitting, className }: { icon: LucideIcon; submitting: boolean; className?: string }) {
+  if (submitting) return <Loader2 aria-hidden='true' className={cn('animate-spin', className)} />;
+  return <Icon aria-hidden='true' className={className} />;
+}
+
 function ProfileStep({ flow }: { flow: WelcomeFlow }) {
   return (
     <form onSubmit={flow.submitProfile} className='space-y-3'>
+      {!flow.invited && <BackLink onClick={() => flow.goTo('role')} />}
       <StepHeading
         title='Your details'
         hint={flow.invited
@@ -102,6 +116,7 @@ function ProfileStep({ flow }: { flow: WelcomeFlow }) {
         autoComplete='name'
         autoFocus
         required
+        aria-invalid={flow.errorField === 'name'}
       />
       <IconInput
         icon={AtSign}
@@ -110,13 +125,13 @@ function ProfileStep({ flow }: { flow: WelcomeFlow }) {
         onChange={(e) => flow.setVenmo(e.target.value)}
         autoCapitalize='none'
         autoCorrect='off'
+        aria-invalid={flow.errorField === 'venmo'}
       />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.submitting}>
         {flow.submitting ? 'Saving…' : 'Continue'}
-        <ArrowRight aria-hidden='true' className='absolute right-4' />
+        <SubmitIcon icon={ArrowRight} submitting={flow.submitting} className='absolute right-4' />
       </Button>
-      {!flow.invited && <BackButton onClick={() => flow.goTo('role')} />}
     </form>
   );
 }
@@ -125,6 +140,7 @@ function ProfileStep({ flow }: { flow: WelcomeFlow }) {
 function TableStep({ flow }: { flow: WelcomeFlow }) {
   return (
     <form onSubmit={flow.submitTable} className='space-y-3'>
+      <BackLink onClick={() => flow.goTo('profile')} />
       <StepHeading title='Name your table' hint='This is what your players will see.' />
       <IconInput
         icon={Spade}
@@ -133,13 +149,13 @@ function TableStep({ flow }: { flow: WelcomeFlow }) {
         onChange={(e) => flow.setTableName(e.target.value)}
         autoFocus
         required
+        aria-invalid={flow.errorField === 'table'}
       />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.submitting}>
-        <Plus aria-hidden='true' />
+        <SubmitIcon icon={Plus} submitting={flow.submitting} />
         {flow.submitting ? 'Creating table…' : 'Create table'}
       </Button>
-      <BackButton onClick={() => flow.goTo('profile')} />
     </form>
   );
 }
