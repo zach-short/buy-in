@@ -63,7 +63,7 @@ is right, with rows inserted by hand on the local stack.
 
 ### Phase 1 — Table, types, merge and reads
 
-**Status: `BUILT` 2026-09-29, uncommitted at hand-off (the owner commits) — `HANDOFF.md` step 56.**
+**Status: `BUILT` 2026-09-29, commit `822f942` — `HANDOFF.md` step 56.**
 `0021` is proven on the local stack and **unapplied to production**. The owner applies it before the commit
 ships, because the poker tab reads the table. Deviations: scope step 9 moved to phase 2 (BD-8). Step 3's types were
 generated from the local stack rather than hand-written (BD-6 met the easier way). Step 1 revokes `all` before
