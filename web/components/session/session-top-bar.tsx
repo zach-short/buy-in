@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
@@ -51,7 +53,11 @@ export function SessionTopBar({ name, playedOn, subscribed, onEnd }: SessionTopB
   return (
     <div className='sticky top-[env(safe-area-inset-top)] z-10 bg-background/95 backdrop-blur border-b border-border'>
       <div className='px-6 py-3 flex items-center justify-between gap-3'>
-        <div className='min-w-0'>
+        {/* Pinned to Home: history would land on /session/new, which only starts another night. */}
+        <Link href='/' aria-label='Back to home' className='-ml-2 flex h-11 w-9 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors'>
+          <ChevronLeft size={22} />
+        </Link>
+        <div className='min-w-0 grow'>
           <h1 className='text-base font-semibold tracking-widest uppercase text-primary truncate'>{name}</h1>
           <p className='text-xs text-muted-foreground mt-0.5'>{formatElapsed(playedOn, now)}</p>
         </div>

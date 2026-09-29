@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 
-import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
+import { BackAction } from '@/components/shared/layout/back-action';
+import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { fetchPlayers, type PlayerRow } from '@/lib/supabase/queries';
 import { createPlayer, startSession as writeStartSession } from '@/lib/supabase/writes';
 import { useDefaultBuyIn } from '@/hooks/use-default-buy-in';
@@ -104,7 +105,7 @@ export default function NewSessionPage() {
 
   return (
     <PageMain>
-      <PageHeader title='New Session' actions={<HeaderAction onClick={() => router.back()}>Back</HeaderAction>} />
+      <PageHeader title='New Session' actions={<BackAction fallback='/' />} />
 
       <div className='space-y-6'>
         <div>

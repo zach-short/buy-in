@@ -1,12 +1,12 @@
 'use client';
 
 import { use } from 'react';
-import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { formatCents, formatDate, formatTime } from '@pb/core';
 import { netParts, paidLine } from '@/components/settle/net-copy';
 import { sendReceipt } from '@/components/settle/send-receipt';
 import { StatusScreen } from '@/components/shared/status-screen';
+import { useGoBack } from '@/hooks/use-go-back';
 import { nightNetFromRows } from '@/lib/ledger';
 import {
   fetchPlayerPayments, fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
@@ -19,7 +19,7 @@ export default function PlayerReceiptPage({
   params: Promise<{ id: string; playerId: string }>;
 }) {
   const { id, playerId } = use(params);
-  const router = useRouter();
+  const goBack = useGoBack('/sessions');
 
   const { data: sessions = [], isLoading: sessionsLoading } = useSWR('sessions', fetchSessions);
   const session = sessions.find((s) => s.id === id);
@@ -67,7 +67,7 @@ export default function PlayerReceiptPage({
 
   if (sessionsLoading || playersLoading) return <StatusScreen kind='loading' />;
   if (!session || !player) {
-    return <StatusScreen kind='error' title='Receipt not found' action={{ label: 'Back', onClick: () => router.back() }} />;
+    return <StatusScreen kind='error' title='Receipt not found' action={{ label: 'Back', onClick: goBack }} />;
   }
 
   return (
@@ -237,7 +237,7 @@ export default function PlayerReceiptPage({
       <div className='receipt-page'>
         <div className='receipt-toolbar'>
           <button
-            onClick={() => router.back()}
+            onClick={goBack}
             className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
           >
             ← Back

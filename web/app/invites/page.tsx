@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 
 import { formatDate } from '@pb/core';
-import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
+import { BackAction } from '@/components/shared/layout/back-action';
+import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useClaimRequests } from '@/hooks/use-claim-requests';
 import { useConfirm } from '@/hooks/use-confirm';
 import { shareOrCopy } from '@/lib/share';
@@ -125,7 +125,6 @@ function ClaimRow({ claim, deciding, onDecide }: ClaimRowProps) {
 }
 
 export default function InvitesPage() {
-  const router = useRouter();
   const { data: barId, error: barError } = useSWR('bar_id', fetchBarId);
   const invites = useSWR(barId ? (['bar_invite_links', barId] as const) : null, ([, id]) => fetchStandingInvites(id));
   const joins = useSWR(barId ? (['players_joined', barId] as const) : null, ([, id]) => fetchRecentJoins(id));
@@ -174,7 +173,7 @@ export default function InvitesPage() {
       <PageHeader
         title='Invites'
         subtitle='Anyone with a live link can join your table'
-        actions={<HeaderAction onClick={() => router.back()}>Back</HeaderAction>}
+        actions={<BackAction fallback='/account' />}
       />
 
       <Button className='w-full h-10 text-xs tracking-widest uppercase mb-10' onClick={handleCreate} disabled={!barId || creating}>

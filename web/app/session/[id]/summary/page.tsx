@@ -4,6 +4,7 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { formatCents } from '@pb/core';
+import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { sendReceipt } from '@/components/settle/send-receipt';
@@ -100,7 +101,7 @@ export default function SummaryPage({
 
   return (
     <PageMain>
-      <PageHeader title='Session Complete' subtitle={session?.name} />
+      <PageHeader title='Session Complete' subtitle={session?.name} actions={<BackAction href='/sessions' />} />
 
       {nightPlayers.length > 0 && (
         <SettleUp

@@ -31,7 +31,7 @@ export default function JoinInvitePage({ params }: { params: Promise<{ token: st
   if (signedIn && claim.view === 'new') {
     return (
       <JoinShell>
-        <p className='text-center text-sm'>You&apos;ve been invited to join a poker table.</p>
+        <p className='text-sm'>You&apos;ve been invited to join a poker table.</p>
         <JoinNameForm flow={flow} token={token} />
         {claim.players.length > 0 && (
           <Button variant='ghost' className='w-full text-xs tracking-widest uppercase' onClick={claim.backToNames}>
@@ -53,7 +53,7 @@ export default function JoinInvitePage({ params }: { params: Promise<{ token: st
   if (flow.error) {
     return (
       <JoinShell>
-        <p role='alert' className='text-center text-xs text-destructive tracking-wide'>
+        <p role='alert' className='text-xs text-destructive tracking-wide'>
           {flow.error}
         </p>
         <Button className='w-full h-11 tracking-widest uppercase text-xs' onClick={() => void begin(returnTo)}>

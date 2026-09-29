@@ -1,9 +1,9 @@
 'use client';
 
 import { use, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { DEFAULT_VENMO_NOTE, venmoUrls } from '@pb/core';
+import { BackAction } from '@/components/shared/layout/back-action';
 import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { openVenmo } from '@/lib/venmo';
@@ -35,7 +35,6 @@ export default function PlayerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const router = useRouter();
   const { confirm, confirmDialog } = useConfirm();
 
   const { data: players, error: playersError, mutate: mutatePlayers } = useSWR(
@@ -96,7 +95,7 @@ export default function PlayerDetailPage({
             <HeaderAction onClick={() => links.copyPortalLink(false)}>Portal</HeaderAction>
             <HeaderAction onClick={() => links.copyPortalLink(true)}>New link</HeaderAction>
             <HeaderAction onClick={() => setEditing(true)}>Edit</HeaderAction>
-            <HeaderAction onClick={() => router.back()}>Back</HeaderAction>
+            <BackAction fallback='/players' />
           </>
         }
       />

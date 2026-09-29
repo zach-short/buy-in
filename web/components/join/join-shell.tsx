@@ -1,19 +1,16 @@
 import type { ReactNode } from 'react';
 
+import { BackAction } from '@/components/shared/layout/back-action';
+import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { StatusScreen } from '@/components/shared/status-screen';
 
-/** The centred, login-style frame every /join screen renders inside. */
+/** The standard page frame every /join screen renders inside, so it matches the rest of the app. */
 export function JoinShell({ children }: { children: ReactNode }) {
   return (
-    <main className='min-h-dvh flex flex-col items-center justify-center px-6'>
-      <div className='w-full max-w-xs space-y-8'>
-        <div className='text-center space-y-1'>
-          <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
-          <p className='text-xs text-muted-foreground tracking-widest uppercase'>Join a table</p>
-        </div>
-        {children}
-      </div>
-    </main>
+    <PageMain>
+      <PageHeader title='Join a table' subtitle='Enter your host&apos;s invite' actions={<BackAction fallback='/' />} />
+      <div className='space-y-6'>{children}</div>
+    </PageMain>
   );
 }
 

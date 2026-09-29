@@ -21,7 +21,7 @@ export default function JoinPage({ searchParams }: { searchParams: SearchParams 
   if (flow.step === 'naming' || flow.step === 'joining') {
     return (
       <JoinShell>
-        <p className='text-center text-sm text-muted-foreground'>Choose the name your host will see.</p>
+        <p className='text-sm text-muted-foreground'>Choose the name your host will see.</p>
         <JoinNameForm flow={flow} token={token} />
         <Button variant='ghost' className='w-full text-xs tracking-widest uppercase' onClick={flow.reset}>
           Use a different code
