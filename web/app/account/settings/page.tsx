@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { DefaultBuyInSetting } from '@/components/shared/default-buy-in-setting';
@@ -15,6 +17,13 @@ export default function SettingsPage() {
       <PaymentHandlesSetting />
       <VenmoNoteSetting />
       <DefaultBuyInSetting />
+      <Link
+        href='/account/settings/whats-new'
+        className='flex items-center justify-between border border-border rounded-md p-4 mb-6 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
+      >
+        What&apos;s new
+        <span className='text-primary'>›</span>
+      </Link>
       <DeleteAccountSetting />
     </PageMain>
   );

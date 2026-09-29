@@ -17,10 +17,6 @@ const MORE_LINKS = [
   { label: 'Menu', href: '/menu' },
 ] as const;
 
-function SectionLabel({ children }: { children: string }) {
-  return <p className='text-xs tracking-widest uppercase text-muted-foreground mb-3'>{children}</p>;
-}
-
 export default function AccountPage() {
   const { user } = useAuthUser();
 
@@ -32,7 +28,6 @@ export default function AccountPage() {
 
       <MyTables />
 
-      <SectionLabel>More</SectionLabel>
       <nav className='flex flex-col border-t border-border mb-10'>
         {MORE_LINKS.map(({ label, href }) => (
           <Link
