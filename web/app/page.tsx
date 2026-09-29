@@ -83,6 +83,7 @@ function Dashboard() {
         {[
           { label: 'Sessions', path: '/sessions' },
           { label: 'Schedule', path: '/schedule' },
+          { label: 'Invites', path: '/invites' },
           { label: 'Players', path: '/players' },
           { label: 'Stats', path: '/stats' },
           { label: 'Inventory', path: '/inventory' },

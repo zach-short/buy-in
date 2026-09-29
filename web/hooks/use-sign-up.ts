@@ -24,6 +24,10 @@ export interface SignUpState {
   status: SignUpStatus;
   accountCreated: boolean;
   submit: (e: FormEvent) => Promise<void>;
+  // True when a ?redirect= sent this visitor here (from /join or /rsvp). Nobody clicking an
+  // invite link is trying to start their own table, so the page skips the role picker
+  // entirely rather than risk someone picking "host" by mistake.
+  invited: boolean;
 }
 
 const EMPTY: SignUpFields = { name: '', email: '', password: '', role: null, barName: '', venmo: '', cashapp: '' };
@@ -57,7 +61,12 @@ export function useSignUp(): SignUpState {
   // wins over the role's own default — it's how an invite code or event link survives
   // the detour through account creation. Same-origin only; see safeRedirectPath.
   const searchParams = useSearchParams();
-  const [fields, setFields] = useState<SignUpFields>(EMPTY);
+  const invited = Boolean(searchParams.get('redirect'));
+  // Lazy initializer: read the param once, on mount, not on every render.
+  const [fields, setFields] = useState<SignUpFields>(() => ({
+    ...EMPTY,
+    role: invited ? 'member' : null,
+  }));
   const [status, setStatus] = useState<SignUpStatus>({ kind: 'idle' });
   // Survives a failed create_bar so a retry skips signUp: the address is registered by
   // then, and a second signUp would be refused as "User already registered".
@@ -79,7 +88,10 @@ export function useSignUp(): SignUpState {
   // Status stays `submitting` on success, so the button stays disabled while the route changes.
   async function submit(e: FormEvent): Promise<void> {
     e.preventDefault();
-    const { role } = fields;
+    // Belt and suspenders: the page hides the picker while invited, so fields.role can't
+    // actually become 'host' here — but an invite always means "join", never "host",
+    // whatever the picker does or doesn't render.
+    const role = invited ? 'member' : fields.role;
     // The page disables submit, and with it Enter-to-submit, until a role is chosen.
     if (!role) return;
     const problem = problemWith(fields, role);
@@ -88,5 +100,5 @@ export function useSignUp(): SignUpState {
     await run(role).catch((err: unknown) => setStatus({ kind: 'error', message: messageOf(err) }));
   }
 
-  return { fields, setField, status, accountCreated, submit };
+  return { fields, setField, status, accountCreated, submit, invited };
 }

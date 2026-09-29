@@ -102,15 +102,24 @@ function AccountFields({ fields, setField, accountCreated }: Pick<SignUpState, '
 }
 
 function SignUpForm({ signUp }: { signUp: SignUpState }) {
-  const { fields, setField, status, accountCreated, submit } = signUp;
+  const { fields, setField, status, accountCreated, submit, invited } = signUp;
   const submitting = status.kind === 'submitting';
 
   return (
     <form onSubmit={submit} className='space-y-3'>
-      <RolePicker value={fields.role} onChange={(role) => setField('role', role)} />
+      {invited ? (
+        // Arriving via a ?redirect= means an invite or RSVP link sent them here — nobody
+        // clicking one of those is trying to start their own table, so there is no host
+        // option to pick by mistake. useSignUp already pins fields.role to 'member'.
+        <p className='text-xs text-muted-foreground tracking-wide'>
+          You&apos;ve been invited to join a table. Create an account to continue.
+        </p>
+      ) : (
+        <RolePicker value={fields.role} onChange={(role) => setField('role', role)} />
+      )}
       <AccountFields fields={fields} setField={setField} accountCreated={accountCreated} />
-      {fields.role === 'host' && <HostFields fields={fields} setField={setField} />}
-      {!fields.role && <p className='text-xs text-muted-foreground tracking-wide'>Choose one to continue.</p>}
+      {!invited && fields.role === 'host' && <HostFields fields={fields} setField={setField} />}
+      {!invited && !fields.role && <p className='text-xs text-muted-foreground tracking-wide'>Choose one to continue.</p>}
       {status.kind === 'error' && <p className='text-xs text-destructive tracking-wide'>{status.message}</p>}
       <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={submitting || !fields.role}>
         {submitting ? 'Creating account…' : 'Create account'}
