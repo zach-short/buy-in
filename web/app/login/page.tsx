@@ -2,6 +2,7 @@
 
 import { Suspense, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Mail } from 'lucide-react';
 
 import { GoogleButton } from '@/components/auth/google-button';
 import { PasswordInput } from '@/components/auth/password-input';
@@ -78,6 +79,7 @@ function EntryStep({ flow }: { flow: LoginFlow }) {
         <EmailStep flow={flow} />
       ) : (
         <Button type='button' variant='outline' onClick={() => flow.goTo('email')} className={PRIMARY}>
+          <Mail aria-hidden='true' />
           Continue with Email
         </Button>
       )}
