@@ -419,6 +419,51 @@ export type Database = {
           },
         ]
       }
+      logged_events: {
+        Row: {
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          minutes_played: number | null
+          note: string | null
+          payout_cents: number
+          place: string | null
+          played_on: string
+          stake_cents: number
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          minutes_played?: number | null
+          note?: string | null
+          payout_cents: number
+          place?: string | null
+          played_on: string
+          stake_cents: number
+          title?: string | null
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          minutes_played?: number | null
+          note?: string | null
+          payout_cents?: number
+          place?: string | null
+          played_on?: string
+          stake_cents?: number
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       logged_sessions: {
         Row: {
           big_blind_cents: number

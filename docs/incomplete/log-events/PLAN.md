@@ -13,7 +13,7 @@ sessions are the drivers in §2.
 | 2 | `@pb/core` already depends on `zod ^3.25.64` and one module uses it, so per-type `details` schemas need no new dependency | `packages/core/package.json:12`; `packages/core/src/shared-tab.ts:1` |
 | 3 | The poker chart, row and summary are typed to `PokerResult`: `ChartPoint.row: PokerResult`, `resultDetail(row)` reads `row.source` | `web/components/results/my-poker.tsx:26-31`; `poker-chart.tsx:9-21`; `poker-result-row.tsx:26-31` |
 | 4 | **Game-stakes will edit `my-poker.tsx`, `poker-result-row.tsx`, `database.types.ts` and `get_my_performance`.** So this build writes sibling components for the Everything tab and *imports* `resultDetail`, `signedAmount` and `toneClass` from `poker-result-row.tsx` without editing it. The one unavoidable edit to a game-stakes file is the entry button's label in `my-poker.tsx:82-90` (one line) | `docs/incomplete/game-stakes/SCOPE.md` §7; §1 row 16 of SCOPE |
-| 5 | The dials this feature needs already exist: `LOGGED_SESSION_MAX_HOURS = 48`, `LOGGED_SESSION_SUGGESTIONS = 5`. The other limits (note 500, name 40, details 2 KB, slug format) are **database checks**, and the form mirrors them. So `web/lib/config.ts` is **not edited** by this build | `web/lib/config.ts:58-61`; SCOPE §4 |
+| 5 | The dials this feature needs already exist: `LOGGED_SESSION_MAX_HOURS = 48`, `LOGGED_SESSION_SUGGESTIONS = 5`. The other limits (note 500, details 2 KB, slug format) are **database checks**; name 40 and the odds range are not (corrected in §3), and the form mirrors them. So `web/lib/config.ts` is **not edited** by this build | `web/lib/config.ts:58-61`; SCOPE §4 |
 | 6 | The Results tab type is `'poker' \| 'bar'`, the strip is `TABS` (two entries), and the page parses `?tab=` with `tab === 'bar' && isStaff !== false ? 'bar' : 'poker'` | `results-tabs.tsx:5-10`; `web/app/results/page.tsx:24` |
 | 7 | The strip renders only for `isStaff && visible.stats`. A host with stats off sees no strip and a `?tab=bar` link still shows the turned-off page | `web/app/results/page.tsx:29`; the comment at `:15-19` |
 | 8 | `/results/log` renders `LogSessionForm` and `/results/log/[id]` is the poker edit page; a non-uuid id reads as "not found" | `web/app/results/log/page.tsx`; `log/[id]/page.tsx`; `logged-sessions.ts:38-47` |
@@ -74,6 +74,8 @@ screen — and the one silent one, the sign of net, is pinned by tests written f
 phase. No subagent.
 
 ### Phase 1 — Table, types, registry, merge and reads
+
+**Status: `BUILT` 2026-09-29 — `HANDOFF.md` step 66; `0027` is proven on a scratch cluster and unapplied to production; types hand-written, regenerate after the apply; not seen in a browser (no UI).** Deviations: the database checks neither the 40-character name nor the odds range (§3 corrected below), so the form and zod carry them; `rowsFromPoker` lives in core with `resultDetail` passed in.
 
 **Scope:**
 1. **Migration** `supabase/migrations/<next free>_logged_events.sql`: `ls supabase/migrations` first (§0 row 12; `0026` is
@@ -219,8 +221,8 @@ owner picked every copy variant in chat.
 ## 3. Dials
 
 From SCOPE §4, with where each lives after the audit (§0 row 5): max hours **48** and suggestions **5** reuse the existing
-`LOGGED_SESSION_*` constants; note **500**, name **40**, details **2 KB**, slug regex, odds `abs >= 100`, and $0 stake are
-**database checks** mirrored by the form and by zod (BD-9); type chips "only present types" is logic, not a number.
+`LOGGED_SESSION_*` constants; note **500**, details **2 KB**, slug regex and $0 stake are
+**database checks** mirrored by the form and by zod (BD-9). **Corrected 2026-09-29 (item 27, `HANDOFF.md` step 66):** the name cap **40** and odds `abs >= 100` are *not* database checks (`title` is 1–100, odds live in `details`); zod enforces odds and the form must cap Other's name at 40. Type chips "only present types" is logic, not a number.
 No new entry in `config.ts`.
 
 ## 4. Seams reserved, deliberately not built

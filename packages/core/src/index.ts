@@ -51,6 +51,35 @@ export {
   type PokerResult,
   type HoursParse,
 } from './logged-session';
+export {
+  POKER_TYPE,
+  EVENT_SLUG,
+  EVENT_TYPES,
+  eventType,
+  typeLabel,
+  searchEventTypes,
+  parseEventDetails,
+  parseAmericanOdds,
+  type EventType,
+  type EventDetails,
+  type ExtraField,
+  type ExtraKind,
+  type TypeOption,
+  type OddsParse,
+} from './event-types';
+export {
+  eventNetCents,
+  eventDetail,
+  rowsFromEvents,
+  rowsFromPoker,
+  mergeEverything,
+  filterByType,
+  typeChips,
+  breakdownByType,
+  type EventLike,
+  type EverythingRow,
+  type TypeTotal,
+} from './event-result';
 export { featureVisibility, type DrinkSettings, type FeatureVisibility } from './host-features';
 export {
   venmoUrls,
