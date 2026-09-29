@@ -1,11 +1,16 @@
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import type { ClaimFlow } from '@/hooks/use-claim-flow';
 
 const ACTION = 'w-full h-11 tracking-widest uppercase text-xs';
 
-// Every string here is provisional, in the plain register of join-name-form.tsx: the picker
-// heading, the waiting state and the rejected note are the owner's to choose (R7, PASSOFF item
-// 17 step 6). The build offers variants in its hand-back rather than picking silently.
+// Copy chosen by the owner 2026-09-29 (R7), in the plain register of join-name-form.tsx.
+
+// A short table fits on a screen and a search box would only add a tap; past this many names
+// people scroll, so the box appears.
+const SEARCH_MIN_NAMES = 8;
 
 function ErrorLine({ text }: { text: string }) {
   if (!text) return null;
@@ -28,9 +33,26 @@ function Waiting({ name }: { name: string }) {
 }
 
 function NameList({ claim }: { claim: ClaimFlow }) {
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLowerCase();
+  const shown = claim.players.filter((p) => p.name.toLowerCase().includes(needle));
   return (
     <div className='space-y-2'>
-      {claim.players.map((p) => (
+      {claim.players.length >= SEARCH_MIN_NAMES && (
+        <Input
+          type='search'
+          placeholder='Search names'
+          aria-label='Search names'
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          autoComplete='off'
+          className='h-11'
+        />
+      )}
+      {!shown.length && (
+        <p className='text-center text-xs text-muted-foreground tracking-wide'>No one by that name.</p>
+      )}
+      {shown.map((p) => (
         <Button
           key={p.id}
           variant='outline'
@@ -73,11 +95,11 @@ export function ClaimPicker({ claim }: { claim: ClaimFlow }) {
           Your host didn&apos;t confirm you as {claim.rejectedName}. Pick again, or join as someone new.
         </p>
       )}
-      <NameList claim={claim} />
-      <ErrorLine text={claim.error} />
-      <Button variant='ghost' className={ACTION} onClick={claim.chooseNew} disabled={claim.requesting}>
+      <Button variant='outline' className={ACTION} onClick={claim.chooseNew} disabled={claim.requesting}>
         I&apos;m not on this list
       </Button>
+      <NameList claim={claim} />
+      <ErrorLine text={claim.error} />
     </div>
   );
 }
