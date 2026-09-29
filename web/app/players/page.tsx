@@ -1,14 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { formatCents, isSettled } from '@pb/core';
+import { Link2 } from 'lucide-react';
 import { DataState } from '@/components/shared/data-state';
 import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { playerBalanceCents, sumCents } from '@/lib/ledger';
 import { isPlayerArchived } from '@/lib/supabase/player-admin';
 import { fetchBuyIns, fetchCashouts, fetchOrders, fetchPayments, fetchPlayers, type PlayerRow } from '@/lib/supabase/queries';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { AddPlayerForm } from './_list/add-player-form';
@@ -54,6 +57,13 @@ export default function PlayersPage() {
         subtitle={totalOwedCents > 0 ? `$${formatCents(totalOwedCents)} outstanding` : undefined}
         actions={<HeaderAction onClick={() => { setAdding(true); }}>+ Add</HeaderAction>}
       />
+
+      <Button asChild variant='outline' className='w-full h-11 text-xs tracking-widest uppercase mb-4'>
+        <Link href='/invites'>
+          <Link2 aria-hidden='true' />
+          Send Invite Link
+        </Link>
+      </Button>
 
       {adding && (
         <AddPlayerForm
