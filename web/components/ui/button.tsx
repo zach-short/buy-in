@@ -19,8 +19,9 @@ const buttonVariants = cva(
           "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/30 dark:hover:text-foreground dark:hover:border-primary/60 dark:hover:shadow-[inset_0_0_12px_color-mix(in_oklch,var(--primary)_25%,transparent)]",
         secondary:
           "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
+        // No fill on hover (owner, 2026-09-29): the muted label brightens to full foreground.
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+          "hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
