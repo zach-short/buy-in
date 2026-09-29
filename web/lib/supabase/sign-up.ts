@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
+import { rememberNext } from '@/lib/supabase/pending-next';
 
 // DESIGN.md D5's named reversal: self-service sign-up. Only the email and password are asked
 // here; the name, Venmo and host-or-member choice come after, on /welcome, for email and
@@ -16,6 +17,7 @@ export function confirmRedirectUrl(next: string): string {
 }
 
 export async function createAccount(email: string, password: string, next: string): Promise<AccountResult> {
+  rememberNext(next);
   const { data, error } = await createClient().auth.signUp({
     email: email.trim(),
     password,

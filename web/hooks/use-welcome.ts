@@ -11,7 +11,7 @@ import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 import { displayNameOf } from '@/lib/supabase/join';
 import { normalizeVenmo, validateHandles } from '@/lib/supabase/payment-handles';
-import { createHostTable, saveProfile, type Profile } from '@/lib/supabase/welcome';
+import { acceptInvite, createHostTable, saveProfile, type Profile } from '@/lib/supabase/welcome';
 
 // A new account's first steps, after /login or Google (owner, 2026-09-29): host or member,
 // then name and optional Venmo, then — for a host — the table, after which home's setup guide
@@ -102,7 +102,7 @@ export function useWelcome() {
     if (role === 'host') return goTo('table');
     await run(async () => {
       await saveProfile(profile);
-      router.replace(invited ? next : '/join');
+      router.replace(invited ? await acceptInvite(next, profile.name) : '/join');
     });
   }
 
