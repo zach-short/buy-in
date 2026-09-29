@@ -77,7 +77,7 @@ Single lane (A), one worktree per phase cut from `main`'s tip. Items inside a la
 
 ### Phase 1 — Data layer
 
-**Status: `IN FLIGHT` — built 2026-09-29 with BD-7, `HANDOFF.md` step 52; uncommitted, `0020_host_setup.sql` unapplied. Becomes `BUILT` once the owner applies `0020` and commits (hash to be added). Deviations: the migration is `0020`, not `0008`; `get_menu` follows `0011:177`, not `0001:786-801`; five columns, not four (BD-7); the `drinks_allowed` guard is a trigger (BD-8 in step 52).**
+**Status: `BUILT 2026-09-29, commit f40b502`** — built with BD-7, `HANDOFF.md` step 52; `0020_host_setup.sql` applied to production by the owner 2026-09-29 (per the owner in chat; no agent queried the project). Types regeneration from production still owed. **Deviations: the migration is `0020`, not `0008`; `get_menu` follows `0011:177`, not `0001:786-801`; five columns, not four (BD-7); the `drinks_allowed` guard is a trigger (BD-8 in step 52).**
 
 **Scope** (read BD-7 first: a fifth column `drinks_allowed`, owner-only; steps 1, 2, 4, 5 and 7 below each gain it)
 1. **Read the directory for the next migration number** (Part 6); write `supabase/migrations/<next>_host_setup.sql`:
