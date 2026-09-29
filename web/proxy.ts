@@ -17,9 +17,14 @@ import { passThrough, redirectTo, updateSession } from '@/lib/supabase/middlewar
 //
 // 2026-09-29: /privacy and /terms added (owner request) — Google's OAuth brand verification
 // fetches both signed out, and the login page links to them. Static, no data.
+//
+// 2026-09-29: /sitemap.xml and /robots.txt added (owner request) — search crawlers carry no
+// session, and a 307 to /login would hide both from Google Search Console. Static, no data.
 function isPublicPath(pathname: string): boolean {
   return (
     pathname === '/' ||
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt' ||
     pathname === '/privacy' ||
     pathname === '/terms' ||
     pathname === '/opengraph-image' ||
