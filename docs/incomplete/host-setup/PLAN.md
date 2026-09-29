@@ -174,7 +174,7 @@ re-read it, do not trust the line numbers above. A missed guard is invisible to 
 
 ### Phase 3 — The first-run guide
 
-**Status: `IN FLIGHT` — built 2026-09-29, `HANDOFF.md` step 55 (`PASSOFF.md` item 22); gates green and walked on the local stack with a brand-new test host, not-allowed and allowed; uncommitted. Becomes `BUILT` with the commit hash.** ~~Waits on P2 merged~~ Met: P2 is `fc2e7f6`. **Deviations:** the question's answered state is per-browser (BD-12, amends BD-5); the question and the card sit under Start New Session, inside the host `Dashboard` only; Skip writes `serves_drinks = false`, because an allowed table defaults it `true`. Owner's copy (warm) and the Settings row are in step 55.
+**Status: `BUILT 2026-09-29, commit ba963f8`** — `HANDOFF.md` step 55 (`PASSOFF.md` item 22); gates green and walked on the local stack with a brand-new test host, not-allowed and allowed. ~~Waits on P2 merged~~ Met: P2 is `fc2e7f6`. **Deviations:** the question's answered state is per-browser (BD-12, amends BD-5); the question and the card sit under Start New Session, inside the host `Dashboard` only; Skip writes `serves_drinks = false`, because an allowed table defaults it `true`. Owner's copy (warm) and the Settings row are in step 55.
 
 **Scope**
 1. **Drinks question** — a one-screen, skippable prompt shown on Home while `setupDismissedAt` is null and
