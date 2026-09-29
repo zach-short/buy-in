@@ -118,9 +118,14 @@ export type Database = {
           cashapp_handle: string | null
           created_at: string
           default_buy_in_cents: number
+          default_buy_in_set_at: string | null
+          drinks_allowed: boolean
           id: string
           name: string
           owner_id: string
+          serves_drinks: boolean
+          setup_dismissed_at: string | null
+          tracks_inventory: boolean
           venmo_handle: string | null
           venmo_note_template: string | null
         }
@@ -128,9 +133,14 @@ export type Database = {
           cashapp_handle?: string | null
           created_at?: string
           default_buy_in_cents?: number
+          default_buy_in_set_at?: string | null
+          drinks_allowed?: boolean
           id?: string
           name: string
           owner_id: string
+          serves_drinks?: boolean
+          setup_dismissed_at?: string | null
+          tracks_inventory?: boolean
           venmo_handle?: string | null
           venmo_note_template?: string | null
         }
@@ -138,9 +148,14 @@ export type Database = {
           cashapp_handle?: string | null
           created_at?: string
           default_buy_in_cents?: number
+          default_buy_in_set_at?: string | null
+          drinks_allowed?: boolean
           id?: string
           name?: string
           owner_id?: string
+          serves_drinks?: boolean
+          setup_dismissed_at?: string | null
+          tracks_inventory?: boolean
           venmo_handle?: string | null
           venmo_note_template?: string | null
         }

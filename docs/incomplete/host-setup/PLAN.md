@@ -56,6 +56,13 @@ answer there. Read `SCOPE.md` first; this file is the order, the owners and the 
   Venmo note — they touch balance-bearing paths (§0 row 8), so they are their own scoped item.
 - **BD-5 — `setup_dismissed_at` is set by the checklist's own dismiss and by completing the drinks
   question**, never by the migration alone (the migration backfills existing bars, once). *Reverse:* n/a.
+- **BD-8 — The `drinks_allowed` guard is a trigger, not column grants** (phase 1 build, 2026-09-29,
+  `HANDOFF.md` step 52). `bars` holds table-wide INSERT and UPDATE for `authenticated` from the platform's
+  default privileges (`0001` grants none itself); column grants would mean revoking those on production and
+  granting every other column back, so each later column would need its own grant (step 51 is what a missed
+  grant costs). `bars_guard_drinks_allowed` (`0020`) is `before insert or update`, security invoker because it
+  keys on `current_user`: for `anon`/`authenticated` an insert is forced `false` and a change is refused;
+  `postgres`, `service_role` and the dashboard pass. *Reverse:* `drop trigger bars_guard_drinks_allowed on bars;`.
 
 ## 2. Phases
 
@@ -70,7 +77,7 @@ Single lane (A), one worktree per phase cut from `main`'s tip. Items inside a la
 
 ### Phase 1 — Data layer
 
-**Status: `PLANNED` — amended by BD-7 2026-09-29; the phase-1 files are already in the working tree, unapplied, and need amending, not redoing (`PASSOFF.md` item 18).**
+**Status: `IN FLIGHT` — built 2026-09-29 with BD-7, `HANDOFF.md` step 52; uncommitted, `0020_host_setup.sql` unapplied. Becomes `BUILT` once the owner applies `0020` and commits (hash to be added). Deviations: the migration is `0020`, not `0008`; `get_menu` follows `0011:177`, not `0001:786-801`; five columns, not four (BD-7); the `drinks_allowed` guard is a trigger (BD-8 in step 52).**
 
 **Scope** (read BD-7 first: a fifth column `drinks_allowed`, owner-only; steps 1, 2, 4, 5 and 7 below each gain it)
 1. **Read the directory for the next migration number** (Part 6); write `supabase/migrations/<next>_host_setup.sql`:
