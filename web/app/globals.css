@@ -96,6 +96,17 @@
        then jumps down. A root that already covers the inset makes WebKit size it right on load. */
     min-height: calc(100% + env(safe-area-inset-top));
   }
+  /* iOS Safari paints date and time pickers natively: its own fill, and a minimum height that
+     beats the h-11 every other field uses. Off, they take the Input styling like the rest. */
+  input[type='date'],
+  input[type='time'] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input::-webkit-date-and-time-value {
+    text-align: left;
+    margin: 0;
+  }
   body {
     @apply bg-background text-foreground;
   }

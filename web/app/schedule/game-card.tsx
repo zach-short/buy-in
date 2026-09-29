@@ -155,7 +155,7 @@ function EditGame({ game, onDone }: { game: ScheduledGameRow; onDone: (saved: bo
           type='time'
           value={form.time}
           onChange={(e) => form.setTime(e.target.value)}
-          className='h-10 w-32 shrink-0'
+          className='w-32 shrink-0'
         />
       </div>
       <div className='flex gap-3'>
