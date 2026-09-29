@@ -7,9 +7,9 @@ import { JoinShell, JoinStatus } from '@/components/join/join-shell';
 import { Button } from '@/components/ui/button';
 import { useJoinFlow } from '@/hooks/use-join-flow';
 
-// The clicked-link way in; /join is the same flow for a typed code. No RPC reveals a bar by its
-// token, so the invitation stays generic rather than naming the table — a lookup would be a
-// new schema function, and a bar's name is exactly what invites exist to keep private.
+// The clicked-link way in; /join is the same flow for a typed code. The link's unfurled card
+// names the table and game night (get_invite_preview, 0005, owner 2026-09-29); the page itself
+// stays generic until the visitor has signed in and joined.
 export default function JoinInvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const flow = useJoinFlow('checking');

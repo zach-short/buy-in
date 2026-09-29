@@ -1,13 +1,13 @@
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
-import { pageMetadata } from '@/lib/page-metadata';
+import { joinMetadata } from '@/lib/invite-metadata';
+import { fetchInvitePreview } from '@/lib/supabase/public-server';
 
-export const metadata = pageMetadata({
-  title: "You're invited",
-  description:
-    "You've been invited to join a poker table on Buy-In. Tap to pick your name and get a seat.",
-  private: true,
-});
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+  return joinMetadata(await fetchInvitePreview(token));
+}
 
 export default function Layout({ children }: { children: ReactNode }) {
   return children;

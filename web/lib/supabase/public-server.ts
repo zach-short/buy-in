@@ -27,3 +27,36 @@ export async function fetchMenuForMetadata(barId: string): Promise<MenuItem[]> {
     return [];
   }
 }
+
+export interface InvitePreview {
+  barName: string;
+  gameName: string | null;
+  scheduledAt: string | null;
+  cancelled: boolean;
+}
+
+function parseInvitePreview(data: unknown): InvitePreview | null {
+  if (typeof data !== 'object' || data === null) return null;
+  const row = data as Record<string, unknown>;
+  if (typeof row.bar_name !== 'string') return null;
+  return {
+    barName: row.bar_name,
+    gameName: typeof row.game_name === 'string' ? row.game_name : null,
+    scheduledAt: typeof row.scheduled_at === 'string' ? row.scheduled_at : null,
+    cancelled: row.cancelled === true,
+  };
+}
+
+/**
+ * The table and game night behind an invite token, for link-preview text (0005). Null for a
+ * dead token and for any failure alike — including 0005 not being applied yet — so the layout
+ * falls back to its generic card rather than erroring.
+ */
+export async function fetchInvitePreview(token: string): Promise<InvitePreview | null> {
+  try {
+    const { data, error } = await anonClient().rpc('get_invite_preview', { p_token: token });
+    return error ? null : parseInvitePreview(data);
+  } catch {
+    return null;
+  }
+}
