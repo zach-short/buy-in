@@ -1,5 +1,5 @@
--- 0018 — create_order refuses a short pour when p_allow_short is null (2026-09-29). UNAPPLIED:
--- the owner applies it.
+-- 0018 — create_order refuses a short pour when p_allow_short is null (2026-09-29). Applied to
+-- production 2026-09-29.
 --
 -- Why this exists: 0011_drinks_stock.sql was edited after it was applied (HANDOFF, correction to
 -- steps 43 and 44, R9: file mtime 10:51:57, after the apply). The edit was the Fable review's one

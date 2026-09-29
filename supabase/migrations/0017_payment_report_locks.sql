@@ -1,4 +1,4 @@
--- 0017 — payment reports take the player lock first (2026-09-29). UNAPPLIED: the owner applies it.
+-- 0017 — payment reports take the player lock first (2026-09-29). Applied to production 2026-09-29.
 --
 -- Why this exists: 0013_payment_reports.sql was applied to production before its review fixes
 -- landed. The owner's screenshot showing `payment_reports` exists is 10:52:27; the file's two
