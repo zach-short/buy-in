@@ -3,12 +3,6 @@
 
 export type ShareResult = 'shared' | 'copied' | 'cancelled' | 'failed';
 
-interface ShareInput {
-  url: string;
-  text?: string;
-  title?: string;
-}
-
 export async function copyText(text: string): Promise<'copied' | 'failed'> {
   try {
     await navigator.clipboard.writeText(text);
@@ -19,17 +13,19 @@ export async function copyText(text: string): Promise<'copied' | 'failed'> {
   }
 }
 
-export async function shareOrCopy({ url, text, title }: ShareInput): Promise<ShareResult> {
+// A shared link goes out bare — no text or title for the share target to prepend (owner's call,
+// 2026-09-29). `text` is only for a share that is a message rather than a link: the payment
+// reminder, whose point is the amount owed.
+export async function shareOrCopy(url: string, text?: string): Promise<ShareResult> {
   if (typeof navigator.share === 'function') {
     try {
-      await navigator.share({ url, text, title });
+      await navigator.share({ url, text });
       return 'shared';
     } catch (e) {
       // a dismissed sheet is the user's answer, so no copy fallback and no error
       if (e instanceof DOMException && e.name === 'AbortError') return 'cancelled';
     }
   }
-  // the copy carries the message too, or a pasted invite arrives as a bare link
   return copyText(text ? `${text} ${url}` : url);
 }
 

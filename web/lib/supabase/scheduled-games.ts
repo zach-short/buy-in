@@ -1,7 +1,7 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
 import { writeErrorMessage, type Tables } from '@pb/core';
-import { copyText, shareOrCopy, type ShareResult } from '@/lib/share';
+import { shareOrCopy, type ShareResult } from '@/lib/share';
 import { createClient } from '@/lib/supabase/client';
 import { fetchBarId } from '@/lib/supabase/queries';
 
@@ -150,23 +150,7 @@ export function rsvpUrl(token: string): string {
   return `${window.location.origin}/rsvp/${token}`;
 }
 
-/** "Fri Oct 3, 7:00 PM", in the viewer's own time zone. */
-function shortWhen(scheduledAt: string): string {
-  const d = new Date(scheduledAt);
-  const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
-  const day = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  return `${weekday} ${day}, ${time}`;
-}
-
-/**
- * Shares the invite as a ready-to-paste message: the share sheet where there is one, the
- * clipboard otherwise. Not shareOrCopy's own fallback, which copies the bare link — a host
- * pasting into a group chat wants the name and time with it.
- */
-export async function shareGameInvite(game: Pick<ScheduledGameRow, 'name' | 'scheduled_at'>, token: string): Promise<ShareResult> {
-  const url = rsvpUrl(token);
-  const text = `${game.name} ${shortWhen(game.scheduled_at)} — RSVP:`;
-  if (typeof navigator.share === 'function') return shareOrCopy({ url, text, title: game.name });
-  return copyText(`${text} ${url}`);
+/** Shares the invite link alone — the share sheet where there is one, the clipboard otherwise. */
+export async function shareGameInvite(token: string): Promise<ShareResult> {
+  return shareOrCopy(rsvpUrl(token));
 }

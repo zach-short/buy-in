@@ -47,7 +47,7 @@ function statusLine({ status, expires_at, revoked_at }: StandingInvite): string 
 // still has a way to copy it by hand. A dismissed sheet is the host's answer — no toast.
 async function shareInvite(token: string): Promise<void> {
   const url = joinUrl(token);
-  const result = await shareOrCopy({ url, text: 'Join my table on Buy-In', title: 'Buy-In invite' });
+  const result = await shareOrCopy(url);
   if (result === 'copied') toast.success('Invite link copied');
   if (result === 'failed') toast.error("Couldn't share or copy. Here's the link:", { description: url, duration: 20000 });
 }

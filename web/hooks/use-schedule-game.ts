@@ -84,10 +84,8 @@ export function useScheduleGame(): ScheduleGameForm {
     }
   }
 
-  // The fields are locked once the game exists, so they still describe the game that was made.
   async function shareInvite(): Promise<ShareResult> {
-    if (!inviteToken) return 'failed';
-    return shareGameInvite({ name: name.trim(), scheduled_at: toScheduledAt(date, time) }, inviteToken);
+    return inviteToken ? shareGameInvite(inviteToken) : 'failed';
   }
 
   const filled = name.trim() !== '' && date !== '' && time !== '';

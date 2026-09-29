@@ -60,7 +60,7 @@ export function usePlayerLinks(player: LinkPlayer | undefined, confirm: ConfirmA
       const url = portalUrl(await shareToken(player, null));
       const text = `You owe $${formatCents(balanceCents)} for poker — pay/see details:`;
       if (player.phone) window.location.href = smsHref(player.phone, `${text} ${url}`);
-      else reportShare(await shareOrCopy({ url, text }), 'Reminder copied');
+      else reportShare(await shareOrCopy(url, text), 'Reminder copied');
     } catch (e) {
       toast.error((e as Error).message);
     }

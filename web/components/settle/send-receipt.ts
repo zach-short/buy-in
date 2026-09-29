@@ -21,7 +21,7 @@ export async function sendReceipt(player: Pick<PlayerRow, 'id' | 'bar_id' | 'nam
     window.location.href = smsHref(player.phone, url);
     return true;
   }
-  const result = await shareOrCopy({ url, title: `${player.name}'s receipt` });
+  const result = await shareOrCopy(url);
   if (result === 'copied') toast.success('Receipt link copied');
   if (result === 'failed') toast.error('Could not share the receipt link');
   return result === 'shared' || result === 'copied';

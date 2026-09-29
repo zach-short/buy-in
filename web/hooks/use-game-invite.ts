@@ -15,7 +15,7 @@ export interface GameInvite {
   /** undefined until loaded (or after a failed read); null when the game has no live invite. */
   token: string | null | undefined;
   making: boolean;
-  /** Shares or copies the ready-to-paste invite message; 'failed' when there is no token yet. */
+  /** Shares or copies the invite link; 'failed' when there is no token yet. */
   share: () => Promise<ShareResult>;
   make: () => Promise<void>;
 }
@@ -31,7 +31,7 @@ export function useGameInvite(game: ScheduledGameRow): GameInvite {
   const [making, setMaking] = useState(false);
 
   async function share(): Promise<ShareResult> {
-    return token ? shareGameInvite(game, token) : 'failed';
+    return token ? shareGameInvite(token) : 'failed';
   }
 
   // A game can be left with no invite — the mint after scheduling failed and the host left
