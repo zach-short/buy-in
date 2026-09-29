@@ -1,7 +1,77 @@
-# Logged sessions — a player records a game played away from any table, and it counts in their results — SCOPE
+# Logged sessions — a player records a game played away from any table, and it counts in their results — DESIGN
 
-**Status: `SCOPED` 2026-09-29 — gate answered (§7), every recommendation taken; sequencing/model still open.**
-Opened by `/scope` on Opus 5.5. §1–§6 are the pre-gate proposal, kept as written (R5); where §7 differs, §7 wins.
+**Status: `RATIFIED` 2026-09-29.** Was `SCOPE.md` (committed `e014181`); renamed to `DESIGN.md` 2026-09-29 and
+the gate answers (§7) written in as `D1`–`D8` below. **Frozen from here:** a decision changes only by a new dated
+`D<n>` or an `As built:` note under the one it amends, never by editing it in place. The build order is `PLAN.md`.
+
+§1–§6 further down are the scope as the owner answered it, kept as written (R5). Where they and a `D` differ, the
+`D` wins.
+
+## Decisions
+
+**D1 — A logged session is its own row in a new `logged_sessions` table, owned by one account.** It carries
+`user_id → auth.users on delete cascade`, `played_on timestamptz`, `venue text`, the stakes (D3), `buy_in_cents`,
+`cash_out_cents` and the extras (D4). It creates no `bars`, `players`, `bar_members`, `sessions`, `buy_ins` or
+`cashouts` row. *Defense:* every home-game money table requires a bar (§1 row 2), and a fake per-player bar would
+make member-home's staff check hand a member the host shell, show in `get_my_tables`, trip `fetchBarId`'s
+one-bar rule and be deleted by account deletion's `delete from bars` (§3 O1(b)). *Against, recorded:* two sources
+now feed the P&L and must be merged (D2). Owner, 2026-09-29, §7 Q1.
+
+**D2 — The P&L merges two reads in `@pb/core`; `get_my_performance` is not touched.** Results reads
+`get_my_performance()` and the caller's `logged_sessions` rows, and a pure function maps both into one row shape,
+won-positive, ordered by `played_on`. *Defense:* the game-stakes effort `drop`s and re-`create`s
+`get_my_performance` (§1 row 8); not editing it means the two efforts never touch one `security definer`
+signature, and the merge gets its own test file (conventions X1). *Against, recorded:* two round trips, and the
+second read needs the same loud cap check as the first (§1 row 6). Owner, 2026-09-29, §7 Q2.
+
+**D3 — Stakes are blinds in integer cents, in game-stakes' shape.** Columns `small_blind_cents`,
+`big_blind_cents`, optional `straddle_cents`, and optional `game_format` text. "2/5" is `200`/`500`. *Defense:*
+once game-stakes lands, a $2/$5 casino night and a $2/$5 home game fall in the same bucket of its stakes filter.
+*Against, recorded:* this item builds a blinds input before game-stakes does, so whichever lands second reuses the
+first one's field rather than building its own. Owner, 2026-09-29, §7 Q3.
+
+**D4 — A logged session also records hours played and a note, both optional.** Hours are stored as
+`minutes_played integer` (whole minutes, entered as hours such as `4.5`) and give **$/hour on logged rows only**.
+The all-games summary does not show $/hour, because a home game has no hours to divide by. `note` is free text.
+Owner, 2026-09-29, §7 Q4.
+
+**D5 — Logged sessions are merged into Results → poker, tagged, and filterable.** There is one net, one
+cumulative chart and one list. A logged row shows its venue where a home game shows the table name, plus a
+"Logged" tag. A three-way filter, **All / Home games / Logged**, redraws the summary, the chart and the list.
+Tapping a logged row opens it for edit or delete. Owner, 2026-09-29, §7 Q5–Q6.
+
+**D6 — The entry point is a "Log a session" button on the Results poker tab.** A button on member Home is a
+follow-up, not this item. The label is owner-picked (plain register), 2026-09-29, §7 Q7.
+
+**D7 — Nothing about a table's money changes.** A logged session never appears in any balance, settle-up,
+receipt, portal, host Results, `get_my_tables` card or member-Home table card. No host can read one: the only
+policy is the owner's own row (D8).
+
+**D8 — The row's owner is the only wall.** One RLS policy, `for all to authenticated`, both `using` and
+`with check` set to `user_id = (select auth.uid())`. `user_id` defaults to `auth.uid()`. The table states its own
+`grant select, insert, update, delete … to authenticated` (HANDOFF invariant). There is no `security definer`
+function. *Defense:* this is the simplest policy shape in the schema, and a mistake in it fails loudly
+(permission denied, or another user's rows showing up) under the harness proof that `PLAN.md` requires. A wrong
+definer function, by contrast, can leak rows silently. This item's build call on the model follows from that.
+*Recorded as build-level, not asked:* it implements D1 and §5 H5.
+
+## Rules that survive unchanged
+
+- `get_my_performance()` — signature, scoping, sign, and its wrong `stakes_cents` label (§1 row 7) are
+  game-stakes' to fix, not this item's.
+- `net_cents` on this screen is **won-positive**, the opposite of `computeBalanceCents`
+  (`web/lib/supabase/performance.ts:5-9`). A logged row's net is `cash_out_cents − buy_in_cents`.
+- Money is integer cents (`0001_init.sql:5-6`); `played_on` is `timestamptz` (BD-2, `0001_init.sql:148-154`).
+- member-home's shell rule: staff at any table = host shell (member-home §7 O1). Unaffected by D1.
+- `?table=<bar id>` on the poker tab (member-home O3(b)) keeps working. With a table chosen, only that table's
+  home games are shown, so the source filter is hidden.
+- `fetchMyPerformance`'s loud failure on a capped read (`performance.ts:12-24`) stays, and is copied, not relaxed.
+- No agent applies a migration; the owner does (`CLAUDE.md` "Never do this").
+
+## Still owed at build (R7)
+
+The form's title, the empty state when the Logged filter has no rows, and the tag's wording. The build session
+offers 2–3 variants of each, in different registers, and asks before shipping.
 
 Owner's ask, 2026-09-29: "as a user add the ability to log a session outside of a table so this app can also be
 used to track general performance integrated with the homegames. for example if i played 2/5 at Rivers Casino in
@@ -219,4 +289,6 @@ Asked in chat 2026-09-29 as one batch; every recommendation taken. Recorded the 
 **Still open for the build session (R7):** the form's title, the empty-state line when the Logged filter has no
 rows, and the "Logged" tag's wording — 2–3 variants each, asked before shipping.
 
-Next: `DESIGN.md` from this file, then `PLAN.md` — after board item 19 (member-home) merges.
+Next: `DESIGN.md` from this file, then `PLAN.md` — after board item 19 (member-home) merges. **Done
+2026-09-29:** item 19 merged as `259e121` (HANDOFF 54); this file became `DESIGN.md` and `PLAN.md` was written the
+same day. §5 H1 is closed by that merge. Q8 is carried to `PLAN.md` §7.
