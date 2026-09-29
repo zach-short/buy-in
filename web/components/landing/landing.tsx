@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowRight, BarChart3, CalendarDays, LogIn, Smartphone, Users } from 'lucide-react';
+import { ArrowRight, BarChart3, CalendarDays, Smartphone, Users } from 'lucide-react';
 
 import { LegalLinks } from '@/components/legal/legal-links';
 import { Button } from '@/components/ui/button';
@@ -42,9 +42,6 @@ function Nav() {
     <header className='mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6'>
       <span className='font-display text-sm font-semibold tracking-widest uppercase text-primary'>Buy-In</span>
       <nav className='flex items-center gap-6'>
-        <Link href='/login' className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>
-          Log in
-        </Link>
         <Button asChild size='sm' className='text-xs tracking-widest uppercase'>
           <Link href='/login'><ArrowRight aria-hidden='true' /> Get started</Link>
         </Button>
@@ -58,9 +55,6 @@ function Actions() {
     <div className='flex flex-wrap items-center gap-3'>
       <Button asChild size='lg' className='h-12 px-7 text-xs tracking-widest uppercase landing-cta'>
         <Link href='/login'><ArrowRight aria-hidden='true' /> Get started</Link>
-      </Button>
-      <Button asChild size='lg' variant='outline' className='h-12 px-7 text-xs tracking-widest uppercase'>
-        <Link href='/login'><LogIn aria-hidden='true' /> Log in</Link>
       </Button>
     </div>
   );
