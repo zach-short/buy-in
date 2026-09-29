@@ -1,0 +1,22 @@
+-- 0019 — staff can read payment_reports through the API (2026-09-29). UNAPPLIED: the owner
+-- applies it.
+--
+-- 0013 created payment_reports with a staff SELECT policy (payment_reports_staff_read) but no
+-- table GRANT. It relied on the platform's default privileges, as every table in 0001–0012 did.
+-- That default is not a constant: on the local stack started 2026-09-29 (Supabase CLI 2.115),
+-- `\ddp public` shows new tables in public get only `Dxtm` (truncate, references, trigger,
+-- maintain) for anon and authenticated, with no select. So the host's player page read
+-- "Permission denied for table payment_reports." and the reported-payments queue never loaded.
+-- RLS policies only filter rows a role may already read; without the grant there is nothing
+-- to filter.
+--
+-- Production may already carry a select grant from its own defaults; this cannot be checked
+-- from here (no execute_sql in this repo). A GRANT is idempotent, so applying this is safe
+-- either way.
+--
+-- Only SELECT, and only to authenticated. The 0013 header is the rule: staff read the queue,
+-- every write goes through its security-definer functions, anon reaches the table only through
+-- report_payment and my_payment_reports. The payment_reports_staff_read policy still decides
+-- which rows a signed-in user sees: only their own bars'.
+
+grant select on table payment_reports to authenticated;
