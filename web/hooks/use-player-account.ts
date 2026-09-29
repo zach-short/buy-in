@@ -10,7 +10,7 @@ import type { PlayerRow } from '@/lib/supabase/queries';
 // PASSOFF item 17's host override on /players/[id]: undo, swap or move the account linked to a
 // row, because a friend will pick the wrong name (owner, 2026-09-29). None of these touches a
 // balance — a balance belongs to the row; only who can see the row changes. Confirm prompts and
-// toasts are provisional copy (R7).
+// toasts are the owner's copy (R7, chosen 2026-09-29).
 
 type Action = 'unlink' | 'swap' | 'move';
 
@@ -40,7 +40,7 @@ export function usePlayerAccount(player: PlayerRow, onChanged: () => Promise<unk
     () => unlinkPlayer(player.id), 'Unlinked');
 
   const swap = (other: PlayerRow) => run('swap',
-    `Swap accounts between ${player.name} and ${other.name}? Each account then sees the other's balance.`,
+    `Swap the accounts on ${player.name} and ${other.name}? Each person will then see the other's balance.`,
     () => swapPlayerAccounts(player.id, other.id), 'Accounts swapped');
 
   // The row this page shows is deleted on success, so the page follows the account to its new row.

@@ -6,11 +6,11 @@ import { toast } from 'sonner';
 
 import { decideClaim, fetchPendingClaims, type DecideOutcome, type PendingClaim } from '@/lib/supabase/claims';
 
-// Provisional copy in the plain register (R7): the owner picks the approve/reject wording.
+// Copy chosen by the owner 2026-09-29 (R7).
 function outcomeToast(outcome: DecideOutcome, claim: PendingClaim): void {
-  if (outcome === 'approved') return void toast.success(`Linked to ${claim.playerName}`);
+  if (outcome === 'approved') return void toast.success(`${claim.playerName} is now linked`);
   if (outcome === 'rejected') return void toast.success('Request declined');
-  if (outcome === 'player-taken') return void toast.error(`${claim.playerName} is already linked to someone else`);
+  if (outcome === 'player-taken') return void toast.error(`Someone else already claimed ${claim.playerName}`);
   toast.error('That account already has a player here. Use Move on its player page.');
 }
 

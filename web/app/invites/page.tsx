@@ -97,7 +97,7 @@ interface ClaimRowProps {
 // PASSOFF item 17: who asked is the email and name their account had when they asked (0008
 // copies both), because a host cannot read accounts and would otherwise approve a stranger.
 // The email leads because the name is self-asserted — the claimant's own profile name, which
-// can be anything, including the very player they are claiming. Wording is provisional (R7).
+// can be anything, including the very player they are claiming. Wording chosen by the owner 2026-09-29 (R7).
 function ClaimRow({ claim, deciding, onDecide }: ClaimRowProps) {
   const who = claim.requesterEmail ?? claim.requesterName ?? 'Someone';
   return (

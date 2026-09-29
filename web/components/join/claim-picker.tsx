@@ -19,9 +19,9 @@ function ErrorLine({ text }: { text: string }) {
 function Waiting({ name }: { name: string }) {
   return (
     <div className='space-y-3 text-center'>
-      <p className='text-sm'>Waiting for your host to confirm you&apos;re {name || 'that player'}.</p>
+      <p className='text-sm'>Your host needs to confirm you&apos;re {name || 'that player'}.</p>
       <p className='text-xs text-muted-foreground tracking-wide'>
-        Your balance and history appear here once they do.
+        This page updates on its own. Nothing to do until then.
       </p>
     </div>
   );
@@ -46,7 +46,7 @@ function NameList({ claim }: { claim: ClaimFlow }) {
   );
 }
 
-/** "Which one are you?" — the claim step shown after sign-in, before today's name form. */
+/** "Pick your name from the table" — the claim step shown after sign-in, before today's name form. */
 export function ClaimPicker({ claim }: { claim: ClaimFlow }) {
   if (claim.view === 'waiting') return <Waiting name={claim.waitingFor} />;
 
@@ -67,7 +67,7 @@ export function ClaimPicker({ claim }: { claim: ClaimFlow }) {
 
   return (
     <div className='space-y-4'>
-      <p className='text-center text-sm'>Which one are you?</p>
+      <p className='text-center text-sm'>Pick your name from the table</p>
       {claim.rejectedName && (
         <p className='text-xs text-muted-foreground tracking-wide text-center'>
           Your host didn&apos;t confirm you as {claim.rejectedName}. Pick again, or join as someone new.
@@ -76,7 +76,7 @@ export function ClaimPicker({ claim }: { claim: ClaimFlow }) {
       <NameList claim={claim} />
       <ErrorLine text={claim.error} />
       <Button variant='ghost' className={ACTION} onClick={claim.chooseNew} disabled={claim.requesting}>
-        I&apos;m new here
+        I&apos;m not on this list
       </Button>
     </div>
   );
