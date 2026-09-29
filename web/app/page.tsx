@@ -9,6 +9,7 @@ import { sumCents } from '@/lib/ledger';
 import { fetchSessions, fetchSessionOrders } from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
 import { Landing } from '@/components/landing/landing';
+import { SetupGuide } from '@/components/host-setup/setup-guide';
 import { MemberHome } from '@/components/member/member-home';
 import { NextGameCard } from '@/components/shared/next-game-card';
 import { useAuthUser } from '@/hooks/use-auth-user';
@@ -54,6 +55,8 @@ function Dashboard() {
           </Button>
         )}
       </div>
+
+      <SetupGuide />
 
       <NextGameCard canStart={!activeSession} />
 

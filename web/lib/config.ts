@@ -22,3 +22,17 @@ export const REALTIME_REFETCH_DEBOUNCE_MS = 250;
  * at a handful of tables, so this is a fold, not pagination.
  */
 export const MEMBER_HOME_TABLE_LIMIT = 5;
+
+/**
+ * The setup guide's checklist on Home (host-setup PLAN phase 3, SCOPE.md §4), in order. Each
+ * item's done state is derived from data (useSetupGuide); only the guide's dismissal is stored.
+ * Copy: warm register, chosen by the owner 2026-09-29 (R7).
+ */
+export const SETUP_GUIDE_ITEMS = [
+  { key: 'defaultBuyIn', label: 'Pick a default buy-in', href: '/account/settings' },
+  { key: 'players', label: 'Add the regulars', href: '/players' },
+  { key: 'invite', label: 'Send someone an invite', href: '/invites' },
+  { key: 'session', label: 'Deal your first session', href: '/session/new' },
+] as const;
+
+export type SetupItemKey = (typeof SETUP_GUIDE_ITEMS)[number]['key'];

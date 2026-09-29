@@ -8,6 +8,7 @@ import { DefaultBuyInSetting } from '@/components/shared/default-buy-in-setting'
 import { DeleteAccountSetting } from '@/components/shared/delete-account-setting';
 import { HostFeaturesSetting } from '@/components/shared/host-features-setting';
 import { PaymentHandlesSetting } from '@/components/shared/payment-handles-setting';
+import { SetupGuideSetting } from '@/components/shared/setup-guide-setting';
 import { VenmoNoteSetting } from '@/components/shared/venmo-note-setting';
 import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
 
@@ -20,6 +21,7 @@ function BarSettings() {
       <VenmoNoteSetting />
       <DefaultBuyInSetting />
       <HostFeaturesSetting />
+      <SetupGuideSetting />
     </>
   );
 }

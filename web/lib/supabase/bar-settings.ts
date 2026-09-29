@@ -102,10 +102,15 @@ export async function updateTracksInventory(barId: string, on: boolean): Promise
   await updateBar(barId, { tracks_inventory: on }, 'Only the bar owner can turn inventory on or off');
 }
 
-/** Ends the first-run setup guide (host-setup phase 3, BD-5). Nothing calls it before then. */
+/** Ends the first-run setup guide (host-setup phase 3, BD-5): the checklist's "I'm all set". */
 export async function dismissSetup(barId: string): Promise<void> {
   await updateBar(barId, { setup_dismissed_at: new Date().toISOString() },
     'Only the bar owner can dismiss the setup guide');
+}
+
+/** Brings the setup guide back on Home — the "Show setup guide" row on /account/settings. */
+export async function reopenSetup(barId: string): Promise<void> {
+  await updateBar(barId, { setup_dismissed_at: null }, 'Only the bar owner can reopen the setup guide');
 }
 
 /**

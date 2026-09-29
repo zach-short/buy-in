@@ -56,6 +56,8 @@ answer there. Read `SCOPE.md` first; this file is the order, the owners and the 
   Venmo note — they touch balance-bearing paths (§0 row 8), so they are their own scoped item.
 - **BD-5 — `setup_dismissed_at` is set by the checklist's own dismiss and by completing the drinks
   question**, never by the migration alone (the migration backfills existing bars, once). *Reverse:* n/a.
+  **Amended by BD-12 (owner, 2026-09-29):** answering the drinks question no longer sets it — only the
+  checklist's dismiss does.
 - **BD-8 — The `drinks_allowed` guard is a trigger, not column grants** (phase 1 build, 2026-09-29,
   `HANDOFF.md` step 52). `bars` holds table-wide INSERT and UPDATE for `authenticated` from the platform's
   default privileges (`0001` grants none itself); column grants would mean revoking those on production and
@@ -75,6 +77,12 @@ answer there. Read `SCOPE.md` first; this file is the order, the owners and the 
 - **BD-11 — The live table's menu and stock reads wait for the stored switch**, not for `visible` (which reads
   "on" while loading, BD-1/phase 1). A failed settings load keeps them, as it keeps everything on. Orders are always
   read — they are balances. *Reverse:* pass `visible.drinks` straight to `useLiveSession`.
+- **BD-12 — Answering the drinks question does not dismiss the guide** (owner, 2026-09-29, phase 3 build,
+  `HANDOFF.md` step 55; amends BD-5). `setup_dismissed_at` is the only stored bit, so BD-5's "completing the
+  question sets it" would hide the checklist step 2 puts under the question. The answer goes to `serves_drinks`
+  (Skip writes `false`, BD-7); only "asked in this browser" is kept, in `localStorage` per bar
+  (`web/lib/setup-drinks-answered.ts`), so a second browser may ask once more, No preselected. *Reverse:* have
+  `answerDrinks` also call `dismissSetup`, and drop the storage file.
 
 ## 2. Phases
 
@@ -166,7 +174,7 @@ re-read it, do not trust the line numbers above. A missed guard is invisible to 
 
 ### Phase 3 — The first-run guide
 
-**Status: `PLANNED`.** Waits on P2 merged (shares `app/page.tsx`).
+**Status: `IN FLIGHT` — built 2026-09-29, `HANDOFF.md` step 55 (`PASSOFF.md` item 22); gates green and walked on the local stack with a brand-new test host, not-allowed and allowed; uncommitted. Becomes `BUILT` with the commit hash.** ~~Waits on P2 merged~~ Met: P2 is `fc2e7f6`. **Deviations:** the question's answered state is per-browser (BD-12, amends BD-5); the question and the card sit under Start New Session, inside the host `Dashboard` only; Skip writes `serves_drinks = false`, because an allowed table defaults it `true`. Owner's copy (warm) and the Settings row are in step 55.
 
 **Scope**
 1. **Drinks question** — a one-screen, skippable prompt shown on Home while `setupDismissedAt` is null and
