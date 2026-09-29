@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 
 import type { Role } from '@/components/auth/role-picker';
+import type { WelcomeProgress } from '@/components/auth/welcome-progress';
 import { useAuthUser } from '@/hooks/use-auth-user';
 import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
 import { safeRedirectPath } from '@/lib/safe-redirect';
@@ -26,6 +27,15 @@ function metaVenmo(user: User | null): string {
 function profileProblem(profile: Profile): string | null {
   if (!profile.name.trim()) return 'Enter your name.';
   return validateHandles(profile.venmo, '');
+}
+
+// A host has all three steps and a member has no table; an invite or ?role=host skips the role
+// step. Before a role is picked the bar assumes the longer host path, so choosing member shortens it.
+function progressOf(step: WelcomeStep, role: Role | null, skipsRole: boolean): WelcomeProgress {
+  const steps: WelcomeStep[] = ['role', 'profile'];
+  if (role !== 'member') steps.push('table');
+  const shown = skipsRole ? steps.slice(1) : steps;
+  return { current: shown.indexOf(step) + 1, total: shown.length };
 }
 
 export function useWelcome() {
@@ -95,7 +105,7 @@ export function useWelcome() {
   }
 
   return {
-    step, role, invited, profile, venmoInput, setName, setVenmo, tableName, setTableName,
+    step, role, invited, progress: progressOf(step, role, presetRole !== null), profile, venmoInput, setName, setVenmo, tableName, setTableName,
     choose, goTo, submitProfile, submitTable, submitting, error,
   };
 }

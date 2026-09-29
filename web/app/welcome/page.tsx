@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 
 import { RolePicker } from '@/components/auth/role-picker';
+import { WelcomeProgressBar } from '@/components/auth/welcome-progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useWelcome, type WelcomeFlow } from '@/hooks/use-welcome';
@@ -31,6 +32,7 @@ function Welcome() {
           <h1 className='text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
           <p className='text-xs text-muted-foreground tracking-widest uppercase'>Welcome</p>
         </div>
+        <WelcomeProgressBar {...flow.progress} />
         {flow.step === 'role' && <RolePicker value={flow.role} onChange={flow.choose} />}
         {flow.step === 'profile' && <ProfileStep flow={flow} />}
         {flow.step === 'table' && <TableStep flow={flow} />}
