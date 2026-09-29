@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { centsPerHour, formatBlinds, formatCents, formatDate, isSettled, type PokerResult } from '@pb/core';
 
 // players/[id]/page.tsx's colours for whose money it is: green when it is the player's,
@@ -41,9 +43,9 @@ function RateLine({ row }: { row: PokerResult }) {
   return <p className={`text-xs tabular-nums ${toneClass(rate)}`}>{signedAmount(rate)}/hr</p>;
 }
 
-export function PokerResultRow({ row }: { row: PokerResult }) {
+function RowBody({ row }: { row: PokerResult }) {
   return (
-    <li className='flex items-start justify-between gap-3 py-3'>
+    <>
       <div className='min-w-0'>
         <div className='flex items-center gap-2'>
           <p className='text-sm font-medium truncate'>{row.place}</p>
@@ -56,6 +58,21 @@ export function PokerResultRow({ row }: { row: PokerResult }) {
         <p className={`text-sm font-semibold tabular-nums ${toneClass(row.netCents)}`}>{signedAmount(row.netCents)}</p>
         <RateLine row={row} />
       </div>
+    </>
+  );
+}
+
+const ROW = 'flex items-start justify-between gap-3 py-3';
+
+// A logged row opens for edit or delete (DESIGN.md D5). A home row stays inert: its money is the
+// host's ledger, corrected at the table, never from here (D7).
+export function PokerResultRow({ row }: { row: PokerResult }) {
+  if (row.source === 'home') return <li className={ROW}><RowBody row={row} /></li>;
+  return (
+    <li>
+      <Link href={`/results/log/${row.id}`} className={`${ROW} -mx-2 px-2 rounded-md transition-colors hover:bg-muted/50`}>
+        <RowBody row={row} />
+      </Link>
     </li>
   );
 }

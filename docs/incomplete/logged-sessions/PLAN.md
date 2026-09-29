@@ -1,6 +1,7 @@
 # Logged sessions — PLAN
 
-**Status: `PLANNED` 2026-09-29 — GATE 2 answered the same day (§7), every recommendation taken; the plan is approved.** Builds `DESIGN.md` `D1`–`D8`. The design says what and
+**Status: `BUILT` 2026-09-29 — both phases (`HANDOFF.md` steps 56, 58); `0021` unapplied to production.** Was
+`PLANNED` 2026-09-29 — GATE 2 answered the same day (§7), every recommendation taken; the plan is approved. Builds `DESIGN.md` `D1`–`D8`. The design says what and
 why; this says in what order, by whom, and what "done" means. Process: `docs/AGENT-PRACTICES.md` Parts 5–7; code:
 `docs/conventions-typescript.md`, read in full before any edit.
 
@@ -141,7 +142,21 @@ Results.
 
 ### Phase 2 — Writes and the form
 
-**Status:** `PLANNED`. Waits on phase 1's migration being applied locally (the owner applies it to production).
+**Status: `BUILT` 2026-09-29 — `HANDOFF.md` step 58; commit pending (the owner commits).** `0021` was
+already applied on the local stack. It is still **unapplied to production**, as at phase 1, and the owner applies it
+before either commit ships. The copy (scope step 7) was asked first, and plain was taken for all three
+(`DESIGN.md` "Still owed at build"). Deviations and build calls:
+- **Scope step 4:** the all-games empty state does not gain a second action. The "Log a session" button sits
+  above the tab's content whenever `?table=` is absent, so it shows on the empty tab too, beside "Join a table".
+  `EmptyResults` (`results-tabs.tsx`) takes one action, and that file is not this item's. *Reverse:* give
+  `EmptyResults` a second action and hide the top button when there are no sessions.
+- **Reverse conversions for the edit page** (a stored `played_on` back to a local `YYYY-MM-DD`, minutes back to
+  hours text, cents back to typed dollars) live in `web/hooks/use-log-session-form.ts`, not `@pb/core`, which is not
+  in this item's files. They reuse `localDateValue` (`use-schedule-game.ts`) and `centsToDollars`, and the walk
+  proved the round trip (4 h → 240 → "4"; 2026-09-28 stays 2026-09-28). *Reverse:* move them to `logged-session.ts`
+  with tests.
+- **Game suggestions** are capped by the same dial as venues (`LOGGED_SESSION_SUGGESTIONS`), then `NLH`/`PLO` are
+  appended if missing (BD-3).
 
 **Scope:**
 1. **`web/lib/supabase/logged-sessions.ts`**: add `createLoggedSession`, `updateLoggedSession` and

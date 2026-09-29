@@ -24,6 +24,20 @@ export const REALTIME_REFETCH_DEBOUNCE_MS = 250;
 export const MEMBER_HOME_TABLE_LIMIT = 5;
 
 /**
+ * How far ahead member Home looks for each table's next game (member-home SCOPE.md §4, ratified
+ * by the owner 2026-09-29, §7 item 21). Passed to get_my_upcoming_games (0022), which holds no
+ * copy of its own.
+ */
+export const MEMBER_GAME_WINDOW_DAYS = 14;
+
+/**
+ * A game the host never started stops showing on member Home this many hours after its start
+ * time (owner, 2026-09-29, SCOPE.md §7 item 21), where the host's own list keeps it. Passed to
+ * get_my_upcoming_games (0022) beside the window.
+ */
+export const MEMBER_GAME_STALE_HOURS = 6;
+
+/**
  * The setup guide's checklist on Home (host-setup PLAN phase 3, SCOPE.md §4), in order. Each
  * item's done state is derived from data (useSetupGuide); only the guide's dismissal is stored.
  * Copy: warm register, chosen by the owner 2026-09-29 (R7).
@@ -36,3 +50,20 @@ export const SETUP_GUIDE_ITEMS = [
 ] as const;
 
 export type SetupItemKey = (typeof SETUP_GUIDE_ITEMS)[number]['key'];
+
+/**
+ * The most hours one logged session may claim (logged-sessions DESIGN.md §4, PLAN.md BD-7). It
+ * catches `300` typed for `3.00` without refusing a marathon. Moved here from phase 1 (BD-8).
+ */
+export const LOGGED_SESSION_MAX_HOURS = 48;
+
+/** How many of the player's own past venues, and game formats, the log form suggests (§4). */
+export const LOGGED_SESSION_SUGGESTIONS = 5;
+
+/** The blinds chips on the log form (§4): the common casino cash games, in cents. */
+export const LOGGED_SESSION_STAKES_PRESETS = [
+  { smallCents: 100, bigCents: 200 },
+  { smallCents: 100, bigCents: 300 },
+  { smallCents: 200, bigCents: 500 },
+  { smallCents: 500, bigCents: 1000 },
+] as const;

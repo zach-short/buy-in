@@ -1,6 +1,6 @@
 # Logged sessions — a player records a game played away from any table, and it counts in their results — DESIGN
 
-**Status: `IN FLIGHT` 2026-09-29 — phase 1 `BUILT` (`HANDOFF.md` step 56), phase 2 open (`PASSOFF.md` item 24). Ratified 2026-09-29.** Was `SCOPE.md` (committed `e014181`); renamed to `DESIGN.md` 2026-09-29 and
+**Status: `BUILT` 2026-09-29 — phase 1 (`HANDOFF.md` step 56) and phase 2 (step 58, `PASSOFF.md` item 24); `0021` unapplied to production. Ratified 2026-09-29.** Was `IN FLIGHT` 2026-09-29 while phase 2 was open. Was `SCOPE.md` (committed `e014181`); renamed to `DESIGN.md` 2026-09-29 and
 the gate answers (§7) written in as `D1`–`D8` below. **Frozen from here:** a decision changes only by a new dated
 `D<n>` or an `As built:` note under the one it amends, never by editing it in place. The build order is `PLAN.md`.
 
@@ -43,9 +43,16 @@ Tapping a logged row opens it for edit or delete. Owner, 2026-09-29, §7 Q5–Q6
 `?source=`. It is hidden under `?table=` and when there are no sessions at all. The tag reads "Logged", and the
 Logged-filter empty state reads "No logged sessions — Games you play away from a table show up here once you log
 them." **Both are provisional (R7)**; item 24 asks. A logged row is not yet tappable; the edit page is phase 2.
+*As built (phase 2, 2026-09-29, `HANDOFF.md` step 58):* the owner kept both words as they were ("Still owed at
+build" below). The Logged empty state's action is now "Log a session" → `/results/log`; it was "All sessions".
+A logged row links to `/results/log/<id>`. A home row stays inert.
 
 **D6 — The entry point is a "Log a session" button on the Results poker tab.** A button on member Home is a
 follow-up, not this item. The label is owner-picked (plain register), 2026-09-29, §7 Q7.
+*As built (phase 2, 2026-09-29, `HANDOFF.md` step 58):* the button is a full-width outline "Log a session" at
+the top of the poker tab. It is hidden under `?table=` (a table's games are home games), and it shows on the empty tab too. So an account with no
+sessions sees it beside "Join a table", rather than as a second action inside the empty state (`PLAN.md` phase 2,
+scope step 4 deviation).
 
 **D7 — Nothing about a table's money changes.** A logged session never appears in any balance, settle-up,
 receipt, portal, host Results, `get_my_tables` card or member-Home table card. No host can read one: the only
@@ -76,6 +83,14 @@ definer function, by contrast, can leak rows silently. This item's build call on
 
 The form's title, the empty state when the Logged filter has no rows, and the tag's wording. The build session
 offers 2–3 variants of each, in different registers, and asks before shipping.
+
+**Answered 2026-09-29 (item 24, one batch; plain, warm and terse offered for each; plain taken every time):**
+
+| Copy | Answer |
+|---|---|
+| Form title | **"Log a session"** on `/results/log`, **"Edit session"** on `/results/log/[id]` |
+| Logged-filter empty state | **"No logged sessions"** — "Games you play away from a table show up here once you log them." (phase 1's provisional, kept) |
+| Row tag | **"Logged"** (phase 1's provisional, kept) |
 
 Owner's ask, 2026-09-29: "as a user add the ability to log a session outside of a table so this app can also be
 used to track general performance integrated with the homegames. for example if i played 2/5 at Rivers Casino in

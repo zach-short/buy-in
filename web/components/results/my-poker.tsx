@@ -12,6 +12,7 @@ import { DataState } from '@/components/shared/data-state';
 import { EmptyResults } from '@/components/results/results-tabs';
 import { PokerResultRow, resultDetail, signedAmount, toneClass } from '@/components/results/poker-result-row';
 import { SourceFilterBar, parseSourceFilter } from '@/components/results/source-filter';
+import { Button } from '@/components/ui/button';
 import { usePokerResults } from '@/hooks/use-poker-results';
 
 function shortDate(date: string) {
@@ -137,6 +138,17 @@ function PerformanceView({ rows }: { rows: readonly PokerResult[] }) {
 }
 
 const ALL_TABLES = '/results?tab=poker';
+const LOG_SESSION = '/results/log';
+
+// The entry point to logging a game away from any table (DESIGN.md D6; label owner-picked). It
+// shows on the empty tab too, so a player with no home games still has a way in besides Join.
+function LogSessionButton() {
+  return (
+    <Button asChild variant='outline' size='lg' className='w-full h-11 mb-6 text-xs tracking-widest uppercase'>
+      <Link href={LOG_SESSION}>Log a session</Link>
+    </Button>
+  );
+}
 
 // ?table=<bar id> narrows the tab to one table — member Home's cards link here (member-home
 // SCOPE.md §3 O3(b)). The page is dynamic already, so reading the param here needs no Suspense.
@@ -151,14 +163,14 @@ function TableFilter({ name }: { name: string }) {
   );
 }
 
-// The Logged empty state's words are provisional: logged-sessions DESIGN.md "Still owed at build"
-// has the owner pick them (R7) in item 24, alongside the form they will point to.
+// The Logged empty state's words are the owner's pick, plain register, 2026-09-29
+// (logged-sessions DESIGN.md "Still owed at build").
 function NoSessions({ table, source }: { table: boolean; source: SourceFilter }) {
   if (table) {
     return <EmptyResults title='No sessions yet' detail='Once you buy in at this table, each session you play there shows up here.' href={ALL_TABLES} action='All tables' />;
   }
   if (source === 'logged') {
-    return <EmptyResults title='No logged sessions' detail='Games you play away from a table show up here once you log them.' href={ALL_TABLES} action='All sessions' />;
+    return <EmptyResults title='No logged sessions' detail='Games you play away from a table show up here once you log them.' href={LOG_SESSION} action='Log a session' />;
   }
   return (
     <EmptyResults
@@ -183,6 +195,7 @@ export function MyPoker() {
 
   return (
     <>
+      {!table && <LogSessionButton />}
       {!table && results && results.length > 0 && <SourceFilterBar active={source} />}
       <DataState rows={rows} error={error} onRetry={retry} empty={<NoSessions table={!!table} source={source} />}>
         {(loaded) => (
