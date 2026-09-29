@@ -1,5 +1,5 @@
--- 0019 — staff can read payment_reports through the API (2026-09-29). UNAPPLIED: the owner
--- applies it.
+-- 0019 — staff can read payment_reports through the API (2026-09-29). Applied to
+-- production 2026-09-29.
 --
 -- 0013 created payment_reports with a staff SELECT policy (payment_reports_staff_read) but no
 -- table GRANT. It relied on the platform's default privileges, as every table in 0001–0012 did.
