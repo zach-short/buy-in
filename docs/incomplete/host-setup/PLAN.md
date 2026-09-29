@@ -45,6 +45,15 @@ answer there. Read `SCOPE.md` first; this file is the order, the owners and the 
   saves a default buy-in. `updateDefaultBuyInCents` writes it in the same `update` as the amount, so it is
   never out of step. Existing bars are **not** backfilled — their item shows undone until they save once, but
   they are dismissed by BD-5's backfill so they never see the card. *Reverse:* drop the column and the item.
+- **BD-7 — Drinks are owner-gated (owner, 2026-09-29, later the same day; supersedes the "both switches
+  default on for every host" reading of `SCOPE.md` §7).** Per-drink charging can be an unlicensed alcohol sale
+  under Virginia law; the owner keeps the feature to their own tables. `bars.drinks_allowed boolean not null
+  default false`, backfilled `true` once for bars existing at apply time, writable only by the owner in the
+  dashboard — never through the API (trigger or column grants; phase 1 picks and proves it). `serves_drinks`
+  stays the host's switch and only counts while `drinks_allowed` is true; `featureVisibility` and `get_menu` both
+  read it. Card copy carries a shared-cost/compliance notice (drafted in `PASSOFF.md` item 18). *Reverse:* drop
+  the column and read `serves_drinks` alone. **Not decided here:** drink logging without prices and a generic
+  Venmo note — they touch balance-bearing paths (§0 row 8), so they are their own scoped item.
 - **BD-5 — `setup_dismissed_at` is set by the checklist's own dismiss and by completing the drinks
   question**, never by the migration alone (the migration backfills existing bars, once). *Reverse:* n/a.
 
@@ -61,9 +70,9 @@ Single lane (A), one worktree per phase cut from `main`'s tip. Items inside a la
 
 ### Phase 1 — Data layer
 
-**Status: `PLANNED`.**
+**Status: `PLANNED` — amended by BD-7 2026-09-29; the phase-1 files are already in the working tree, unapplied, and need amending, not redoing (`PASSOFF.md` item 18).**
 
-**Scope**
+**Scope** (read BD-7 first: a fifth column `drinks_allowed`, owner-only; steps 1, 2, 4, 5 and 7 below each gain it)
 1. **Read the directory for the next migration number** (Part 6); write `supabase/migrations/<next>_host_setup.sql`:
    `alter table bars add column serves_drinks boolean not null default true`, `add column tracks_inventory
    boolean not null default true`, `add column setup_dismissed_at timestamptz`, `add column default_buy_in_set_at timestamptz` (BD-6); then
@@ -144,7 +153,11 @@ re-read it, do not trust the line numbers above. A missed guard is invisible to 
 1. **Drinks question** — a one-screen, skippable prompt shown on Home while `setupDismissedAt` is null and
    the question has not been answered. Warm copy (`SCOPE.md` §7 Q8): "Will there be drinks on the tab?" with
    Yes / No / Skip. Yes and No write `servesDrinks`; all three end the question. Copy and layout shown to the
-   owner in the build before merge.
+   owner in the build before merge. **Amended by BD-7 (owner, 2026-09-29): drinks are off by default in
+   onboarding.** A new table has `drinks_allowed = false`, so the question is **not shown at all** and the guide
+   never mentions drinks; a new table's `servesDrinks` is treated as off. Only where the owner has set
+   `drinks_allowed = true` does the question appear, and there **No is the preselected answer** (Yes needs a tap,
+   Skip leaves drinks off).
 2. **Checklist card** on Home under it: *Set a default buy-in* (`default_buy_in_set_at` is non-null, BD-6), *Add your players*
    (any `players` row), *Send an invite* (any `bar_invite_links` row), *Start a session* (any `sessions`
    row). Items derive from data; only dismissal is stored. Dismiss writes `setup_dismissed_at` (BD-5); all
