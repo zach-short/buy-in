@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import { formatCents, formatDate, type NightNet, type SharedTab } from '@pb/core';
 import { paidLine } from '@/components/settle/net-copy';
 import { sharedNightNet } from '@/lib/ledger';
@@ -47,6 +48,11 @@ function portalNights(tab: SharedTab): PortalNight[] {
 
 const ROW = 'flex items-baseline justify-between gap-3 text-xs';
 
+// list-none hides the browser's marker, so the row needs its own cue that it opens.
+function Chevron() {
+  return <ChevronDown aria-hidden='true' className='size-3.5 shrink-0 self-center text-muted-foreground transition-transform group-open:rotate-180' />;
+}
+
 function Line({ label, amount }: { label: string; amount: string }) {
   return (
     <div className={ROW}>
@@ -70,13 +76,14 @@ function NightLines({ net }: { net: NightNet }) {
 
 function NightRow({ night }: { night: PortalNight }) {
   return (
-    <details className='border border-border rounded-md px-4 py-3'>
-      <summary className='flex items-baseline justify-between gap-3 cursor-pointer list-none'>
-        <span className='min-w-0'>
+    <details className='group border border-border rounded-md px-4 py-3'>
+      <summary className='flex items-baseline justify-between gap-3 cursor-pointer list-none min-h-11'>
+        <span className='min-w-0 flex-1'>
           <span className='block text-sm font-medium truncate'>{night.name}</span>
           {night.playedOn && <span className='block text-xs text-muted-foreground'>{formatDate(night.playedOn)}</span>}
         </span>
         <span className='text-xs tabular-nums shrink-0'>{portalNetText(night.net.netCents)}</span>
+        <Chevron />
       </summary>
       <NightLines net={night.net} />
     </details>
@@ -85,10 +92,11 @@ function NightRow({ night }: { night: PortalNight }) {
 
 function LoosePayments({ payments }: { payments: SharedPayment[] }) {
   return (
-    <details className='border border-border rounded-md px-4 py-3'>
-      <summary className='flex items-baseline justify-between gap-3 cursor-pointer list-none'>
-        <span className='text-sm font-medium'>Payments</span>
+    <details className='group border border-border rounded-md px-4 py-3'>
+      <summary className='flex items-baseline justify-between gap-3 cursor-pointer list-none min-h-11'>
+        <span className='text-sm font-medium flex-1'>Payments</span>
         <span className='text-xs text-muted-foreground shrink-0'>{payments.length}</span>
+        <Chevron />
       </summary>
       <div className='space-y-1.5 pt-3'>
         {payments.map((p) => {

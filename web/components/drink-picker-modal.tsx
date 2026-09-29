@@ -77,6 +77,7 @@ export function DrinkPickerModal({ drinks, inventory, orders, playerName, lastDr
           {sameAgain && (
             <button
               type='button'
+              aria-label={`Same again: ${sameAgain.drink.name}, $${formatCents(sameAgain.drink.price_cents)}`}
               onClick={() => pour(sameAgain.drink)}
               className='w-full min-h-11 rounded border border-primary/60 px-4 py-3 text-left flex items-center justify-between gap-3 hover:border-primary active:scale-[0.98] transition'
             >
@@ -95,6 +96,7 @@ export function DrinkPickerModal({ drinks, inventory, orders, playerName, lastDr
               <button
                 key={drink.id}
                 type='button'
+                aria-label={`${drink.name}, $${formatCents(drink.price_cents)}${available ? '' : ', out of stock, pour anyway'}`}
                 onClick={() => pour(drink)}
                 className={cn(
                   'rounded border p-4 text-left transition-colors min-h-[72px] flex flex-col justify-between active:scale-95',

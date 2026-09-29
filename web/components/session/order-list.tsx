@@ -47,8 +47,10 @@ export function OrderList({ orders, paid, onUndo, onTogglePaid }: OrderListProps
         )}
       </div>
 
+      {/* orders.paid is a note for the host, not a payment: the balance never reads it
+          (DESIGN.md:749). The wording says so, or a host marks a tab and thinks it is settled. */}
       {orders.length > 0 && (
-        <div className='px-6 pb-6'>
+        <div className='px-6 pb-6 space-y-2'>
           <button
             type='button'
             onClick={onTogglePaid}
@@ -59,8 +61,11 @@ export function OrderList({ orders, paid, onUndo, onTogglePaid }: OrderListProps
                 : 'border-border text-muted-foreground hover:border-primary hover:text-primary',
             )}
           >
-            {paid ? '✓ Paid — Mark Unpaid' : 'Mark Paid'}
+            {paid ? '✓ Tab checked — undo' : 'Mark tab checked'}
           </button>
+          <p className='text-[10px] text-center text-muted-foreground'>
+            A note only — money is recorded in Settle up.
+          </p>
         </div>
       )}
     </>
