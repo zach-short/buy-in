@@ -817,6 +817,7 @@ export type Database = {
       delete_order: { Args: { p_order_id: string }; Returns: undefined }
       delete_session: { Args: { p_session_id: string }; Returns: undefined }
       email_has_account: { Args: { p_email: string }; Returns: boolean }
+      get_invite_preview: { Args: { p_token: string }; Returns: Json }
       get_menu: { Args: { p_bar_id: string }; Returns: Json }
       get_my_performance: {
         Args: never
