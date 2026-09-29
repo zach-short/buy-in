@@ -4,7 +4,7 @@ import { pageMetadata } from '@/lib/page-metadata';
 
 export const metadata = pageMetadata({
   title: 'Results',
-  description: 'Your poker results across every table, and your bar’s profit night by night.',
+  description: 'Your results across every table and everything you log, and your bar’s profit night by night.',
   private: true,
 });
 

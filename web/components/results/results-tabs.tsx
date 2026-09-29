@@ -2,18 +2,24 @@ import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
 
-export type ResultsTab = 'poker' | 'bar';
+export type ResultsTab = 'poker' | 'everything' | 'bar';
 
+// "Everything" is the owner's name for the combined tab, plain register (log-events SCOPE Q4).
 const TABS: readonly { tab: ResultsTab; label: string }[] = [
   { tab: 'poker', label: 'My poker' },
+  { tab: 'everything', label: 'Everything' },
   { tab: 'bar', label: 'The bar' },
 ];
 
-/** The tab lives in the URL (`?tab=bar`) so a result view can be linked to and survives reload. */
-export function ResultsTabs({ active }: { active: ResultsTab }) {
+/**
+ * The tab lives in the URL (`?tab=bar`) so a result view can be linked to and survives reload.
+ * Every account sees the strip; "The bar" is on it only for staff with stats on (log-events SCOPE H2).
+ */
+export function ResultsTabs({ active, showBar }: { active: ResultsTab; showBar: boolean }) {
+  const tabs = showBar ? TABS : TABS.filter(({ tab }) => tab !== 'bar');
   return (
     <nav className='flex gap-6 border-b border-border mb-8'>
-      {TABS.map(({ tab, label }) => (
+      {tabs.map(({ tab, label }) => (
         <Link
           key={tab}
           href={`/results?tab=${tab}`}

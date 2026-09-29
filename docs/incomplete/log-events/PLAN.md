@@ -180,6 +180,8 @@ drops input silently; that is the design (BD-3) and the pass confirms it does no
 
 ### Phase 3 — The Everything tab
 
+**Status: `BUILT` 2026-09-29 — `HANDOFF.md` step 70; walked on the local stack at phone width (member, host stats off and on), not on a real phone.** Deviations: no web test file (vitest runs core only; the maths is pinned in `event-result.test.ts`); "By type" shows only under All; chips wrap as pills rather than a segmented bar; the empty state is draft copy for item 30 to ask. **It mounts the `logged_events` read, so `0027` must be on production before this ships.**
+
 **Scope:**
 1. **`web/components/results/results-tabs.tsx`** (edit): `ResultsTab` gains `'everything'`; the strip lists "My poker",
    "Everything", and "The bar" only when the viewer is staff with stats on.
