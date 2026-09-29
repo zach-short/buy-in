@@ -6,6 +6,9 @@ import { passThrough, redirectTo, updateSession } from '@/lib/supabase/middlewar
 // NextAuth proxy had (web/proxy.ts:8-14 as of 2026-09-16). D8 and D14 change how these pages
 // read their data, never which of them are public; adding a line here is an owner decision.
 //
+// 2026-09-29: /opengraph-image added — link-preview bots carry no session, and a 307 to /login
+// on the card image would leave every shared link without a picture. Static, no data.
+//
 // 2026-09-28, onboarding feature: /signup, /join and /rsvp added. /join and /join/[token] must
 // be public — the whole point is a brand-new visitor with no account yet clicking an invite
 // link; each page does its own signed-in check client-side and bounces to /signup?redirect=...
@@ -14,6 +17,7 @@ import { passThrough, redirectTo, updateSession } from '@/lib/supabase/middlewar
 function isPublicPath(pathname: string): boolean {
   return (
     pathname === '/' ||
+    pathname === '/opengraph-image' ||
     pathname === '/login' ||
     pathname === '/signup' ||
     pathname === '/join' ||
