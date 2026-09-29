@@ -1,6 +1,6 @@
 # Member home — a shell for players who are not hosts, and a view of the tables they play at — SCOPE
 
-**Status: `BUILT` 2026-09-29, uncommitted — `HANDOFF.md` step 54.** Gate answered in full (§7), every recommendation taken; build-time answers and the stale-row disproof are in §7. Opened by `/scope` on Sonnet 5.5.
+**Status: `BUILT` 2026-09-29, commit `259e121` — `HANDOFF.md` step 54.** Follow-up O3(c) is `PASSOFF.md` item 21. Gate answered in full (§7), every recommendation taken; build-time answers and the stale-row disproof are in §7. Opened by `/scope` on Sonnet 5.5.
 Owner's ask, 2026-09-29: is there a difference between a member and a host, is there a view of the tables you
 play at, and "if someone doesn't own a table they probably should not see the same thing as a table host."
 Vocabulary is the repo's own: a **table** is a bar (`web/hooks/use-sign-up.ts:51`, "Name your table"), a **game**
