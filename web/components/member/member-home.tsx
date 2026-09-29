@@ -6,12 +6,16 @@ import Link from 'next/link';
 import { formatCents, isSettled, type RsvpAnswer, type TableRecord, type TableWithGame } from '@pb/core';
 import { NextGameRow } from '@/components/member/next-game';
 import { DataState } from '@/components/shared/data-state';
+import { Button } from '@/components/ui/button';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useTableRecords } from '@/hooks/use-table-records';
 import { MEMBER_HOME_TABLE_LIMIT } from '@/lib/config';
 
 // Copy chosen by the owner 2026-09-29, plain register (member-home SCOPE.md §7, build-time answers).
 const EMPTY = "You're not at any tables yet. Ask a host for an invite link.";
+
+// Results' own form route (fcadc3b); saving returns to Results → poker, not here.
+const LOG_SESSION = '/results/log';
 
 // my-poker.tsx's colours and signs: net is the player's way round, so positive is a win.
 function netLine(record: TableRecord): { text: string; tone: string } {
@@ -67,6 +71,17 @@ function TableList({ records, onAnswer }: { records: TableWithGame[]; onAnswer: 
   );
 }
 
+// The same look as Results' LogSessionButton (my-poker.tsx), not an import of it: member/ does not
+// reach into results/. Label owner-picked (logged-sessions DESIGN.md D6). Under the tables, outside
+// DataState, so an account at no table can still log a casino game (owner, 2026-09-29, item 26).
+function LogSessionButton() {
+  return (
+    <Button asChild variant='outline' size='lg' className='w-full h-11 mt-6 text-xs tracking-widest uppercase'>
+      <Link href={LOG_SESSION}>Log a session</Link>
+    </Button>
+  );
+}
+
 /** Home for an account that hosts nowhere: the tables it plays at, its record and next game at each. */
 export function MemberHome() {
   const { records, error, retry, answer } = useTableRecords();
@@ -82,6 +97,7 @@ export function MemberHome() {
       >
         {(rows) => <TableList records={rows} onAnswer={answer} />}
       </DataState>
+      <LogSessionButton />
     </PageMain>
   );
 }

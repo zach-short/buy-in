@@ -53,6 +53,11 @@ follow-up, not this item. The label is owner-picked (plain register), 2026-09-29
 the top of the poker tab. It is hidden under `?table=` (a table's games are home games), and it shows on the empty tab too. So an account with no
 sessions sees it beside "Join a table", rather than as a second action inside the empty state (`PLAN.md` phase 2,
 scope step 4 deviation).
+*As built (follow-up, 2026-09-29, `PASSOFF.md` item 26, `HANDOFF.md` step 61):* member Home has the button too, a
+full-width outline "Log a session" to `/results/log`, under "Your tables" and outside its `DataState`, so it shows
+with or without tables. Just the button, no summary line. Both were the owner's answers, 2026-09-29, recommendation
+taken each time (`web/components/member/member-home.tsx`). It matches Results' `LogSessionButton` by look, not by
+import. The host's `Dashboard` has none.
 
 **D7 — Nothing about a table's money changes.** A logged session never appears in any balance, settle-up,
 receipt, portal, host Results, `get_my_tables` card or member-Home table card. No host can read one: the only
