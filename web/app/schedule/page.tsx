@@ -12,6 +12,7 @@ import {
   startScheduledGame,
   type ScheduledGameRow,
 } from '@/lib/supabase/scheduled-games';
+import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useGameInvite, type GameInvite } from '@/hooks/use-game-invite';
 import { DataState } from '@/components/shared/data-state';
 import { Button } from '@/components/ui/button';
@@ -38,19 +39,12 @@ export default function SchedulePage() {
   }
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto'>
-      <div className='flex items-center justify-between mb-10'>
-        <div>
-          <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Schedule</h1>
-          <p className='text-xs text-muted-foreground mt-0.5'>{games ? `${games.length} upcoming` : ' '}</p>
-        </div>
-        <button
-          onClick={() => router.back()}
-          className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
-        >
-          Back
-        </button>
-      </div>
+    <PageMain>
+      <PageHeader
+        title='Schedule'
+        subtitle={games ? `${games.length} upcoming` : undefined}
+        actions=<HeaderAction onClick={() => router.back()}>Back</HeaderAction>
+      />
 
       <Button
         size='lg'
@@ -75,7 +69,7 @@ export default function SchedulePage() {
           </div>
         )}
       </DataState>
-    </main>
+    </PageMain>
   );
 }
 

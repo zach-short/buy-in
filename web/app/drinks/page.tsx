@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { centsToDollars, formatCents, toCents } from '@pb/core';
+import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { canMakeDrink, recipeCostCents } from '@/lib/recipes';
 import {
   fetchDrinks, fetchInventory, type DrinkWithIngredients, type InventoryRow,
@@ -178,22 +179,18 @@ export default function DrinksPage() {
   }
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto pb-24'>
-      <div className='flex items-center justify-between mb-10'>
-        <button
-          onClick={() => router.back()}
-          className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors min-h-[44px]'
-        >
-          ← Back
-        </button>
-        <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Drinks</h1>
-        <button
-          onClick={() => { setShowAdd((v) => !v); setExpandedId(null); }}
-          className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors min-h-[44px]'
-        >
-          {showAdd ? 'Cancel' : '+ Add'}
-        </button>
-      </div>
+    <PageMain>
+      <PageHeader
+        title='Drinks'
+        actions={
+          <>
+            <HeaderAction onClick={() => { setShowAdd((v) => !v); setExpandedId(null); }}>
+              {showAdd ? 'Cancel' : '+ Add'}
+            </HeaderAction>
+            <HeaderAction onClick={() => router.back()}>Back</HeaderAction>
+          </>
+        }
+      />
 
       {showAdd && (
         <div className='border border-border rounded-md p-4 mb-6'>
@@ -248,6 +245,6 @@ export default function DrinksPage() {
           );
         })}
       </div>
-    </main>
+    </PageMain>
   );
 }

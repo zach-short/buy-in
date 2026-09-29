@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { toast } from 'sonner';
 
 import { toCents } from '@pb/core';
+import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { fetchPlayers, type PlayerRow } from '@/lib/supabase/queries';
 import { createPlayer, startSession as writeStartSession } from '@/lib/supabase/writes';
 import { useDefaultBuyIn } from '@/hooks/use-default-buy-in';
@@ -88,17 +89,8 @@ export default function NewSessionPage() {
   }
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto'>
-      <div className='flex items-center justify-between mb-10'>
-        <button
-          onClick={() => router.back()}
-          className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors min-h-[44px]'
-        >
-          ← Back
-        </button>
-        <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>New Session</h1>
-        <span className='w-16' />
-      </div>
+    <PageMain>
+      <PageHeader title='New Session' actions=<HeaderAction onClick={() => router.back()}>Back</HeaderAction> />
 
       <div className='space-y-6'>
         <div>
@@ -219,6 +211,6 @@ export default function NewSessionPage() {
           {starting ? 'Starting…' : `Start Session · ${selected.length} player${selected.length !== 1 ? 's' : ''}`}
         </Button>
       </div>
-    </main>
+    </PageMain>
   );
 }

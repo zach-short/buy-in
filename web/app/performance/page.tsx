@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 
 import { centsToDollars, formatCents, formatDate, isSettled } from '@pb/core';
+import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { fetchMyPerformance, type PerformanceRow } from '@/lib/supabase/performance';
 
 function shortDate(date: string) {
@@ -64,13 +65,10 @@ function CumTooltip({ active, payload }: { active?: boolean; payload?: { payload
 function PageShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   return (
-    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto pb-24'>
-      <div className='flex items-center justify-between mb-10'>
-        <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Performance</h1>
-        <button onClick={() => router.back()} className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>Back</button>
-      </div>
+    <PageMain>
+      <PageHeader title='Performance' actions=<HeaderAction onClick={() => router.back()}>Back</HeaderAction> />
       {children}
-    </main>
+    </PageMain>
   );
 }
 

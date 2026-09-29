@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useScheduleGame, type ScheduleGameForm } from '@/hooks/use-schedule-game';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,20 +16,11 @@ export default function ScheduleGamePage() {
   const form = useScheduleGame();
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto'>
-      <div className='flex items-center justify-between mb-10'>
-        <button
-          onClick={() => router.back()}
-          className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors min-h-[44px]'
-        >
-          ← Back
-        </button>
-        <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Schedule Game</h1>
-        <span className='w-16' />
-      </div>
+    <PageMain>
+      <PageHeader title='Schedule Game' actions=<HeaderAction onClick={() => router.back()}>Back</HeaderAction> />
 
       {form.inviteUrl ? <InviteReady name={form.name.trim()} url={form.inviteUrl} /> : <ScheduleForm form={form} />}
-    </main>
+    </PageMain>
   );
 }
 

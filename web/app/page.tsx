@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 
 import { formatCents } from '@pb/core';
+import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { sumCents } from '@/lib/ledger';
 import { fetchSessions, fetchSessionOrders } from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
@@ -47,8 +48,8 @@ function Dashboard() {
   const activeSession = sessions?.find((s) => s.status === 'active');
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto flex flex-col'>
-      <h1 className='text-xl font-semibold tracking-widest uppercase text-primary mb-12'>Buy-In</h1>
+    <PageMain className='flex flex-col'>
+      <PageHeader title='Buy-In' />
 
       <div className='flex flex-col gap-3 mb-10'>
         {activeSession ? (
@@ -94,7 +95,7 @@ function Dashboard() {
           </button>
         </div>
       )}
-    </main>
+    </PageMain>
   );
 }
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { formatCents } from '@pb/core';
+import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { sumCents } from '@/lib/ledger';
 import {
   fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
@@ -74,15 +75,8 @@ export default function SummaryPage({
   }
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto pb-24'>
-      <div className='mb-10'>
-        <h1 className='text-base font-semibold tracking-widest uppercase text-primary mb-1'>
-          Session Complete
-        </h1>
-        <p className='text-xs text-muted-foreground tracking-wide'>
-          {session?.name}
-        </p>
-      </div>
+    <PageMain>
+      <PageHeader title='Session Complete' subtitle={session?.name} />
 
       {sessionPlayers.length > 0 && (() => {
         const idx = Math.min(carouselIndex, sessionPlayers.length - 1);
@@ -301,6 +295,6 @@ export default function SummaryPage({
       >
         Done
       </Button>
-    </main>
+    </PageMain>
   );
 }

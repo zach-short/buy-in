@@ -7,6 +7,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine,
 } from 'recharts';
 import { centsToDollars, formatCents } from '@pb/core';
+import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { sumCents } from '@/lib/ledger';
 import { fetchOrders, fetchSessions } from '@/lib/supabase/queries';
 
@@ -96,22 +97,16 @@ export default function StatsPage() {
 
   if (closedSessions.length === 0) {
     return (
-      <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto'>
-        <div className='flex items-center justify-between mb-10'>
-          <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Stats</h1>
-          <button onClick={() => router.back()} className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>Back</button>
-        </div>
+      <PageMain>
+        <PageHeader title='Stats' actions=<HeaderAction onClick={() => router.back()}>Back</HeaderAction> />
         <p className='text-center text-muted-foreground text-xs tracking-widest uppercase py-24'>No closed sessions yet</p>
-      </main>
+      </PageMain>
     );
   }
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto pb-24'>
-      <div className='flex items-center justify-between mb-10'>
-        <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Stats</h1>
-        <button onClick={() => router.back()} className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>Back</button>
-      </div>
+    <PageMain>
+      <PageHeader title='Stats' actions=<HeaderAction onClick={() => router.back()}>Back</HeaderAction> />
 
       <div className='grid grid-cols-2 gap-3 mb-10 sm:grid-cols-4'>
         {[
@@ -201,6 +196,6 @@ export default function StatsPage() {
           </span>
         </div>
       </div>
-    </main>
+    </PageMain>
   );
 }

@@ -7,6 +7,7 @@ import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { formatDate } from '@pb/core';
+import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { fetchPlayers, fetchSessions, type SessionWithPlayers } from '@/lib/supabase/queries';
 import { deleteSession } from '@/lib/supabase/writes';
 
@@ -71,19 +72,8 @@ export default function SessionsPage() {
   }
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto'>
-      <div className='flex items-center justify-between mb-10'>
-        <div>
-          <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Sessions</h1>
-          <p className='text-xs text-muted-foreground mt-0.5'>{sessions.length} total</p>
-        </div>
-        <button
-          onClick={() => router.back()}
-          className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
-        >
-          Back
-        </button>
-      </div>
+    <PageMain>
+      <PageHeader title='Sessions' subtitle={`${sessions.length} total`} actions=<HeaderAction onClick={() => router.back()}>Back</HeaderAction> />
 
       {isLoading && (
         <p className='text-center text-muted-foreground text-xs tracking-widest uppercase py-12'>Loading…</p>
@@ -172,6 +162,6 @@ export default function SessionsPage() {
           </div>
         </div>
       )}
-    </main>
+    </PageMain>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { centsToDollars, formatCents, toCents } from '@pb/core';
+import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useSessionRealtime } from '@/hooks/use-session-realtime';
 import { sumCents } from '@/lib/ledger';
 import {
@@ -280,11 +281,8 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     const isOver = remainingCents < 0;
 
     return (
-      <main className='min-h-screen flex flex-col max-w-3xl mx-auto px-6 py-10'>
-        <div className='mb-6'>
-          <h1 className='text-base font-semibold tracking-widest uppercase text-primary mb-1'>Cash Out</h1>
-          <p className='text-xs text-muted-foreground'>Enter each player&apos;s chip value to close the session.</p>
-        </div>
+      <PageMain className='flex flex-col'>
+        <PageHeader title='Cash Out' subtitle='Enter each player&apos;s chip value to close the session.' />
 
         <div className='border border-border rounded-md px-5 py-4 mb-6 flex items-center justify-between'>
           <div>
@@ -348,7 +346,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
             {closingSession ? 'Closing…' : 'Close Session'}
           </Button>
         </div>
-      </main>
+      </PageMain>
     );
   }
 
@@ -357,7 +355,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       {/* Top bar */}
       <div className='sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-6 py-4 flex items-center justify-between gap-3'>
         <div className='min-w-0'>
-          <h1 className='text-sm font-semibold tracking-widest uppercase text-primary truncate'>{session.name}</h1>
+          <h1 className='text-base font-semibold tracking-widest uppercase text-primary truncate'>{session.name}</h1>
           <p className='text-xs text-muted-foreground mt-0.5'>{elapsed}</p>
         </div>
         <Button

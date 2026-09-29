@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { formatCents, isSettled } from '@pb/core';
+import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { playerBalanceCents, sumCents } from '@/lib/ledger';
 import { fetchBuyIns, fetchCashouts, fetchOrders, fetchPayments, fetchPlayers } from '@/lib/supabase/queries';
 import { createPlayer } from '@/lib/supabase/writes';
@@ -48,29 +49,17 @@ export default function PlayersPage() {
   }
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto'>
-      <div className='flex items-center justify-between mb-10'>
-        <div>
-          <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Players</h1>
-          {totalOwedCents > 0 && (
-            <p className='text-xs text-muted-foreground mt-0.5'>${formatCents(totalOwedCents)} outstanding</p>
-          )}
-        </div>
-        <div className='flex items-center gap-4'>
-          <button
-            onClick={() => { setAdding(true); }}
-            className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
-          >
-            + Add
-          </button>
-          <button
-            onClick={() => router.back()}
-            className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
-          >
-            Back
-          </button>
-        </div>
-      </div>
+    <PageMain>
+      <PageHeader
+        title='Players'
+        subtitle={totalOwedCents > 0 ? `$${formatCents(totalOwedCents)} outstanding` : undefined}
+        actions={
+          <>
+            <HeaderAction onClick={() => { setAdding(true); }}>+ Add</HeaderAction>
+            <HeaderAction onClick={() => router.back()}>Back</HeaderAction>
+          </>
+        }
+      />
 
       {adding && (
         <div className='border border-border rounded-md p-4 mb-6 space-y-3'>
@@ -134,6 +123,6 @@ export default function PlayersPage() {
           </button>
         ))}
       </div>
-    </main>
+    </PageMain>
   );
 }
