@@ -16,6 +16,11 @@ export interface StripPlayer {
 
 interface PlayerStripProps {
   players: readonly StripPlayer[];
+  /**
+   * False while drinks are off: a $0 drinks figure then means nothing, but a player with a
+   * drink already on their tab still shows it, because it is part of what they owe.
+   */
+  showEmptyTabs: boolean;
   selectedId: string | null;
   addOpen: boolean;
   onSelect: (playerId: string) => void;
@@ -23,23 +28,24 @@ interface PlayerStripProps {
 }
 
 // The chip shows three bare figures; read aloud in a row they say nothing about which is which.
-function chipLabel({ player, tabCents, buyInCents, paid, out }: StripPlayer): string {
-  const parts = [player.name, `drinks $${formatCents(tabCents)}`, `bought in $${formatCents(buyInCents)}`];
+function chipLabel({ player, tabCents, buyInCents, paid, out }: StripPlayer, showTab: boolean): string {
+  const parts = [player.name, ...(showTab ? [`drinks $${formatCents(tabCents)}`] : []), `bought in $${formatCents(buyInCents)}`];
   if (out) parts.push('cashed out');
   if (paid) parts.push('tab checked');
   return parts.join(', ');
 }
 
-export function PlayerStrip({ players, selectedId, addOpen, onSelect, onToggleAdd }: PlayerStripProps) {
+export function PlayerStrip({ players, showEmptyTabs, selectedId, addOpen, onSelect, onToggleAdd }: PlayerStripProps) {
   return (
     <div className='px-6 py-4 flex gap-2 overflow-x-auto scrollbar-none shrink-0 border-b border-border'>
       {players.map((entry) => {
         const { player, tabCents, buyInCents, paid, out } = entry;
+        const showTab = showEmptyTabs || tabCents > 0;
         return (
           <button
             key={player.id}
             type='button'
-            aria-label={chipLabel(entry)}
+            aria-label={chipLabel(entry, showTab)}
             aria-pressed={selectedId === player.id}
             onClick={() => onSelect(player.id)}
             className={cn(
@@ -51,7 +57,7 @@ export function PlayerStrip({ players, selectedId, addOpen, onSelect, onToggleAd
             )}
           >
             <span className='text-xs font-medium truncate max-w-[88px]'>{player.name}</span>
-            <span className='text-xs tabular-nums'>${formatCents(tabCents)}</span>
+            {showTab && <span className='text-xs tabular-nums'>${formatCents(tabCents)}</span>}
             <span className='text-[10px] tabular-nums text-muted-foreground'>In ${formatCents(buyInCents)}</span>
             {(paid || out) && (
               <span className='flex gap-1 text-[9px] tracking-widest uppercase'>

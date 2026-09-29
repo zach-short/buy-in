@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { FeatureGate } from '@/components/shared/feature-gate';
 import { pageMetadata } from '@/lib/page-metadata';
 
 export const metadata = pageMetadata({
@@ -9,5 +10,5 @@ export const metadata = pageMetadata({
 });
 
 export default function Layout({ children }: { children: ReactNode }) {
-  return children;
+  return <FeatureGate feature='drinks'>{children}</FeatureGate>;
 }

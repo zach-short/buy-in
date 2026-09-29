@@ -63,6 +63,18 @@ answer there. Read `SCOPE.md` first; this file is the order, the owners and the 
   grant costs). `bars_guard_drinks_allowed` (`0020`) is `before insert or update`, security invoker because it
   keys on `current_user`: for `anon`/`authenticated` an insert is forced `false` and a change is refused;
   `postgres`, `service_role` and the dashboard pass. *Reverse:* `drop trigger bars_guard_drinks_allowed on bars;`.
+- **BD-9 — `useBarFeatures` waits on the staff check** (phase 2 build, 2026-09-29, `HANDOFF.md` step 53). Home,
+  Account and Results are shared with members, and `fetchBarSettings` throws for them; the hook keys its SWR read
+  on `useIsBarStaff()` (`web/hooks/use-bar-features.ts`), so a member never makes the read and sees everything on.
+  *Reverse:* key on `'bar_settings'` unconditionally.
+- **BD-10 — The gate sits in the route's layout** for `/drinks` and `/inventory` (`app/drinks/layout.tsx`,
+  `app/inventory/layout.tsx`), so the page does not mount and none of its reads run while off; on Results it wraps
+  `<BarResults />` only. Copy is chosen in `web/components/shared/feature-gate.tsx`: not allowed → the Settings
+  card's own neutral line, no link; inventory off with drinks on → the inventory line; otherwise the drinks line.
+  *Reverse:* move the wrapper into each page.
+- **BD-11 — The live table's menu and stock reads wait for the stored switch**, not for `visible` (which reads
+  "on" while loading, BD-1/phase 1). A failed settings load keeps them, as it keeps everything on. Orders are always
+  read — they are balances. *Reverse:* pass `visible.drinks` straight to `useLiveSession`.
 
 ## 2. Phases
 
@@ -120,7 +132,7 @@ web code only after the owner has applied `0008`, or the settings screen breaks 
 
 ### Phase 2 — The guards
 
-**Status: `PLANNED`.** Waits on P1 merged **and `0008` applied on `prod`**.
+**Status: `IN FLIGHT` — built 2026-09-29, `HANDOFF.md` step 53 (`PASSOFF.md` item 20); gates green and walked on the local stack; uncommitted. Becomes `BUILT` with the commit hash.** ~~Waits on P1 merged **and `0008` applied on `prod`**.~~ Met: P1 is `f40b502`, `0020` applied (`2fb4295`). **Deviations:** `/menu` is not wrapped in `<FeatureGate>` — the item-20 prompt left it out, the Account link hides with `menu`, and `get_menu` already returns `[]` (`0020`); the "Stats" link is now "Results", which never hides (its poker tab is not drinks), and scope item 4's `/stats` gate is the results bar tab (`stats` only redirects, `HANDOFF.md` step 47); `web/app/page.tsx` and `web/app/account/page.tsx` also carry item 19's hunks (member home, built in the same checkout the same day). Build-level calls are BD-9–BD-11.
 
 **Scope** (every screen in §0 row 7, by its class in row 8)
 1. **Account** (`app/account/page.tsx:9-17`): filter `MORE_LINKS` by `featureVisibility` — Drinks and Menu on

@@ -9,6 +9,7 @@ import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { sendReceipt } from '@/components/settle/send-receipt';
 import { SettleUp } from '@/components/settle/settle-up';
+import { useBarFeatures } from '@/hooks/use-bar-features';
 import { sumCents } from '@/lib/ledger';
 import {
   fetchPayments, fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
@@ -25,6 +26,9 @@ export default function SummaryPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  // Bar Totals is drink money for the host, so it goes with stats; the settle-up above it and
+  // the per-player drink lines below are balances and always show (host-setup P2).
+  const showBarTotals = useBarFeatures().visible.stats;
 
   const sessionsQuery = useSWR('sessions', fetchSessions);
   const playersQuery = useSWR('players', fetchPlayers);
@@ -114,31 +118,33 @@ export default function SummaryPage({
         />
       )}
 
-      <div className='border border-border rounded-md p-5 mb-8'>
-        <p className='text-xs tracking-widest uppercase text-muted-foreground mb-4'>
-          Bar Totals
-        </p>
-        <div className='grid grid-cols-3 gap-4 text-center'>
-          <div>
-            <p className='text-xs text-muted-foreground mb-1'>Revenue</p>
-            <p className='text-xl font-semibold text-primary'>
-              ${formatCents(totalRevenueCents)}
-            </p>
-          </div>
-          <div>
-            <p className='text-xs text-muted-foreground mb-1'>Cost</p>
-            <p className='text-xl font-semibold'>${formatCents(totalCogsCents)}</p>
-          </div>
-          <div>
-            <p className='text-xs text-muted-foreground mb-1'>Profit</p>
-            <p
-              className={`text-xl font-semibold ${totalProfitCents >= 0 ? 'text-primary' : 'text-destructive'}`}
-            >
-              ${formatCents(totalProfitCents)}
-            </p>
+      {showBarTotals && (
+        <div className='border border-border rounded-md p-5 mb-8'>
+          <p className='text-xs tracking-widest uppercase text-muted-foreground mb-4'>
+            Bar Totals
+          </p>
+          <div className='grid grid-cols-3 gap-4 text-center'>
+            <div>
+              <p className='text-xs text-muted-foreground mb-1'>Revenue</p>
+              <p className='text-xl font-semibold text-primary'>
+                ${formatCents(totalRevenueCents)}
+              </p>
+            </div>
+            <div>
+              <p className='text-xs text-muted-foreground mb-1'>Cost</p>
+              <p className='text-xl font-semibold'>${formatCents(totalCogsCents)}</p>
+            </div>
+            <div>
+              <p className='text-xs text-muted-foreground mb-1'>Profit</p>
+              <p
+                className={`text-xl font-semibold ${totalProfitCents >= 0 ? 'text-primary' : 'text-destructive'}`}
+              >
+                ${formatCents(totalProfitCents)}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {playersWithPhone.length > 0 && (
         <div className='mb-8'>

@@ -9,6 +9,7 @@ import {
   updateServesDrinks,
   updateTracksInventory,
 } from '@/lib/supabase/bar-settings';
+import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
 
 export interface BarFeatures {
   /** What each drinks-side screen shows. Everything is visible until the settings load. */
@@ -29,11 +30,13 @@ const ALL_ON: DrinkSettings = { drinksAllowed: true, servesDrinks: true, tracksI
 
 /**
  * The drinks settings (0020), on the same `'bar_settings'` SWR entry as the other bar
- * settings. Host screens only: fetchBarSettings throws for a joined player, who has no bar
- * of their own, so nothing a member can reach may call this.
+ * settings. fetchBarSettings throws for a joined player, who has no bar of their own, so the
+ * read waits on the staff check and never runs for a player: Home, Account and Results are
+ * shared with members, and they see everything on, as they did before 0020.
  */
 export function useBarFeatures(): BarFeatures {
-  const { data, error, isLoading, mutate } = useSWR('bar_settings', fetchBarSettings);
+  const isStaff = useIsBarStaff();
+  const { data, error, isLoading, mutate } = useSWR(isStaff ? 'bar_settings' : null, fetchBarSettings);
   const settings = data && {
     drinksAllowed: data.drinksAllowed,
     servesDrinks: data.servesDrinks,

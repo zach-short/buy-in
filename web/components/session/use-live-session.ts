@@ -13,15 +13,18 @@ import {
 // Phase 11: while the channel is SUBSCRIBED the session-scoped keys do not poll; while it is
 // not, they fall back to the 15 s poll — all four (the hook polls ['session', id]), since a
 // rebuy, a cash-out or a close is as live as a pour.
-export function useLiveSession(id: string) {
+//
+// `readDrinks` false skips the menu and stock reads (host-setup P2): nothing on the screen pours
+// then. Orders are always read, because they are part of every player's balance.
+export function useLiveSession(id: string, readDrinks = true) {
   const { refreshInterval, subscribed } = useSessionRealtime(id);
   const session = useSWR(['session', id], ([, sessionId]) => fetchSession(sessionId));
   const players = useSWR('players', fetchPlayers);
   const orders = useSWR(['orders', id], ([, sessionId]) => fetchSessionOrders(sessionId), { refreshInterval });
   const buyIns = useSWR(['buy_ins', id], ([, sessionId]) => fetchSessionBuyIns(sessionId), { refreshInterval });
   const cashouts = useSWR(['cashouts', id], ([, sessionId]) => fetchSessionCashouts(sessionId), { refreshInterval });
-  const drinks = useSWR('drinks', fetchDrinks);
-  const inventory = useSWR('inventory', fetchInventory);
+  const drinks = useSWR(readDrinks ? 'drinks' : null, fetchDrinks);
+  const inventory = useSWR(readDrinks ? 'inventory' : null, fetchInventory);
 
   // A first load that failed has no data to fall back on; the app's SWRConfig does not retry
   // on error, so without this the screen would say "Loading…" forever. A failure on a later

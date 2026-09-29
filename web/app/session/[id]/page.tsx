@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatCents } from '@pb/core';
+import { useBarFeatures } from '@/hooks/use-bar-features';
 import { useConfirm } from '@/hooks/use-confirm';
 import { sumCents } from '@/lib/ledger';
 import { DrinkPickerModal } from '@/components/drink-picker-modal';
@@ -24,7 +25,13 @@ import { usePlayerMoney } from '@/components/session/use-player-money';
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const live = useLiveSession(id);
+  // With drinks off there is no pouring here, but a drink already on a tab still shows as that
+  // player's total, because it is still part of what they owe (host-setup PLAN §0 row 8).
+  const features = useBarFeatures();
+  const drinksOn = features.visible.drinks;
+  // The menu and stock reads wait for the switch itself: `visible` reads "on" while loading.
+  // A failed settings load keeps them, as it keeps everything else on.
+  const live = useLiveSession(id, drinksOn && (features.settings !== undefined || features.error !== undefined));
   const { session, players = [], orders, buyIns, cashouts } = live;
   const { confirm, confirmDialog } = useConfirm();
   const pours = useDrinkPours(session, live, confirm);
@@ -116,6 +123,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           paid: isTabPaid(player.id),
           out: cashoutOf(player.id) !== undefined,
         }))}
+        showEmptyTabs={drinksOn}
         selectedId={selectedId}
         addOpen={showAddPlayer}
         onSelect={(playerId) => { setPickedPlayerId(playerId); setShowAddPlayer(false); }}
@@ -143,7 +151,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         />
       )}
 
-      {selected && (
+      {drinksOn && selected && (
         <OrderList
           orders={selectedOrders}
           paid={isTabPaid(selected.id)}
@@ -152,17 +160,19 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         />
       )}
 
-      <button
-        type='button'
-        aria-label={selected ? `Add a drink for ${selected.name}` : 'Add a drink'}
-        onClick={openPicker}
-        disabled={!selected}
-        className='fixed bottom-6 right-6 size-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform z-40 text-2xl font-light disabled:opacity-40'
-      >
-        <span aria-hidden='true'>+</span>
-      </button>
+      {drinksOn && (
+        <button
+          type='button'
+          aria-label={selected ? `Add a drink for ${selected.name}` : 'Add a drink'}
+          onClick={openPicker}
+          disabled={!selected}
+          className='fixed bottom-6 right-6 size-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform z-40 text-2xl font-light disabled:opacity-40'
+        >
+          <span aria-hidden='true'>+</span>
+        </button>
+      )}
 
-      {showPicker && selected && (
+      {drinksOn && showPicker && selected && (
         <DrinkPickerModal
           drinks={live.drinks}
           inventory={live.inventory}
