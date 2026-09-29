@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 
 import { formatDate } from '@pb/core';
 import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
+import { useClaimRequests } from '@/hooks/use-claim-requests';
+import type { PendingClaim } from '@/lib/supabase/claims';
 import { fetchBarId } from '@/lib/supabase/queries';
 import {
   createStandingInvite, fetchRecentJoins, fetchStandingInvites, joinUrl, revokeInvite,
@@ -86,11 +88,46 @@ function JoinRow({ player }: { player: RecentJoin }) {
   );
 }
 
+interface ClaimRowProps {
+  claim: PendingClaim;
+  deciding: boolean;
+  onDecide: (approve: boolean) => void;
+}
+
+// PASSOFF item 17: who asked is the email and name their account had when they asked (0008
+// copies both), because a host cannot read accounts and would otherwise approve a stranger.
+// Wording is provisional (R7).
+function ClaimRow({ claim, deciding, onDecide }: ClaimRowProps) {
+  const who = claim.requesterName ?? claim.requesterEmail ?? 'Someone';
+  return (
+    <div className='border border-border rounded-md px-4 py-3 space-y-2'>
+      <p className='text-sm'>
+        <span className='font-medium'>{who}</span> says they&apos;re <span className='font-medium'>{claim.playerName}</span>
+      </p>
+      {claim.requesterName && claim.requesterEmail && (
+        <p className='text-xs text-muted-foreground break-all'>{claim.requesterEmail}</p>
+      )}
+      <div className='flex items-center justify-between gap-3'>
+        <span className='text-xs text-muted-foreground'>Asked {formatDate(claim.createdAt)}</span>
+        <div className='flex gap-2 shrink-0'>
+          <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={() => onDecide(false)} disabled={deciding}>
+            Reject
+          </Button>
+          <Button size='sm' className='text-xs tracking-widest uppercase' onClick={() => onDecide(true)} disabled={deciding}>
+            {deciding ? 'Saving…' : 'Approve'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function InvitesPage() {
   const router = useRouter();
   const { data: barId, error: barError } = useSWR('bar_id', fetchBarId);
   const invites = useSWR(barId ? (['bar_invite_links', barId] as const) : null, ([, id]) => fetchStandingInvites(id));
   const joins = useSWR(barId ? (['players_joined', barId] as const) : null, ([, id]) => fetchRecentJoins(id));
+  const claims = useClaimRequests(barId);
   const [creating, setCreating] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
 
@@ -127,12 +164,26 @@ export default function InvitesPage() {
       <PageHeader
         title='Invites'
         subtitle='Anyone with a live link can join your table'
-        actions=<HeaderAction onClick={() => router.back()}>Back</HeaderAction>
+        actions={<HeaderAction onClick={() => router.back()}>Back</HeaderAction>}
       />
 
       <Button className='w-full h-10 text-xs tracking-widest uppercase mb-10' onClick={handleCreate} disabled={!barId || creating}>
         {creating ? 'Creating…' : 'Create Invite Link'}
       </Button>
+
+      <section className='mb-10'>
+        <p className={SECTION_LABEL}>Waiting For You</p>
+        <ListState rows={claims.pending.data} error={barError ?? claims.pending.error} empty='No one is waiting'>
+          {(rows) => rows.map((claim) => (
+            <ClaimRow
+              key={claim.id}
+              claim={claim}
+              deciding={claims.deciding === claim.id}
+              onDecide={(approve) => void claims.decide(claim, approve)}
+            />
+          ))}
+        </ListState>
+      </section>
 
       <section className='mb-10'>
         <p className={SECTION_LABEL}>Invite Links</p>

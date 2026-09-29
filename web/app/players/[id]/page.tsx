@@ -20,6 +20,7 @@ import { createPayment, updatePlayer } from '@/lib/supabase/writes';
 import {
   playerReceiptUrl, portalUrl, replacePortalToken, shareToken,
 } from '@/lib/supabase/share-links';
+import { PlayerAccountPanel } from '@/components/players/player-account-panel';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -363,6 +364,8 @@ export default function PlayerDetailPage({
           </div>
         </div>
       )}
+
+      <PlayerAccountPanel player={player} players={players} onChanged={() => mutatePlayers()} />
 
       {sessionGroups.length > 0 && (
         <div className='space-y-4 mb-8'>
