@@ -873,9 +873,11 @@ export type Database = {
         Args: { p_approve: boolean; p_request_id: string }
         Returns: string
       }
+      delete_my_account: { Args: never; Returns: undefined }
       delete_order: { Args: { p_order_id: string }; Returns: undefined }
       delete_session: { Args: { p_session_id: string }; Returns: undefined }
       email_has_account: { Args: { p_email: string }; Returns: boolean }
+      get_account_deletion_check: { Args: never; Returns: Json }
       get_invite_preview: { Args: { p_token: string }; Returns: Json }
       get_menu: { Args: { p_bar_id: string }; Returns: Json }
       get_my_performance: {
@@ -890,12 +892,24 @@ export type Database = {
           stakes_cents: number
         }[]
       }
+      get_my_tables: {
+        Args: never
+        Returns: {
+          balance_cents: number
+          bar_id: string
+          bar_name: string
+        }[]
+      }
       get_shared_tab: { Args: { p_token: string }; Returns: Json }
       is_bar_member: { Args: { b: string }; Returns: boolean }
       is_bar_staff: { Args: { b: string }; Returns: boolean }
       join_bar_as_player: {
         Args: { p_name: string; p_token: string }
         Returns: string
+      }
+      leave_table: {
+        Args: { p_accept_credit?: boolean; p_bar_id: string }
+        Returns: undefined
       }
       list_claimable_players: {
         Args: { p_token: string }
@@ -905,6 +919,7 @@ export type Database = {
           name: string
         }[]
       }
+      player_balance_cents: { Args: { p_player_id: string }; Returns: number }
       reassign_player_account: {
         Args: { p_from: string; p_to: string }
         Returns: undefined

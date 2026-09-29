@@ -12,6 +12,7 @@ export {
   type PaymentLike,
 } from './balance';
 export { settle, type PlayerBalance, type Transfer } from './settlement';
+export { leaveTableVerdict, type LeaveTableVerdict } from './leave-table';
 export {
   venmoUrls,
   venmoNote,

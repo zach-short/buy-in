@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { InstallCard } from '@/components/shared/install-card';
+import { MyTables } from '@/components/shared/my-tables';
 import { SignoutButton } from '@/components/shared/button/signout';
 import { useAuthUser } from '@/hooks/use-auth-user';
 
@@ -29,6 +30,8 @@ export default function AccountPage() {
       <PageHeader title='Account' subtitle={user?.email} />
 
       <InstallCard />
+
+      <MyTables />
 
       <SectionLabel>More</SectionLabel>
       <nav className='flex flex-col border-t border-border mb-10'>
