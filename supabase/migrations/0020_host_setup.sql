@@ -1,5 +1,5 @@
--- 0020 — host setup: the drinks and inventory switches (2026-09-29). UNAPPLIED: the owner
--- applies it.
+-- 0020 — host setup: the drinks and inventory switches (2026-09-29). Applied to production
+-- 2026-09-29.
 --
 -- docs/incomplete/host-setup/, phase 1 (PASSOFF.md item 18). Some hosts run a home game with
 -- no bar. These columns let a host turn the drinks side of the app off and back on; the
