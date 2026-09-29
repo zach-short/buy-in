@@ -14,9 +14,14 @@ import { passThrough, redirectTo, updateSession } from '@/lib/supabase/middlewar
 // link; each page does its own signed-in check client-side and bounces to /signup?redirect=...
 // when needed. Same reasoning for /rsvp/[token]. /invites, /schedule and /results stay
 // behind login — they're host- or member-account-scoped, never link-only.
+//
+// 2026-09-29: /privacy and /terms added (owner request) — Google's OAuth brand verification
+// fetches both signed out, and the login page links to them. Static, no data.
 function isPublicPath(pathname: string): boolean {
   return (
     pathname === '/' ||
+    pathname === '/privacy' ||
+    pathname === '/terms' ||
     pathname === '/opengraph-image' ||
     pathname === '/login' ||
     pathname === '/signup' ||

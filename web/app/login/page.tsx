@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, LogIn, Mail } from 'lucide-react';
 
 import { GoogleButton } from '@/components/auth/google-button';
 import { PasswordInput } from '@/components/auth/password-input';
+import { LegalLinks } from '@/components/legal/legal-links';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLogin, type LoginFlow } from '@/hooks/use-login';
@@ -29,7 +30,7 @@ function Login() {
   const entry = flow.step === 'start' || flow.step === 'email';
 
   return (
-    <main className='min-h-dvh flex flex-col items-center justify-center px-6'>
+    <main className='relative min-h-dvh flex flex-col items-center justify-center px-6'>
       <div className='w-full max-w-xs'>
         <h1 className='pb-8 text-center text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
         {confirmed && (
@@ -43,6 +44,7 @@ function Login() {
         {flow.step === 'password' && <PasswordStep flow={flow} />}
         {flow.step === 'create' && <CreateStep flow={flow} />}
       </div>
+      <LegalLinks className='absolute bottom-6' />
     </main>
   );
 }

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowRight, BarChart3, CalendarDays, LogIn, Smartphone, Users } from 'lucide-react';
 
+import { LegalLinks } from '@/components/legal/legal-links';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { LiveTableDemo } from './live-table-demo';
@@ -229,9 +230,10 @@ export function Landing() {
         <Extras />
         <Closing />
       </main>
-      <footer className='mx-auto flex w-full max-w-6xl items-center justify-between border-t border-border px-6 py-8 text-xs text-muted-foreground'>
+      <footer className='mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-border px-6 py-8 text-xs text-muted-foreground'>
         <span className='font-display tracking-widest uppercase text-primary'>Buy-In</span>
         <span>Home bar management for poker nights</span>
+        <LegalLinks />
       </footer>
     </div>
   );
