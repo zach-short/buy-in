@@ -53,3 +53,11 @@ supabase/.temp/
 
 # Misc
 .turbo
+
+# PWA workers — written into web/public by @ducanh2912/next-pwa on every `next build --webpack`
+web/public/sw.js
+web/public/sw.js.map
+web/public/workbox-*.js
+web/public/workbox-*.js.map
+web/public/swe-worker-*.js
+web/public/swe-worker-*.js.map
