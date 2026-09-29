@@ -4,6 +4,7 @@ import { use, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 
 import { formatDate, formatTime } from '@pb/core';
+import { ArrowRight, CalendarPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthUser } from '@/hooks/use-auth-user';
 import { buildIcs, icsDataUrl, type IcsEvent } from '@/lib/ics';
@@ -68,7 +69,7 @@ function SignInPrompt({ token }: { token: string }) {
       </div>
       <div className='space-y-3'>
         <Button asChild className='w-full h-11 tracking-widest uppercase text-xs'>
-          <Link href={`/login?redirect=${redirect}`}>Continue</Link>
+          <Link href={`/login?redirect=${redirect}`}><ArrowRight aria-hidden='true' /> Continue</Link>
         </Button>
       </div>
     </div>
@@ -181,7 +182,7 @@ function CalendarLink({ event }: { event: IcsEvent }) {
   const href = useMemo(() => icsDataUrl(buildIcs({ title, start, description })), [title, start, description]);
   return (
     <Button asChild variant='outline' className='w-full h-11 tracking-widest uppercase text-xs'>
-      <a href={href} download='game-night.ics'>Add to calendar</a>
+      <a href={href} download='game-night.ics'><CalendarPlus aria-hidden='true' /> Add to calendar</a>
     </Button>
   );
 }

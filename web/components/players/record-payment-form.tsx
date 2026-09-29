@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { formatCents } from '@pb/core';
+import { Check, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,6 +92,7 @@ export function RecordPaymentForm({ player, mode, balanceCents, onRecorded, onCl
           onClick={onClose}
           disabled={saving}
         >
+          <X aria-hidden='true' />
           Cancel
         </Button>
         <Button
@@ -98,6 +100,7 @@ export function RecordPaymentForm({ player, mode, balanceCents, onRecorded, onCl
           onClick={save}
           disabled={saving || !valid}
         >
+          <Check aria-hidden='true' />
           {saving ? 'Saving…' : 'Save'}
         </Button>
       </div>

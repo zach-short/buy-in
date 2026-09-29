@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { CalendarPlus, Check, Share2 } from 'lucide-react';
 
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { announceShare } from '@/app/schedule/announce-share';
@@ -73,6 +74,7 @@ function ScheduleForm({ form }: { form: ScheduleGameForm }) {
       </div>
 
       <Button type='submit' size='lg' className='w-full h-12 text-xs tracking-widest uppercase mt-2' disabled={!form.canSubmit}>
+        <CalendarPlus aria-hidden='true' />
         {form.submitting ? 'Scheduling…' : form.scheduled ? 'Retry Invite Link' : 'Schedule & Get Invite Link'}
       </Button>
     </form>
@@ -89,10 +91,11 @@ function InviteReady({ form, url }: { form: ScheduleGameForm; url: string }) {
       </div>
 
       <Button size='lg' className='w-full h-12 text-xs tracking-widest uppercase' onClick={async () => announceShare(await form.shareInvite())}>
+        <Share2 aria-hidden='true' />
         Share Invite
       </Button>
       <Button asChild size='lg' variant='outline' className='w-full h-12 text-xs tracking-widest uppercase'>
-        <Link href='/schedule'>Done</Link>
+        <Link href='/schedule'><Check aria-hidden='true' /> Done</Link>
       </Button>
     </div>
   );

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 
 import { formatCents } from '@pb/core';
+import { Play, Plus } from 'lucide-react';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { sumCents } from '@/lib/ledger';
 import { fetchSessions, fetchSessionOrders } from '@/lib/supabase/queries';
@@ -43,6 +44,7 @@ function Dashboard() {
             className='h-12 text-sm tracking-widest uppercase font-medium'
             onClick={() => router.push(`/session/${activeSession.id}`)}
           >
+            <Play aria-hidden='true' />
             Resume — {activeSession.name}
           </Button>
         ) : (
@@ -51,6 +53,7 @@ function Dashboard() {
             className='h-12 text-sm tracking-widest uppercase font-medium'
             onClick={() => router.push('/session/new')}
           >
+            <Plus aria-hidden='true' />
             Start New Session
           </Button>
         )}

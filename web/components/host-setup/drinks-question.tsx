@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Check, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
@@ -29,8 +30,8 @@ export function DrinksQuestion({ onAnswer }: DrinksQuestionProps) {
     <div className='border border-border rounded-md p-4 mb-10'>
       <p className='text-sm font-medium mb-4'>Will there be drinks on the tab?</p>
       <div role='group' aria-label='Will there be drinks on the tab?' className='grid grid-cols-2 gap-3'>
-        <Button variant='outline' disabled={saving} onClick={() => answer(true)}>Yes</Button>
-        <Button disabled={saving} onClick={() => answer(false)}>No</Button>
+        <Button variant='outline' disabled={saving} onClick={() => answer(true)}><Check aria-hidden='true' /> Yes</Button>
+        <Button disabled={saving} onClick={() => answer(false)}><X aria-hidden='true' /> No</Button>
       </div>
       <Button variant='link' disabled={saving} className='w-full mt-2 text-muted-foreground' onClick={() => answer(null)}>
         Skip

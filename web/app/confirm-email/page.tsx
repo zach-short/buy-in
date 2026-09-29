@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { ExternalLink, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useConfirmationWatch } from '@/hooks/use-confirmation-watch';
@@ -26,6 +27,7 @@ function ResendButton({ resend }: { resend: ResendState }) {
         disabled={cooldown > 0 || status === 'sending'}
         className='w-full h-11 tracking-widest uppercase text-xs'
       >
+        <Send aria-hidden='true' />
         {resendLabel(resend)}
       </Button>
       {status === 'sent' && <p className='text-xs text-muted-foreground tracking-wide text-center'>Sent again.</p>}
@@ -38,6 +40,7 @@ function OpenMailLink({ mail, label }: { mail: Webmail; label: string }) {
   return (
     <Button asChild variant='outline' className='w-full h-11 tracking-widest uppercase text-xs'>
       <a href={mail.url} target='_blank' rel='noopener noreferrer'>
+        <ExternalLink aria-hidden='true' />
         {label}
       </a>
     </Button>

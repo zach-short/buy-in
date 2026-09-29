@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { formatCents } from '@pb/core';
-import { Archive, Check, Plus, Trash2 } from 'lucide-react';
+import { Archive, Check, Plus, Trash2, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +66,7 @@ export function DrinkEditor({ drink, inventory, onSave, onCancel, isNew = false,
         <Button className='flex-1 h-10' onClick={handleSave} disabled={saving || !form.name.trim()}>
           <Check className='size-4' /> {saving ? 'Saving…' : 'Save'}
         </Button>
-        <Button variant='outline' className='h-10 px-4' onClick={onCancel}>Cancel</Button>
+        <Button variant='outline' className='h-10 px-4' onClick={onCancel}><X aria-hidden='true' /> Cancel</Button>
         {onArchive && (
           <Button variant='outline' className='h-10 px-4' onClick={onArchive} disabled={saving}>
             <Archive className='size-4' /> Archive

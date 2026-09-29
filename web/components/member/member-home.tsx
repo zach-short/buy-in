@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 import { formatCents, isSettled, type RsvpAnswer, type TableRecord, type TableWithGame } from '@pb/core';
+import { Plus } from 'lucide-react';
 import { NextGameRow } from '@/components/member/next-game';
 import { DataState } from '@/components/shared/data-state';
 import { Button } from '@/components/ui/button';
@@ -77,7 +78,7 @@ function TableList({ records, onAnswer }: { records: TableWithGame[]; onAnswer: 
 function LogSessionButton() {
   return (
     <Button asChild variant='outline' size='lg' className='w-full h-11 mt-6 text-xs tracking-widest uppercase'>
-      <Link href={LOG_SESSION}>Log a session</Link>
+      <Link href={LOG_SESSION}><Plus aria-hidden='true' /> Log a session</Link>
     </Button>
   );
 }

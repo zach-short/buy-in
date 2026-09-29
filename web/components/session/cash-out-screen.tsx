@@ -1,6 +1,7 @@
 'use client';
 
 import { formatCents } from '@pb/core';
+import { ArrowLeft, Lock } from 'lucide-react';
 
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { Button } from '@/components/ui/button';
@@ -101,9 +102,11 @@ export function CashOutScreen({ close, buyInCents, tabCents, onBack }: CashOutSc
 
       <div className='flex gap-3 mt-8'>
         <Button variant='outline' className='flex-1 h-12 text-xs tracking-widest uppercase' onClick={onBack} disabled={closing}>
+          <ArrowLeft aria-hidden='true' />
           Back
         </Button>
         <Button className='flex-1 h-12 text-xs tracking-widest uppercase' onClick={close.close} disabled={closing}>
+          <Lock aria-hidden='true' />
           {closing ? 'Closing…' : 'Close Session'}
         </Button>
       </div>

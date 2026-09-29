@@ -9,10 +9,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Every button is outlined like the login page's (owner, 2026-09-29). The default keeps a
+        // gold border at rest so it still reads as the main action, and so a chosen option (RSVP,
+        // In/Out, the drinks question: `default` when picked, `outline` when not) stays visible.
         default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+          "border border-primary/60 bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:hover:bg-input/30 dark:hover:text-foreground dark:hover:border-primary dark:hover:shadow-[inset_0_0_12px_color-mix(in_oklch,var(--primary)_25%,transparent)]",
         destructive:
-          "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "border border-destructive/60 bg-background text-destructive shadow-xs hover:bg-destructive/10 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-input/30 dark:hover:bg-input/30 dark:hover:border-destructive dark:hover:shadow-[inset_0_0_12px_color-mix(in_oklch,var(--destructive)_25%,transparent)]",
         // Dark keeps the text on hover: accent-foreground is near-black, and the dark hover
         // background never turns gold, so the label vanished. A gold border and inner glow instead.
         outline:

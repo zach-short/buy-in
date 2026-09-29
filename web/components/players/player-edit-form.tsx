@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Check, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,6 +68,7 @@ export function PlayerEditForm({ player, onSaved, onClose }: {
           onClick={onClose}
           disabled={saving}
         >
+          <X aria-hidden='true' />
           Cancel
         </Button>
         <Button
@@ -74,6 +76,7 @@ export function PlayerEditForm({ player, onSaved, onClose }: {
           onClick={save}
           disabled={saving || !name.trim()}
         >
+          <Check aria-hidden='true' />
           {saving ? 'Saving…' : 'Save'}
         </Button>
       </div>

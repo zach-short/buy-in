@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useState, type FormEvent } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 import { JoinNameForm } from '@/components/join/join-name-form';
 import { JoinShell } from '@/components/join/join-shell';
@@ -24,6 +25,7 @@ export default function JoinPage({ searchParams }: { searchParams: SearchParams 
         <p className='text-sm text-muted-foreground'>Choose the name your host will see.</p>
         <JoinNameForm flow={flow} token={token} />
         <Button variant='ghost' className='w-full text-xs tracking-widest uppercase' onClick={flow.reset}>
+          <ArrowLeft aria-hidden='true' />
           Use a different code
         </Button>
       </JoinShell>
@@ -60,6 +62,7 @@ export default function JoinPage({ searchParams }: { searchParams: SearchParams 
           </p>
         )}
         <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={busy || !token}>
+          <ArrowRight aria-hidden='true' />
           {busy ? 'Checking…' : 'Continue'}
         </Button>
       </form>

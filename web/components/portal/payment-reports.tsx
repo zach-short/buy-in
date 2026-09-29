@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { formatCents, formatDate } from '@pb/core';
+import { Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MoneyInput, parseMoneyInput } from '@/components/ui/money-input';
@@ -61,9 +62,11 @@ export function ReportPaymentForm({ defaultCents, api, onClose }: ReportFormProp
       {api.sendError && <p className='text-xs text-destructive' role='alert'>{api.sendError}</p>}
       <div className='flex gap-2'>
         <Button type='button' variant='outline' className='flex-1 text-xs tracking-widest uppercase' onClick={onClose}>
+          <X aria-hidden='true' />
           Cancel
         </Button>
         <Button type='submit' className='flex-1 text-xs tracking-widest uppercase' disabled={problem !== null || api.sending}>
+          <Send aria-hidden='true' />
           {api.sending ? 'Sending…' : `I sent $${cents === null ? '0.00' : formatCents(cents)}`}
         </Button>
       </div>

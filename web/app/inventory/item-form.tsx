@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Check, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,10 +80,12 @@ export function ItemForm({ title, initial, showQty, onSubmit, onCancel, classNam
       <div className='flex gap-2'>
         {onCancel && (
           <Button variant='outline' className='flex-1 h-11 tracking-widest uppercase text-xs' onClick={onCancel} disabled={saving}>
+            <X aria-hidden='true' />
             Cancel
           </Button>
         )}
         <Button className='flex-1 h-11 tracking-widest uppercase text-xs' onClick={submit} disabled={saving || !form.name.trim() || !form.unit.trim()}>
+          <Check aria-hidden='true' />
           {saving ? 'Saving…' : 'Save'}
         </Button>
       </div>

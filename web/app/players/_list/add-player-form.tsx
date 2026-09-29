@@ -1,3 +1,5 @@
+import { UserPlus, X } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -59,8 +61,9 @@ export function AddPlayerForm({ existingNames, onAdded, onClose }: AddPlayerForm
         className='h-11'
       />
       <div className='flex gap-2'>
-        <Button variant='outline' className='flex-1 h-11 text-xs tracking-widest uppercase' onClick={handleCancel} disabled={form.saving}>Cancel</Button>
+        <Button variant='outline' className='flex-1 h-11 text-xs tracking-widest uppercase' onClick={handleCancel} disabled={form.saving}><X aria-hidden='true' /> Cancel</Button>
         <Button className='flex-1 h-11 text-xs tracking-widest uppercase' onClick={() => void handleAdd()} disabled={form.saving || !form.name.trim() || blocked}>
+          <UserPlus aria-hidden='true' />
           {form.saving ? 'Saving…' : clash?.kind === 'similar' ? 'Add anyway' : 'Add Player'}
         </Button>
       </div>

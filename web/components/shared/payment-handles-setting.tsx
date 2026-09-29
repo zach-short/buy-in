@@ -1,6 +1,7 @@
 'use client';
 
 import { toast } from 'sonner';
+import { Check } from 'lucide-react';
 
 import { usePaymentHandles } from '@/hooks/use-payment-handles';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ export function PaymentHandlesSetting() {
       />
       <p className='text-xs text-muted-foreground'>Where players pay you. Leave one blank to remove it.</p>
       <Button className='w-full h-10 text-xs tracking-widest uppercase' onClick={handleSave} disabled={!dirty || saving || isLoading}>
+        <Check aria-hidden='true' />
         {saving ? 'Saving…' : 'Save Handles'}
       </Button>
     </div>

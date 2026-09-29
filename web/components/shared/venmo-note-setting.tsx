@@ -3,6 +3,7 @@
 import { toast } from 'sonner';
 
 import { DEFAULT_VENMO_NOTE, VENMO_NOTE_TEMPLATE_MAX_LENGTH, renderVenmoNote } from '@pb/core';
+import { Check } from 'lucide-react';
 import { useVenmoNoteTemplate } from '@/hooks/use-venmo-note-template';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,7 @@ export function VenmoNoteSetting() {
         Preview: <span className='text-foreground'>{renderVenmoNote(value, PREVIEW_VARS)}</span>
       </p>
       <Button className='w-full h-10 text-xs tracking-widest uppercase' onClick={handleSave} disabled={!dirty || saving || isLoading}>
+        <Check aria-hidden='true' />
         {saving ? 'Saving…' : 'Save Note'}
       </Button>
     </div>

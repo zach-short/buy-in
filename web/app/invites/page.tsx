@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import { toast } from 'sonner';
 
 import { formatDate } from '@pb/core';
+import { Ban, Check, Link2, Share2, X } from 'lucide-react';
 import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useClaimRequests } from '@/hooks/use-claim-requests';
@@ -68,9 +69,11 @@ function InviteRow({ invite, revoking, onRevoke }: InviteRowProps) {
         {live && (
           <div className='flex gap-2 shrink-0'>
             <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={() => void shareInvite(invite.token)}>
+              <Share2 aria-hidden='true' />
               Share
             </Button>
             <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={onRevoke} disabled={revoking}>
+              <Ban aria-hidden='true' />
               {revoking ? 'Revoking…' : 'Revoke'}
             </Button>
           </div>
@@ -113,9 +116,11 @@ function ClaimRow({ claim, deciding, onDecide }: ClaimRowProps) {
         <span className='text-xs text-muted-foreground'>Asked {formatDate(claim.createdAt)}</span>
         <div className='flex gap-2 shrink-0'>
           <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={() => onDecide(false)} disabled={deciding}>
+            <X aria-hidden='true' />
             Reject
           </Button>
           <Button size='sm' className='text-xs tracking-widest uppercase' onClick={() => onDecide(true)} disabled={deciding}>
+            <Check aria-hidden='true' />
             {deciding ? 'Saving…' : 'Approve'}
           </Button>
         </div>
@@ -177,6 +182,7 @@ export default function InvitesPage() {
       />
 
       <Button className='w-full h-10 text-xs tracking-widest uppercase mb-10' onClick={handleCreate} disabled={!barId || creating}>
+        <Link2 aria-hidden='true' />
         {creating ? 'Creating…' : 'Create Invite Link'}
       </Button>
 

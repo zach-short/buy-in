@@ -17,7 +17,7 @@ import {
 } from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { MessageCircle } from 'lucide-react';
+import { Check, MessageCircle } from 'lucide-react';
 
 export default function SummaryPage({
   params,
@@ -256,6 +256,7 @@ export default function SummaryPage({
         className='w-full h-12 text-xs tracking-widest uppercase mt-8'
         onClick={() => router.push('/')}
       >
+        <Check aria-hidden='true' />
         Done
       </Button>
     </PageMain>

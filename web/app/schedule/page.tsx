@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
+import { CalendarPlus } from 'lucide-react';
 
 import {
   cancelScheduledGame,
@@ -65,7 +66,7 @@ export default function SchedulePage() {
       <PageHeader title='Schedule' subtitle={games ? `${games.length} upcoming` : undefined} />
 
       <Button asChild size='lg' className='w-full h-12 text-xs tracking-widest uppercase mb-6'>
-        <Link href='/schedule/new'>Schedule a Game</Link>
+        <Link href='/schedule/new'><CalendarPlus aria-hidden='true' /> Schedule a Game</Link>
       </Button>
 
       <DataState rows={games} error={error} onRetry={() => void mutate()} empty={<NoGames />}>

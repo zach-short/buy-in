@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RotateCw, UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,6 +78,7 @@ export function ClaimPicker({ claim }: { claim: ClaimFlow }) {
       <div className='space-y-3'>
         <ErrorLine text={claim.error} />
         <Button className={ACTION} onClick={claim.retry}>
+          <RotateCw aria-hidden='true' />
           Try again
         </Button>
       </div>
@@ -96,6 +98,7 @@ export function ClaimPicker({ claim }: { claim: ClaimFlow }) {
         </p>
       )}
       <Button variant='outline' className={ACTION} onClick={claim.chooseNew} disabled={claim.requesting}>
+        <UserPlus aria-hidden='true' />
         I&apos;m not on this list
       </Button>
       <NameList claim={claim} />

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, CircleStop } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
@@ -62,6 +62,7 @@ export function SessionTopBar({ name, playedOn, subscribed, onEnd }: SessionTopB
           <p className='text-xs text-muted-foreground mt-0.5'>{formatElapsed(playedOn, now)}</p>
         </div>
         <Button variant='destructive' size='sm' className='shrink-0 h-11 text-xs tracking-widest uppercase' onClick={onEnd}>
+          <CircleStop aria-hidden='true' />
           End Session
         </Button>
       </div>

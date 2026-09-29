@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatCents, formatDate } from '@pb/core';
+import { Check, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { MoneyInput, parseMoneyInput } from '@/components/ui/money-input';
@@ -46,9 +47,11 @@ function ReportRow({ report, api }: { report: PendingPaymentReport; api: PlayerP
       )}
       <div className='flex gap-2'>
         <Button variant='outline' className={ACTION} disabled={busy} onClick={() => void api.dismiss(report)}>
+          <X aria-hidden='true' />
           Dismiss
         </Button>
         <Button className={ACTION} disabled={busy || !canConfirm} onClick={() => void confirm()}>
+          <Check aria-hidden='true' />
           {api.busyId === report.id ? 'Saving…' : 'Confirm'}
         </Button>
       </div>

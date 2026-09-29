@@ -5,6 +5,7 @@ import { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 
 import { DEFAULT_VENMO_NOTE, describeNet, formatCents, venmoUrls, type NetDisplay, type NightNet } from '@pb/core';
+import { Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MoneyInput, parseMoneyInput } from '@/components/ui/money-input';
 import { useConfirm, type ConfirmApi } from '@/hooks/use-confirm';
@@ -204,9 +205,11 @@ function RecordPaymentForm({ player, sessionId, net, confirm, onDone }: RecordPa
         </button>
         <div className='flex gap-2 ml-auto'>
           <Button variant='outline' size='sm' disabled={saving} onClick={() => void onDone(false)}>
+            <X aria-hidden='true' />
             Cancel
           </Button>
           <Button size='sm' disabled={saving} onClick={() => void save()}>
+            <Check aria-hidden='true' />
             {saving ? 'Saving…' : 'Record'}
           </Button>
         </div>

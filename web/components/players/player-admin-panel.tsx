@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Archive, ArchiveRestore } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { MergePlayerPanel } from '@/components/players/merge-player-panel';
@@ -42,6 +43,7 @@ function ArchiveToggle({ player, onChanged }: { player: PlayerRow; onChanged: ()
         {archived ? 'Archived: hidden' : 'Archiving hides them'} from the players list. Balance still counts.
       </p>
       <Button variant='outline' className='h-11 shrink-0 text-xs tracking-widest uppercase' disabled={saving} onClick={() => void toggle()}>
+        {archived ? <ArchiveRestore aria-hidden='true' /> : <Archive aria-hidden='true' />}
         {archived ? 'Restore' : 'Archive'}
       </Button>
     </div>

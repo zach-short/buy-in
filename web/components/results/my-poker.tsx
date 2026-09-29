@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 
 import { centsToDollars, filterResults, formatDate, type PokerResult, type SourceFilter } from '@pb/core';
+import { Plus } from 'lucide-react';
 import { DataState } from '@/components/shared/data-state';
 import { EmptyResults } from '@/components/results/results-tabs';
 import { PokerResultRow, resultDetail, signedAmount, toneClass } from '@/components/results/poker-result-row';
@@ -145,7 +146,7 @@ const LOG_SESSION = '/results/log';
 function LogSessionButton() {
   return (
     <Button asChild variant='outline' size='lg' className='w-full h-11 mb-6 text-xs tracking-widest uppercase'>
-      <Link href={LOG_SESSION}>Log a session</Link>
+      <Link href={LOG_SESSION}><Plus aria-hidden='true' /> Log a session</Link>
     </Button>
   );
 }

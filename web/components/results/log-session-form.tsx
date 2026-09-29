@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { formatBlinds, formatDate } from '@pb/core';
+import { Check, Trash2 } from 'lucide-react';
 import { signedAmount, toneClass } from '@/components/results/poker-result-row';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -152,6 +153,7 @@ function DeleteButton({ form, existing, done }: { form: FormState; existing: Log
   return (
     <>
       <Button type='button' variant='outline' size='lg' className={cn(ACTION, 'text-destructive')} disabled={form.busy} onClick={remove}>
+        <Trash2 aria-hidden='true' />
         Delete session
       </Button>
       {confirmDialog}
@@ -184,6 +186,7 @@ export function LogSessionForm({ existing }: { existing?: LoggedSessionRow }) {
       <Fields form={form} />
       <NetLine form={form} />
       <Button type='submit' size='lg' className={ACTION} disabled={!form.canSave}>
+        <Check aria-hidden='true' />
         {form.busy ? 'Saving…' : 'Save'}
       </Button>
       {existing && <DeleteButton form={form} existing={existing} done={done} />}

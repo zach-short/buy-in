@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect } from 'react';
+import { ArrowLeft, RotateCw } from 'lucide-react';
 
 import { ClaimPicker } from '@/components/join/claim-picker';
 import { JoinNameForm } from '@/components/join/join-name-form';
@@ -35,6 +36,7 @@ export default function JoinInvitePage({ params }: { params: Promise<{ token: st
         <JoinNameForm flow={flow} token={token} />
         {claim.players.length > 0 && (
           <Button variant='ghost' className='w-full text-xs tracking-widest uppercase' onClick={claim.backToNames}>
+            <ArrowLeft aria-hidden='true' />
             Back to names
           </Button>
         )}
@@ -57,6 +59,7 @@ export default function JoinInvitePage({ params }: { params: Promise<{ token: st
           {flow.error}
         </p>
         <Button className='w-full h-11 tracking-widest uppercase text-xs' onClick={() => void begin(returnTo)}>
+          <RotateCw aria-hidden='true' />
           Try again
         </Button>
       </JoinShell>

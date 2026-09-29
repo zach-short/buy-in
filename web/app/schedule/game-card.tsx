@@ -3,6 +3,7 @@ import useSWR from 'swr';
 import { toast } from 'sonner';
 
 import { formatDate, formatTime } from '@pb/core';
+import { Check, Play } from 'lucide-react';
 import { fetchGameRsvps, type GameRsvp, type RsvpStatus, type ScheduledGameRow } from '@/lib/supabase/scheduled-games';
 import { useGameInvite, type GameInvite } from '@/hooks/use-game-invite';
 import { announceShare } from '@/app/schedule/announce-share';
@@ -65,6 +66,7 @@ export function GameCard({ game, starting, locked, onStart, onCancel, onEdited }
       <div className='flex gap-3'>
         <InviteButton invite={invite} />
         <Button onClick={onStart} disabled={locked} className='flex-1 h-10 text-xs tracking-widest uppercase'>
+          <Play aria-hidden='true' />
           {starting ? 'Starting…' : 'Start Game'}
         </Button>
       </div>
@@ -163,6 +165,7 @@ function EditGame({ game, onDone }: { game: ScheduledGameRow; onDone: (saved: bo
           Discard
         </button>
         <Button type='submit' disabled={!form.canSave} className='flex-1 h-10 text-xs tracking-widest uppercase'>
+          <Check aria-hidden='true' />
           {form.saving ? 'Saving…' : 'Save'}
         </Button>
       </div>

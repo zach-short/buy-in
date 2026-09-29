@@ -7,6 +7,7 @@ import useSWR from 'swr';
 import { toast } from 'sonner';
 
 import { formatDate, formatTime } from '@pb/core';
+import { Play } from 'lucide-react';
 import {
   fetchUpcomingGames,
   fetchYesCount,
@@ -71,6 +72,7 @@ function GameSummary({ game, canStart, onStarted }: GameSummaryProps) {
         </div>
         {canStart && (
           <Button onClick={start} disabled={starting} className='shrink-0 h-9 text-xs tracking-widest uppercase'>
+            <Play aria-hidden='true' />
             {starting ? 'Starting…' : 'Start this game'}
           </Button>
         )}

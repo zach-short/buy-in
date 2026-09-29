@@ -1,5 +1,7 @@
 'use client';
 
+import { Download } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { useInstallPlatform } from '@/hooks/use-install-platform';
 import type { InstallPlatform } from '@/hooks/use-install-platform';
@@ -58,6 +60,7 @@ export function InstallCard() {
       <p className='text-xs tracking-widest uppercase text-primary'>{title}</p>
       {promptInstall ? (
         <Button className='w-full h-10 text-xs tracking-widest uppercase' onClick={promptInstall}>
+          <Download aria-hidden='true' />
           Install Buy-In
         </Button>
       ) : (

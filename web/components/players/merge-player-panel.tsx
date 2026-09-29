@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Merge, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,6 +78,7 @@ export function MergePlayerPanel({ player, players, balanceCents, ledger, confir
   if (!open) {
     return (
       <Button variant='outline' className='w-full h-11 text-xs tracking-widest uppercase' onClick={() => setOpen(true)}>
+        <Merge aria-hidden='true' />
         Merge into another player…
       </Button>
     );
@@ -100,10 +102,12 @@ export function MergePlayerPanel({ player, players, balanceCents, ledger, confir
       {merge.refusal && <p role='alert' className='text-sm text-destructive'>{merge.refusal}</p>}
       <div className='flex gap-2'>
         <Button variant='outline' className={ACTION} disabled={merge.merging} onClick={merge.into ? () => merge.choose(undefined) : close}>
+          <X aria-hidden='true' />
           {merge.into ? 'Back' : 'Cancel'}
         </Button>
         {merge.into && (
           <Button variant='destructive' className={ACTION} disabled={merge.merging || combined === undefined} onClick={() => void merge.merge()}>
+            <Merge aria-hidden='true' />
             {merge.merging ? 'Merging…' : 'Merge'}
           </Button>
         )}

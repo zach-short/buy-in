@@ -1,6 +1,7 @@
 'use client';
 
 import { formatCents, leaveTableVerdict } from '@pb/core';
+import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataState } from '@/components/shared/data-state';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -37,6 +38,7 @@ function TableRow({ table, busy, onLeave }: TableRowProps) {
         disabled={blocked || busy}
         onClick={() => onLeave(table)}
       >
+        <LogOut aria-hidden='true' />
         {busy ? 'Leaving…' : 'Leave table'}
       </Button>
     </li>

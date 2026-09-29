@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { Check, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,9 +72,11 @@ function ConfirmBody({ options, onResolve }: { options: ConfirmOptions; onResolv
       {/* Cancel first in DOM order, so it — not the destructive action — takes initial focus. */}
       <div className='flex gap-2'>
         <Button type='button' variant='outline' className={ACTION_CLASS} onClick={() => onResolve(false)}>
+          <X aria-hidden='true' />
           {options.cancelLabel ?? 'Cancel'}
         </Button>
         <Button type='submit' variant={options.destructive ? 'destructive' : 'default'} className={ACTION_CLASS} disabled={!ready}>
+          <Check aria-hidden='true' />
           {options.confirmLabel ?? 'Confirm'}
         </Button>
       </div>

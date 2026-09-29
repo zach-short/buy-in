@@ -1,6 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
+import { UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,7 @@ export function JoinNameForm({ flow, token }: { flow: JoinFlow; token: string })
         </p>
       )}
       <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={joining}>
+        <UserPlus aria-hidden='true' />
         {joining ? 'Joining…' : 'Join table'}
       </Button>
     </form>

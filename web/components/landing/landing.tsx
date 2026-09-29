@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { BarChart3, CalendarDays, Smartphone, Users } from 'lucide-react';
+import { ArrowRight, BarChart3, CalendarDays, LogIn, Smartphone, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,7 @@ function Nav() {
           Log in
         </Link>
         <Button asChild size='sm' className='text-xs tracking-widest uppercase'>
-          <Link href='/login'>Get started</Link>
+          <Link href='/login'><ArrowRight aria-hidden='true' /> Get started</Link>
         </Button>
       </nav>
     </header>
@@ -56,10 +56,10 @@ function Actions() {
   return (
     <div className='flex flex-wrap items-center gap-3'>
       <Button asChild size='lg' className='h-12 px-7 text-xs tracking-widest uppercase landing-cta'>
-        <Link href='/login'>Get started</Link>
+        <Link href='/login'><ArrowRight aria-hidden='true' /> Get started</Link>
       </Button>
       <Button asChild size='lg' variant='outline' className='h-12 px-7 text-xs tracking-widest uppercase'>
-        <Link href='/login'>Log in</Link>
+        <Link href='/login'><LogIn aria-hidden='true' /> Log in</Link>
       </Button>
     </div>
   );

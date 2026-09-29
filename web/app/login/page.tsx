@@ -2,7 +2,7 @@
 
 import { Suspense, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Mail } from 'lucide-react';
+import { ArrowLeft, ArrowRight, LogIn, Mail } from 'lucide-react';
 
 import { GoogleButton } from '@/components/auth/google-button';
 import { PasswordInput } from '@/components/auth/password-input';
@@ -95,6 +95,7 @@ function ErrorLine({ error }: { error: string }) {
 function BackButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <Button type='button' variant='ghost' onClick={onClick} className='w-full text-xs text-muted-foreground'>
+      <ArrowLeft aria-hidden='true' />
       {label}
     </Button>
   );
@@ -115,6 +116,7 @@ function EmailStep({ flow }: { flow: LoginFlow }) {
       />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.busy || !flow.email.trim()}>
+        <ArrowRight aria-hidden='true' />
         {flow.busy ? 'Checking…' : 'Continue'}
       </Button>
       <BackButton label='Back' onClick={() => flow.goTo('start')} />
@@ -137,6 +139,7 @@ function PasswordStep({ flow }: { flow: LoginFlow }) {
       />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.busy}>
+        <LogIn aria-hidden='true' />
         {flow.busy ? 'Signing in…' : 'Sign in'}
       </Button>
       <BackButton label='Use a different email' onClick={() => flow.goTo('email')} />
@@ -168,6 +171,7 @@ function CreateStep({ flow }: { flow: LoginFlow }) {
       />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.busy}>
+        <ArrowRight aria-hidden='true' />
         {flow.busy ? 'Creating account…' : 'Continue'}
       </Button>
       <BackButton label='Use a different email' onClick={() => flow.goTo('email')} />

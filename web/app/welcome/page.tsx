@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
+import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 
 import { RolePicker } from '@/components/auth/role-picker';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,7 @@ function ErrorLine({ error }: { error: string }) {
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
     <Button type='button' variant='ghost' onClick={onClick} className='w-full text-xs text-muted-foreground'>
+      <ArrowLeft aria-hidden='true' />
       Back
     </Button>
   );
@@ -78,6 +80,7 @@ function ProfileStep({ flow }: { flow: WelcomeFlow }) {
       />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.submitting}>
+        <ArrowRight aria-hidden='true' />
         {flow.submitting ? 'Saving…' : 'Continue'}
       </Button>
       {!flow.invited && <BackButton onClick={() => flow.goTo('role')} />}
@@ -100,6 +103,7 @@ function TableStep({ flow }: { flow: WelcomeFlow }) {
       />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.submitting}>
+        <Plus aria-hidden='true' />
         {flow.submitting ? 'Creating table…' : 'Create table'}
       </Button>
       <BackButton onClick={() => flow.goTo('profile')} />

@@ -1,6 +1,7 @@
 'use client';
 
 import { toast } from 'sonner';
+import { Check } from 'lucide-react';
 
 import { useDefaultBuyIn } from '@/hooks/use-default-buy-in';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ export function DefaultBuyInSetting() {
         Pre-fills every player&apos;s buy-in when you start a session. You can still change it for any one night.
       </p>
       <Button className='w-full h-10 text-xs tracking-widest uppercase' onClick={handleSave} disabled={!dirty || saving || isLoading}>
+        <Check aria-hidden='true' />
         {saving ? 'Saving…' : 'Save Buy-In'}
       </Button>
     </div>

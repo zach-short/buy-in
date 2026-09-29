@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ArrowRightLeft, Unlink } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -30,6 +31,7 @@ function PickAndAct({ label, options, busy, onPick }: PickProps) {
         ))}
       </select>
       <Button variant='outline' className={ACTION} disabled={!chosen || busy} onClick={() => chosen && onPick(chosen)}>
+        <ArrowRightLeft aria-hidden='true' />
         {label}
       </Button>
     </div>
@@ -58,6 +60,7 @@ export function PlayerAccountPanel({ player, players, onChanged }: {
         <p className={LABEL}>{linked ? 'Linked to an account' : 'Not linked to an account'}</p>
         {linked && (
           <Button variant='outline' className='h-11 text-xs tracking-widest uppercase' onClick={() => void account.unlink()} disabled={account.busy !== null}>
+            <Unlink aria-hidden='true' />
             {account.busy === 'unlink' ? 'Unlinking…' : 'Unlink'}
           </Button>
         )}

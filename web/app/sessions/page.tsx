@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { formatDate } from '@pb/core';
@@ -173,7 +173,7 @@ function NoSessions() {
     <div className='text-center py-12 space-y-4'>
       <p className='text-muted-foreground text-xs tracking-widest uppercase'>No sessions yet</p>
       <Button asChild className='h-11 px-6 text-xs tracking-widest uppercase'>
-        <Link href='/session/new'>Start a session</Link>
+        <Link href='/session/new'><Plus aria-hidden='true' /> Start a session</Link>
       </Button>
     </div>
   );

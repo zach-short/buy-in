@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
+import { CalendarCheck, History, Play, Plus } from 'lucide-react';
 
 import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
@@ -137,11 +138,13 @@ export default function NewSessionPage() {
           <div className='flex flex-wrap gap-2'>
             {lastTime.length > 0 && (
               <Button variant='outline' className='h-11 text-xs tracking-widest uppercase' onClick={() => addPlayers(lastTime)}>
+                <History aria-hidden='true' />
                 Same players as last time ({lastTime.length})
               </Button>
             )}
             {tonight && tonight.players.length > 0 && (
               <Button variant='outline' className='h-11 text-xs tracking-widest uppercase' onClick={() => addPlayers(tonight.players)}>
+                <CalendarCheck aria-hidden='true' />
                 Tonight&apos;s yes RSVPs ({tonight.players.length})
               </Button>
             )}
@@ -215,8 +218,9 @@ export default function NewSessionPage() {
               onClick={addNewPlayer}
               disabled={creating || !newPlayerName.trim()}
               className='h-11 px-5 shrink-0 text-sm tracking-widest'
+              aria-label='Add player'
             >
-              +
+              <Plus aria-hidden='true' />
             </Button>
           </div>
         </div>
@@ -227,6 +231,7 @@ export default function NewSessionPage() {
           onClick={startSession}
           disabled={starting || !name.trim() || selected.length === 0}
         >
+          <Play aria-hidden='true' />
           {starting ? 'Starting…' : `Start Session · ${selected.length} player${selected.length !== 1 ? 's' : ''}`}
         </Button>
       </div>
