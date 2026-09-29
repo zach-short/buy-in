@@ -3,12 +3,11 @@
 import Link from 'next/link';
 
 import { InstallCard } from '@/components/shared/install-card';
-import { DefaultBuyInSetting } from '@/components/shared/default-buy-in-setting';
 import { SignoutButton } from '@/components/shared/button/signout';
-import { VenmoNoteSetting } from '@/components/shared/venmo-note-setting';
 import { useAuthUser } from '@/hooks/use-auth-user';
 
 const MORE_LINKS = [
+  { label: 'Settings', href: '/account/settings' },
   { label: 'Invites', href: '/invites' },
   { label: 'Stats', href: '/stats' },
   { label: 'Performance', href: '/performance' },
@@ -33,7 +32,7 @@ export default function AccountPage() {
 
       <InstallCard />
 
-      <SectionLabel>Bar tools</SectionLabel>
+      <SectionLabel>More</SectionLabel>
       <nav className='flex flex-col border-t border-border mb-10'>
         {MORE_LINKS.map(({ label, href }) => (
           <Link
@@ -46,10 +45,6 @@ export default function AccountPage() {
           </Link>
         ))}
       </nav>
-
-      <SectionLabel>Settings</SectionLabel>
-      <VenmoNoteSetting />
-      <DefaultBuyInSetting />
 
       <SignoutButton className='mt-4' />
     </main>
