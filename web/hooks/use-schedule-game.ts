@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 
 import type { ShareResult } from '@/lib/share';
 import {
@@ -51,9 +51,21 @@ export function toScheduledAt(date: string, time: string): string {
   return new Date(`${date}T${time}`).toISOString();
 }
 
+// The date never changes under an open form, so there is nothing to subscribe to; the
+// external-store hook only gives the server render '' and the browser its own calendar day.
+// Reading it during render instead would stamp the server's UTC day into the HTML.
+const subscribeNever = () => () => {};
+
+function useLocalToday(): string {
+  return useSyncExternalStore(subscribeNever, () => localDateValue(new Date()), () => '');
+}
+
 export function useScheduleGame(): ScheduleGameForm {
+  const today = useLocalToday();
   const [name, setName] = useState('');
-  const [date, setDate] = useState('');
+  // null until the host picks, so the field shows today without an effect copying it in.
+  const [picked, setDate] = useState<string | null>(null);
+  const date = picked ?? today;
   const [time, setTime] = useState('19:00');
   const [submitting, setSubmitting] = useState(false);
   // Scheduling and minting are two requests, not one transaction. Holding the game means a
@@ -81,7 +93,7 @@ export function useScheduleGame(): ScheduleGameForm {
   const filled = name.trim() !== '' && date !== '' && time !== '';
   return {
     name, setName, date, setDate, time, setTime,
-    today: localDateValue(new Date()),
+    today,
     scheduled: game !== null,
     canSubmit: !submitting && (game !== null || filled),
     submitting, submit, shareInvite,
