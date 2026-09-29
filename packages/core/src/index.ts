@@ -21,7 +21,17 @@ export {
 } from './night-net';
 export { settle, type PlayerBalance, type Transfer } from './settlement';
 export { leaveTableVerdict, type LeaveTableVerdict } from './leave-table';
-export { tableRecords, type SeatLike, type PlayedLike, type TableRecord } from './table-record';
+export {
+  tableRecords,
+  withNextGames,
+  type SeatLike,
+  type PlayedLike,
+  type TableRecord,
+  type NextGameLike,
+  type NextGame,
+  type RsvpAnswer,
+  type TableWithGame,
+} from './table-record';
 export {
   resultsFromPerformance,
   resultsFromLogged,

@@ -1062,6 +1062,16 @@ export type Database = {
           bar_name: string
         }[]
       }
+      get_my_upcoming_games: {
+        Args: { p_stale_hours: number; p_window_days: number }
+        Returns: {
+          bar_id: string
+          game_id: string
+          my_status: string
+          name: string
+          scheduled_at: string
+        }[]
+      }
       get_rsvp_game: {
         Args: { p_token: string }
         Returns: {
@@ -1132,6 +1142,10 @@ export type Database = {
         Returns: string
       }
       revoke_bar_invite: { Args: { p_token: string }; Returns: undefined }
+      rsvp_my_game: {
+        Args: { p_game_id: string; p_status: string }
+        Returns: undefined
+      }
       rsvp_scheduled_game: {
         Args: { p_status: string; p_token: string }
         Returns: undefined

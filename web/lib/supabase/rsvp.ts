@@ -40,8 +40,13 @@ const FUNCTION_MISSING = 'PGRST202';
 
 // The match is loose because the raise wording belongs to the schema: 0004 and 0012 both say
 // 'invalid or expired link', and a standing-table invite opened here says 'not an event invite'.
-function rsvpError(error: PostgrestError): RsvpError {
+// Member Home's by-id path (0022, rsvp_my_game) raises in the same style and maps through here too.
+export function rsvpError(error: PostgrestError): RsvpError {
   const message = error.message.toLowerCase();
+  // 0022 only: the link path takes a late answer on purpose (0012), the card's path does not.
+  if (message.includes('game has already started')) {
+    return { fatal: true, message: 'This game has already started.' };
+  }
   // 0012: a cancelled game refuses answers. Fatal — no retry will change it — and checked first
   // so the loose dead-link match below can never swallow it.
   if (message.includes('game was cancelled')) {

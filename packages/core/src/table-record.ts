@@ -50,3 +50,45 @@ function byActivity(a: TableRecord, b: TableRecord): number {
 export function tableRecords(seats: readonly SeatLike[], played: readonly PlayedLike[]): TableRecord[] {
   return seats.map((seat) => recordFor(seat, played)).sort(byActivity);
 }
+
+/** One row of get_my_upcoming_games (0022): the soonest game at one table, and the caller's answer. */
+export interface NextGameLike {
+  bar_id: string;
+  game_id: string;
+  name: string;
+  scheduled_at: string;
+  my_status: string | null;
+}
+
+export type RsvpAnswer = 'yes' | 'no' | 'maybe';
+
+export interface NextGame {
+  gameId: string;
+  name: string;
+  scheduledAt: string;
+  /** null until the member answers — through the card or the host's texted link. */
+  myStatus: RsvpAnswer | null;
+}
+
+export interface TableWithGame extends TableRecord {
+  /** null when the table has nothing scheduled inside the window. */
+  nextGame: NextGame | null;
+}
+
+// The column is plain text with a check constraint, so anything else reads as no answer.
+function toAnswer(status: string | null): RsvpAnswer | null {
+  return status === 'yes' || status === 'no' || status === 'maybe' ? status : null;
+}
+
+function toNextGame(row: NextGameLike): NextGame {
+  return { gameId: row.game_id, name: row.name, scheduledAt: row.scheduled_at, myStatus: toAnswer(row.my_status) };
+}
+
+/**
+ * Each record with its table's next game. The records decide which tables are listed, as the
+ * seats do in tableRecords, so a game at a table without a card is never shown.
+ */
+export function withNextGames(records: readonly TableRecord[], games: readonly NextGameLike[]): TableWithGame[] {
+  const byBar = new Map(games.map((row) => [row.bar_id, toNextGame(row)]));
+  return records.map((record) => ({ ...record, nextGame: byBar.get(record.barId) ?? null }));
+}

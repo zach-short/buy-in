@@ -1,6 +1,6 @@
 # Member home — a shell for players who are not hosts, and a view of the tables they play at — SCOPE
 
-**Status: `BUILT` 2026-09-29, commit `259e121` — `HANDOFF.md` step 54.** Follow-up O3(c) is `PASSOFF.md` item 21. Gate answered in full (§7), every recommendation taken; build-time answers and the stale-row disproof are in §7. Opened by `/scope` on Sonnet 5.5.
+**Status: `BUILT` 2026-09-29, commit `259e121` — `HANDOFF.md` step 54.** Follow-up O3(c) is `PASSOFF.md` item 21, **built 2026-09-29 — `HANDOFF.md` step 59; migration `0022` not yet applied to production**. Gate answered in full (§7), every recommendation taken; build-time answers and the stale-row disproof are in §7. Opened by `/scope` on Sonnet 5.5.
 Owner's ask, 2026-09-29: is there a difference between a member and a host, is there a view of the tables you
 play at, and "if someone doesn't own a table they probably should not see the same thing as a table host."
 Vocabulary is the repo's own: a **table** is a bar (`web/hooks/use-sign-up.ts:51`, "Name your table"), a **game**
@@ -211,3 +211,12 @@ redirect to `/results?tab=poker` (B11, `web/app/performance/page.tsx`), so O2's 
 
 **Nothing in `DESIGN.md` (`supabase-migration`) is reopened.** `D16` (membership is not authority) and BD-8
 (a claimant is not a member) are relied on, not changed.
+
+**Item 21 (O3(c), `PASSOFF.md` item 21) — asked 2026-09-29 by the item-21 build session, in one batch.**
+
+| Q | Answer (2026-09-29) | Consequence |
+|---|---|---|
+| RSVP control's words (R7) | **Terse: "In / Out"** | two buttons under the card's record line, `web/components/member/member-home.tsx` |
+| Offer "Maybe"? | **No** — two buttons only | an existing `maybe` answer (from the link page) shows as neither selected; `rsvp_my_game` still accepts it, as the column does |
+| Game line's words (R7) | **Plain: "Next game: Fri Oct 3, 8:00 PM"** | short weekday/month form, not `formatDate`'s long "October 3, 2026" |
+| Window, and a game past its start but never started | **14 days (§4, now ratified); hide once more than 6 hours past `scheduled_at`** | two dials in `web/lib/config.ts`, passed to `get_my_upcoming_games` as arguments — no literal in SQL |

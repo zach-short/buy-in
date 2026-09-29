@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-import { formatCents, isSettled, type TableRecord } from '@pb/core';
+import { formatCents, isSettled, type RsvpAnswer, type TableRecord, type TableWithGame } from '@pb/core';
+import { NextGameRow } from '@/components/member/next-game';
 import { DataState } from '@/components/shared/data-state';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useTableRecords } from '@/hooks/use-table-records';
@@ -22,13 +23,17 @@ function netLine(record: TableRecord): { text: string; tone: string } {
   return { text: `${games} · ${sign}$${formatCents(Math.abs(record.netCents))}`, tone };
 }
 
-function TableCard({ record }: { record: TableRecord }) {
+type Answer = (gameId: string, status: RsvpAnswer) => Promise<void>;
+
+// The record half stays the link to Results; the next game sits below it, outside the link, so
+// answering never navigates.
+function TableCard({ record, onAnswer }: { record: TableWithGame; onAnswer: Answer }) {
   const line = netLine(record);
   return (
-    <li>
+    <li className='border border-border rounded-md has-[>a:hover]:border-primary/50 transition-colors'>
       <Link
         href={`/results?tab=poker&table=${record.barId}`}
-        className='flex items-center justify-between gap-4 border border-border rounded-md p-4 hover:border-primary/50 transition-colors'
+        className='flex items-center justify-between gap-4 p-4'
       >
         <div className='min-w-0'>
           <p className='text-sm font-medium truncate'>{record.barName}</p>
@@ -36,17 +41,18 @@ function TableCard({ record }: { record: TableRecord }) {
         </div>
         <span className='text-primary text-xs'>›</span>
       </Link>
+      {record.nextGame && <NextGameRow game={record.nextGame} onAnswer={onAnswer} />}
     </li>
   );
 }
 
-function TableList({ records }: { records: TableRecord[] }) {
+function TableList({ records, onAnswer }: { records: TableWithGame[]; onAnswer: Answer }) {
   const [all, setAll] = useState(false);
   const shown = all ? records : records.slice(0, MEMBER_HOME_TABLE_LIMIT);
   return (
     <>
       <ul className='flex flex-col gap-3'>
-        {shown.map((record) => <TableCard key={record.barId} record={record} />)}
+        {shown.map((record) => <TableCard key={record.barId} record={record} onAnswer={onAnswer} />)}
       </ul>
       {shown.length < records.length && (
         <button
@@ -61,9 +67,9 @@ function TableList({ records }: { records: TableRecord[] }) {
   );
 }
 
-/** Home for an account that hosts nowhere: the tables it plays at, and its record at each. */
+/** Home for an account that hosts nowhere: the tables it plays at, its record and next game at each. */
 export function MemberHome() {
-  const { records, error, retry } = useTableRecords();
+  const { records, error, retry, answer } = useTableRecords();
   return (
     <PageMain>
       <PageHeader title='Buy-In' />
@@ -74,7 +80,7 @@ export function MemberHome() {
         onRetry={retry}
         empty={<p className='text-xs text-muted-foreground py-4'>{EMPTY}</p>}
       >
-        {(rows) => <TableList records={rows} />}
+        {(rows) => <TableList records={rows} onAnswer={answer} />}
       </DataState>
     </PageMain>
   );

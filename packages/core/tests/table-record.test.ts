@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { tableRecords } from '../src/table-record';
+import { tableRecords, withNextGames, type TableRecord } from '../src/table-record';
 
 const colin = { barId: 'b1', barName: "Colin's" };
 const dana = { barId: 'b2', barName: "Dana's" };
@@ -34,5 +34,32 @@ describe('tableRecords', () => {
 
   it('is empty with no seats', () => {
     expect(tableRecords([], [])).toEqual([]);
+  });
+});
+
+describe('withNextGames', () => {
+  const played: TableRecord = { barId: 'b1', barName: "Colin's", games: 2, netCents: 1500, lastPlayedOn: '2026-09-08T20:00:00Z' };
+  const fresh: TableRecord = { barId: 'b2', barName: "Dana's", games: 0, netCents: 0, lastPlayedOn: null };
+  const friday = { bar_id: 'b1', game_id: 'g1', name: 'Friday Game', scheduled_at: '2026-10-02T00:00:00Z', my_status: 'yes' };
+
+  it('puts each table\'s next game on its record, and the answer the member gave', () => {
+    const [first] = withNextGames([played], [friday]);
+    expect(first).toEqual({ ...played, nextGame: { gameId: 'g1', name: 'Friday Game', scheduledAt: '2026-10-02T00:00:00Z', myStatus: 'yes' } });
+  });
+
+  it('leaves a table with no game scheduled at null, and keeps the records\' order', () => {
+    const records = withNextGames([played, fresh], [{ ...friday, bar_id: 'b2', game_id: 'g2' }]);
+    expect(records.map((r) => [r.barId, r.nextGame?.gameId ?? null])).toEqual([['b1', null], ['b2', 'g2']]);
+  });
+
+  it('reads no answer yet, or one it does not know, as null', () => {
+    const none = withNextGames([played], [{ ...friday, my_status: null }]);
+    const odd = withNextGames([played], [{ ...friday, my_status: 'perhaps' }]);
+    expect(none[0].nextGame?.myStatus).toBeNull();
+    expect(odd[0].nextGame?.myStatus).toBeNull();
+  });
+
+  it('never shows a game at a table the member has no card for', () => {
+    expect(withNextGames([played], [{ ...friday, bar_id: 'gone' }])).toEqual([{ ...played, nextGame: null }]);
   });
 });
