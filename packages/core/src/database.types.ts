@@ -116,6 +116,7 @@ export type Database = {
       bars: {
         Row: {
           cashapp_handle: string | null
+          claim_by_name: boolean
           created_at: string
           default_buy_in_cents: number
           default_buy_in_set_at: string | null
@@ -131,6 +132,7 @@ export type Database = {
         }
         Insert: {
           cashapp_handle?: string | null
+          claim_by_name?: boolean
           created_at?: string
           default_buy_in_cents?: number
           default_buy_in_set_at?: string | null
@@ -146,6 +148,7 @@ export type Database = {
         }
         Update: {
           cashapp_handle?: string | null
+          claim_by_name?: boolean
           created_at?: string
           default_buy_in_cents?: number
           default_buy_in_set_at?: string | null
