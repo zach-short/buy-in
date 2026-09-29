@@ -66,8 +66,9 @@ function ConfirmEmail({ state }: { state: DeleteAccountState }) {
   const deleting = state.step === 'deleting';
   return (
     <div className='space-y-3'>
-      <Label htmlFor='confirm-email' className='text-xs text-muted-foreground'>
-        This can&apos;t be undone. Type <span className='text-foreground'>{state.email}</span> to confirm.
+      <Label htmlFor='confirm-email' className='block text-xs leading-relaxed text-muted-foreground'>
+        This can&apos;t be undone. Type{' '}
+        <span className='break-all text-foreground'>{state.email}</span> to confirm.
       </Label>
       <Input
         id='confirm-email'
