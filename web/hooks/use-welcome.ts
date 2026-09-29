@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Role } from '@/components/auth/role-picker';
+import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
 import { createClient } from '@/lib/supabase/client';
 import { createBarWith, type BarFields } from '@/lib/supabase/pending-bar';
 
@@ -12,10 +13,16 @@ const EMPTY_BAR: BarFields = { barName: '', venmo: '', cashapp: '' };
 /** The host-or-player choice for a signed-in account with neither: a host names a table, a player enters a code. */
 export function useWelcome() {
   const router = useRouter();
+  const isHost = useIsBarStaff();
   const [role, setRole] = useState<Role | null>(null);
   const [bar, setBar] = useState<BarFields>(EMPTY_BAR);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Someone who already runs a table has nothing to choose; a second one is not what they came for.
+  useEffect(() => {
+    if (isHost) router.replace('/');
+  }, [isHost, router]);
 
   function setField<K extends keyof BarFields>(key: K, value: BarFields[K]): void {
     setBar((prev) => ({ ...prev, [key]: value }));

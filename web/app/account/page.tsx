@@ -7,6 +7,7 @@ import { InstallCard } from '@/components/shared/install-card';
 import { MyTables } from '@/components/shared/my-tables';
 import { SignoutButton } from '@/components/shared/button/signout';
 import { useAuthUser } from '@/hooks/use-auth-user';
+import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
 
 const MORE_LINKS = [
   { label: 'Settings', href: '/account/settings' },
@@ -19,6 +20,7 @@ const MORE_LINKS = [
 
 export default function AccountPage() {
   const { user } = useAuthUser();
+  const isHost = useIsBarStaff();
 
   return (
     <PageMain>
@@ -27,6 +29,16 @@ export default function AccountPage() {
       <InstallCard />
 
       <MyTables />
+
+      {isHost === false && (
+        <Link
+          href='/welcome'
+          className='flex items-center justify-between py-4 mb-10 border-y border-border text-sm tracking-widest uppercase hover:text-primary transition-colors'
+        >
+          Host your own table
+          <span className='text-primary text-xs'>›</span>
+        </Link>
+      )}
 
       <nav className='flex flex-col border-t border-border mb-10'>
         {MORE_LINKS.map(({ label, href }) => (

@@ -7,16 +7,13 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { GoogleButton, OrDivider } from '@/components/auth/google-button';
-import { HostFields } from '@/components/auth/host-fields';
 import { PasswordInput } from '@/components/auth/password-input';
-import { RolePicker } from '@/components/auth/role-picker';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 import { useSignUp, type SignUpState } from '@/hooks/use-sign-up';
 
-function AccountFields({ fields, setField, accountCreated }: Pick<SignUpState, 'fields' | 'setField' | 'accountCreated'>) {
+function AccountFields({ fields, setField }: Pick<SignUpState, 'fields' | 'setField'>) {
   return (
-    // Locked once the account exists: a retry after a failed create_bar only sets up the table.
-    <fieldset disabled={accountCreated} className='space-y-3 min-w-0'>
+    <div className='space-y-3 min-w-0'>
       <Input
         placeholder='Name'
         value={fields.name}
@@ -50,39 +47,32 @@ function AccountFields({ fields, setField, accountCreated }: Pick<SignUpState, '
         required
         className='h-11'
       />
-    </fieldset>
+    </div>
   );
 }
 
 function SignUpForm({ signUp }: { signUp: SignUpState }) {
-  const { fields, setField, status, accountCreated, submit, invited } = signUp;
+  const { fields, setField, status, submit, invited } = signUp;
   const submitting = status.kind === 'submitting';
 
   return (
     <form onSubmit={submit} className='space-y-3'>
-      {invited ? (
-        // Arriving via a ?redirect= means an invite or RSVP link sent them here — nobody
-        // clicking one of those is trying to start their own table, so there is no host
-        // option to pick by mistake. useSignUp already pins fields.role to 'member'.
+      {invited && (
         <p className='text-xs text-muted-foreground tracking-wide'>
           You&apos;ve been invited to join a table. Create an account to continue.
         </p>
-      ) : (
-        <RolePicker value={fields.role} onChange={(role) => setField('role', role)} />
       )}
-      <AccountFields fields={fields} setField={setField} accountCreated={accountCreated} />
-      {!invited && fields.role === 'host' && <HostFields fields={fields} setField={setField} />}
-      {!invited && !fields.role && <p className='text-xs text-muted-foreground tracking-wide'>Choose one to continue.</p>}
+      <AccountFields fields={fields} setField={setField} />
       {status.kind === 'error' && <p className='text-xs text-destructive tracking-wide'>{status.message}</p>}
-      <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={submitting || !fields.role}>
+      <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={submitting}>
         {submitting ? 'Creating account…' : 'Create account'}
       </Button>
     </form>
   );
 }
 
-// The OAuth round trip leaves the page, so a host's table name cannot be collected first. Google
-// sign-up asks no role: /auth/callback sends an account with no table or seat to /welcome, which does.
+// Google sign-up lands on '/', and /auth/callback sends an account with no table or seat to
+// /welcome, the same place the email form goes.
 function GoogleSignUp({ signUp }: { signUp: SignUpState }) {
   const searchParams = useSearchParams();
   const next = safeRedirectPath(searchParams.get('redirect'), '/');
