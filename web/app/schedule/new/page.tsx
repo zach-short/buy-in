@@ -15,7 +15,7 @@ export default function ScheduleGamePage() {
   const form = useScheduleGame();
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-sm mx-auto'>
+    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto'>
       <div className='flex items-center justify-between mb-10'>
         <button
           onClick={() => router.back()}

@@ -38,7 +38,7 @@ export default function SchedulePage() {
   }
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-sm mx-auto'>
+    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto'>
       <div className='flex items-center justify-between mb-10'>
         <div>
           <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Schedule</h1>

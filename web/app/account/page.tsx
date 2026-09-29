@@ -25,7 +25,7 @@ export default function AccountPage() {
   const { user } = useAuthUser();
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-sm mx-auto'>
+    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto'>
       <div className='mb-10'>
         <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Account</h1>
         {user?.email && <p className='text-xs text-muted-foreground mt-0.5'>{user.email}</p>}

@@ -96,7 +96,7 @@ export default function StatsPage() {
 
   if (closedSessions.length === 0) {
     return (
-      <main className='min-h-screen px-6 py-10 max-w-sm mx-auto'>
+      <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto'>
         <div className='flex items-center justify-between mb-10'>
           <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Stats</h1>
           <button onClick={() => router.back()} className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>Back</button>
@@ -107,7 +107,7 @@ export default function StatsPage() {
   }
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-2xl mx-auto pb-24'>
+    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto pb-24'>
       <div className='flex items-center justify-between mb-10'>
         <h1 className='text-base font-semibold tracking-widest uppercase text-primary'>Stats</h1>
         <button onClick={() => router.back()} className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>Back</button>

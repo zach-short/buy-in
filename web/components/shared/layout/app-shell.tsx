@@ -31,7 +31,7 @@ function DesktopLinks({ pathname }: { pathname: string }) {
 function TopBar({ pathname }: { pathname: string }) {
   return (
     <header className='hidden md:block fixed inset-x-0 top-0 z-40 h-14 border-b border-border bg-background/90 backdrop-blur'>
-      <div className='mx-auto flex h-full max-w-2xl items-center justify-between px-6'>
+      <div className='mx-auto flex h-full max-w-3xl items-center justify-between px-6'>
         <Link href='/' className='text-sm font-semibold tracking-widest uppercase text-primary'>
           Buy-In
         </Link>

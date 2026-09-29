@@ -47,7 +47,7 @@ function Dashboard() {
   const activeSession = sessions?.find((s) => s.status === 'active');
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-sm mx-auto flex flex-col'>
+    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto flex flex-col'>
       <h1 className='text-xl font-semibold tracking-widest uppercase text-primary mb-12'>Buy-In</h1>
 
       <div className='flex flex-col gap-3 mb-10'>

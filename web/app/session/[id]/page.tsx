@@ -280,7 +280,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     const isOver = remainingCents < 0;
 
     return (
-      <main className='min-h-screen flex flex-col max-w-lg mx-auto px-6 py-10'>
+      <main className='min-h-screen flex flex-col max-w-3xl mx-auto px-6 py-10'>
         <div className='mb-6'>
           <h1 className='text-base font-semibold tracking-widest uppercase text-primary mb-1'>Cash Out</h1>
           <p className='text-xs text-muted-foreground'>Enter each player&apos;s chip value to close the session.</p>
@@ -353,7 +353,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   }
 
   return (
-    <main className='min-h-screen flex flex-col max-w-lg mx-auto'>
+    <main className='min-h-screen flex flex-col max-w-3xl mx-auto'>
       {/* Top bar */}
       <div className='sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-6 py-4 flex items-center justify-between gap-3'>
         <div className='min-w-0'>

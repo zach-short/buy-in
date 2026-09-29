@@ -115,7 +115,7 @@ export default function InventoryPage() {
   }, {} as Record<string, InventoryRow[]>);
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-lg mx-auto pb-24'>
+    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto pb-24'>
       <div className='flex items-center justify-between mb-10'>
         <button
           onClick={() => router.back()}

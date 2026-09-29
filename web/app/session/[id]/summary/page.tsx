@@ -74,7 +74,7 @@ export default function SummaryPage({
   }
 
   return (
-    <main className='min-h-screen px-6 py-10 max-w-sm mx-auto pb-24'>
+    <main className='min-h-screen px-6 py-10 max-w-3xl mx-auto pb-24'>
       <div className='mb-10'>
         <h1 className='text-base font-semibold tracking-widest uppercase text-primary mb-1'>
           Session Complete
