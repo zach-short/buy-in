@@ -181,15 +181,19 @@ export function LogSessionForm({ existing }: { existing?: LoggedSessionRow }) {
     }
   }
 
+  // Delete sits outside the <form>: its confirm dialog is a form too, and React carries that
+  // submit through the portal to this form's onSubmit, which would save the fields first.
   return (
-    <form onSubmit={handleSubmit} className='space-y-6'>
-      <Fields form={form} />
-      <NetLine form={form} />
-      <Button type='submit' size='lg' className={ACTION} disabled={!form.canSave}>
-        <Check aria-hidden='true' />
-        {form.busy ? 'Saving…' : 'Save'}
-      </Button>
+    <div className='space-y-6'>
+      <form onSubmit={handleSubmit} className='space-y-6'>
+        <Fields form={form} />
+        <NetLine form={form} />
+        <Button type='submit' size='lg' className={ACTION} disabled={!form.canSave}>
+          <Check aria-hidden='true' />
+          {form.busy ? 'Saving…' : 'Save'}
+        </Button>
+      </form>
       {existing && <DeleteButton form={form} existing={existing} done={done} />}
-    </form>
+    </div>
   );
 }
