@@ -416,6 +416,54 @@ export type Database = {
           },
         ]
       }
+      logged_sessions: {
+        Row: {
+          big_blind_cents: number
+          buy_in_cents: number
+          cash_out_cents: number
+          created_at: string
+          game_format: string | null
+          id: string
+          minutes_played: number | null
+          note: string | null
+          played_on: string
+          small_blind_cents: number
+          straddle_cents: number | null
+          user_id: string
+          venue: string
+        }
+        Insert: {
+          big_blind_cents: number
+          buy_in_cents: number
+          cash_out_cents: number
+          created_at?: string
+          game_format?: string | null
+          id?: string
+          minutes_played?: number | null
+          note?: string | null
+          played_on: string
+          small_blind_cents: number
+          straddle_cents?: number | null
+          user_id?: string
+          venue: string
+        }
+        Update: {
+          big_blind_cents?: number
+          buy_in_cents?: number
+          cash_out_cents?: number
+          created_at?: string
+          game_format?: string | null
+          id?: string
+          minutes_played?: number | null
+          note?: string | null
+          played_on?: string
+          small_blind_cents?: number
+          straddle_cents?: number | null
+          user_id?: string
+          venue?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           bar_id: string

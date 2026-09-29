@@ -44,6 +44,9 @@ Build-level calls that implement a `D`, each with how to reverse it.
   *Reverse:* hold it in component state.
 - **BD-6 — `database.types.ts` gets the new table hand-written in the generator's shape**, per the step-52
   precedent (§0 row 10), until the owner regenerates it after applying the migration. *Reverse:* regenerate.
+- **BD-8 — Phase 1 does not touch `web/lib/config.ts`; its one dial moves to phase 2.** Added 2026-09-29, the owner's
+  call at build time. Item 22 had uncommitted edits in that file, and phase 1 needs no dial:
+  `hoursToMinutes` takes the cap as an argument, and only the form (phase 2) supplies it. *Reverse:* none needed.
 - **BD-7 — Hours are entered as a decimal (`4.5`) and stored as whole minutes (`270`).** Parsing is a pure
   `@pb/core` helper that rejects negatives and anything above the dial. *Reverse:* store hours as numeric. That
   is a float, so it is not recommended.
@@ -60,7 +63,11 @@ is right, with rows inserted by hand on the local stack.
 
 ### Phase 1 — Table, types, merge and reads
 
-**Status:** `PLANNED`.
+**Status: `BUILT` 2026-09-29, uncommitted at hand-off (the owner commits) — `HANDOFF.md` step 56.**
+`0021` is proven on the local stack and **unapplied to production**. The owner applies it before the commit
+ships, because the poker tab reads the table. Deviations: scope step 9 moved to phase 2 (BD-8). Step 3's types were
+generated from the local stack rather than hand-written (BD-6 met the easier way). Step 1 revokes `all` before
+granting, because the local default privileges gave `authenticated` TRUNCATE, which ignores RLS.
 
 **Scope:**
 1. **Migration** `supabase/migrations/<next free>_logged_sessions.sql`: read the directory first (§0 row 3). The
@@ -116,7 +123,8 @@ is right, with rows inserted by hand on the local stack.
    - Show `$/hr` beside a logged row's net when it has minutes.
    - Split into `source-filter.tsx` (All / Home games / Logged, BD-5) and a `poker-result-row.tsx`, so the file
      stays reviewable (L1).
-9. **`web/lib/config.ts`**: `LOGGED_SESSION_MAX_HOURS = 48` (the hours dial), with its comment.
+9. ~~**`web/lib/config.ts`**: `LOGGED_SESSION_MAX_HOURS = 48` (the hours dial), with its comment.~~ **Moved to phase 2,
+   2026-09-29 (BD-8).**
 
 **Done when:**
 - `cd web && npx tsc --noEmit`, `cd packages/core && npx tsc --noEmit`, `bun run test`, `cd web && bun run lint`
@@ -156,7 +164,8 @@ Results.
 4. **"Log a session"** button on the poker tab (D6). The all-games empty state gains it as a second action beside
    "Join a table". The Logged-filter empty state uses the copy the owner picks (R7).
 5. **Tapping a logged row** in the list opens `/results/log/<id>`. Home rows stay inert, as they are today.
-6. **`web/lib/config.ts`**: add the venue-suggestion count and the stakes presets as dials (`DESIGN.md` §4).
+6. **`web/lib/config.ts`**: add `LOGGED_SESSION_MAX_HOURS = 48` (moved from phase 1, BD-8), the venue-suggestion
+   count and the stakes presets as dials (`DESIGN.md` §4).
 7. **Copy (R7):** before shipping, ask for the form title, the Logged empty state and the tag, with 2–3 variants
    each.
 

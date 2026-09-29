@@ -1,6 +1,6 @@
 # Logged sessions — a player records a game played away from any table, and it counts in their results — DESIGN
 
-**Status: `RATIFIED` 2026-09-29.** Was `SCOPE.md` (committed `e014181`); renamed to `DESIGN.md` 2026-09-29 and
+**Status: `IN FLIGHT` 2026-09-29 — phase 1 `BUILT` (`HANDOFF.md` step 56), phase 2 open (`PASSOFF.md` item 24). Ratified 2026-09-29.** Was `SCOPE.md` (committed `e014181`); renamed to `DESIGN.md` 2026-09-29 and
 the gate answers (§7) written in as `D1`–`D8` below. **Frozen from here:** a decision changes only by a new dated
 `D<n>` or an `As built:` note under the one it amends, never by editing it in place. The build order is `PLAN.md`.
 
@@ -39,6 +39,10 @@ Owner, 2026-09-29, §7 Q4.
 cumulative chart and one list. A logged row shows its venue where a home game shows the table name, plus a
 "Logged" tag. A three-way filter, **All / Home games / Logged**, redraws the summary, the chart and the list.
 Tapping a logged row opens it for edit or delete. Owner, 2026-09-29, §7 Q5–Q6.
+*As built (phase 1, 2026-09-29, `HANDOFF.md` step 56):* the bar reads **All / Home games / Logged**, in the URL as
+`?source=`. It is hidden under `?table=` and when there are no sessions at all. The tag reads "Logged", and the
+Logged-filter empty state reads "No logged sessions — Games you play away from a table show up here once you log
+them." **Both are provisional (R7)**; item 24 asks. A logged row is not yet tappable; the edit page is phase 2.
 
 **D6 — The entry point is a "Log a session" button on the Results poker tab.** A button on member Home is a
 follow-up, not this item. The label is owner-picked (plain register), 2026-09-29, §7 Q7.

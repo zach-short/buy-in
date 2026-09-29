@@ -22,6 +22,24 @@ export {
 export { settle, type PlayerBalance, type Transfer } from './settlement';
 export { leaveTableVerdict, type LeaveTableVerdict } from './leave-table';
 export { tableRecords, type SeatLike, type PlayedLike, type TableRecord } from './table-record';
+export {
+  resultsFromPerformance,
+  resultsFromLogged,
+  mergeResults,
+  filterResults,
+  centsPerHour,
+  formatBlinds,
+  hoursToMinutes,
+  playedOnFromLocalDate,
+  type ResultSource,
+  type SourceFilter,
+  type PerformanceLike,
+  type LoggedLike,
+  type HomeResult,
+  type LoggedResult,
+  type PokerResult,
+  type HoursParse,
+} from './logged-session';
 export { featureVisibility, type DrinkSettings, type FeatureVisibility } from './host-features';
 export {
   venmoUrls,

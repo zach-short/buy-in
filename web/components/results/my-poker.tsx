@@ -2,49 +2,36 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import useSWR from 'swr';
 import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine,
 } from 'recharts';
 
-import { centsToDollars, formatCents, formatDate, isSettled } from '@pb/core';
+import { centsToDollars, filterResults, formatDate, type PokerResult, type SourceFilter } from '@pb/core';
 import { DataState } from '@/components/shared/data-state';
 import { EmptyResults } from '@/components/results/results-tabs';
-import { fetchMyPerformance, type PerformanceRow } from '@/lib/supabase/performance';
+import { PokerResultRow, resultDetail, signedAmount, toneClass } from '@/components/results/poker-result-row';
+import { SourceFilterBar, parseSourceFilter } from '@/components/results/source-filter';
+import { usePokerResults } from '@/hooks/use-poker-results';
 
 function shortDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// players/[id]/page.tsx's colours for whose money it is: green when it is the player's,
-// destructive when it is gone, muted at even. net_cents from get_my_performance is already
-// signed the player's way (positive = won), so positive is green here — the reverse of a
-// ledger balance, where positive means the player owes the house.
-function toneClass(cents: number): string {
-  if (isSettled(cents)) return 'text-muted-foreground';
-  return cents > 0 ? 'text-green-500' : 'text-destructive';
-}
-
-function signedAmount(cents: number): string {
-  if (isSettled(cents)) return 'Even';
-  return cents > 0 ? `+$${formatCents(cents)}` : `-$${formatCents(Math.abs(cents))}`;
-}
-
 // `cumulative` is dollars only because recharts picks its axis ticks from it (the reason
 // bar-results.tsx gives); the running sum is taken in cents and converted once, here.
 interface ChartPoint {
-  row: PerformanceRow;
+  row: PokerResult;
   date: string;
   cumulativeCents: number;
   cumulative: number;
 }
 
-function toChartPoints(rows: readonly PerformanceRow[]): ChartPoint[] {
+function toChartPoints(rows: readonly PokerResult[]): ChartPoint[] {
   let runningCents = 0;
   return rows.map((row) => {
-    runningCents += row.net_cents;
-    return { row, date: shortDate(row.played_on), cumulativeCents: runningCents, cumulative: centsToDollars(runningCents) };
+    runningCents += row.netCents;
+    return { row, date: shortDate(row.playedOn), cumulativeCents: runningCents, cumulative: centsToDollars(runningCents) };
   });
 }
 
@@ -55,10 +42,10 @@ function CumTooltip({ active, payload }: { active?: boolean; payload?: { payload
   const { row, cumulativeCents } = payload[0].payload;
   return (
     <div className='bg-background text-foreground border border-border rounded px-3 py-2 text-xs shadow-md'>
-      <p className='font-semibold text-primary mb-1'>{row.bar_name}</p>
-      <p className='text-muted-foreground'>{formatDate(row.played_on)} · {row.session_name}</p>
+      <p className='font-semibold text-primary mb-1'>{row.place}</p>
+      <p className='text-muted-foreground'>{formatDate(row.playedOn)} · {resultDetail(row)}</p>
       <p className='mt-1'>Running total: <span className={`font-bold ${toneClass(cumulativeCents)}`}>{signedAmount(cumulativeCents)}</span></p>
-      <p>Session: <span className={`font-medium ${toneClass(row.net_cents)}`}>{signedAmount(row.net_cents)}</span></p>
+      <p>Session: <span className={`font-medium ${toneClass(row.netCents)}`}>{signedAmount(row.netCents)}</span></p>
     </div>
   );
 }
@@ -123,32 +110,20 @@ function CumulativeChart({ points, totalCents }: { points: ChartPoint[]; totalCe
   );
 }
 
-function SessionList({ rows }: { rows: readonly PerformanceRow[] }) {
+function SessionList({ rows }: { rows: readonly PokerResult[] }) {
   const newestFirst = [...rows].reverse();
 
   return (
     <div className='border border-border rounded-md p-5'>
       <p className='text-xs tracking-widest uppercase text-muted-foreground mb-2'>Sessions</p>
       <ul className='divide-y divide-border'>
-        {newestFirst.map((row) => (
-          <li key={row.session_id} className='flex items-start justify-between gap-3 py-3'>
-            <div className='min-w-0'>
-              <p className='text-sm font-medium truncate'>{row.bar_name}</p>
-              <p className='text-xs text-muted-foreground mt-0.5'>{formatDate(row.played_on)}</p>
-              <p className='text-xs text-muted-foreground truncate'>${formatCents(row.stakes_cents)} game · {row.session_name}</p>
-            </div>
-            <div className='text-right shrink-0'>
-              <p className={`text-sm font-semibold tabular-nums ${toneClass(row.net_cents)}`}>{signedAmount(row.net_cents)}</p>
-              <p className='text-xs text-muted-foreground'>net</p>
-            </div>
-          </li>
-        ))}
+        {newestFirst.map((row) => <PokerResultRow key={`${row.source}:${row.id}`} row={row} />)}
       </ul>
     </div>
   );
 }
 
-function PerformanceView({ rows }: { rows: readonly PerformanceRow[] }) {
+function PerformanceView({ rows }: { rows: readonly PokerResult[] }) {
   const points = toChartPoints(rows);
   const totalCents = points[points.length - 1].cumulativeCents;
 
@@ -176,9 +151,14 @@ function TableFilter({ name }: { name: string }) {
   );
 }
 
-function NoSessions({ filtered }: { filtered: boolean }) {
-  if (filtered) {
+// The Logged empty state's words are provisional: logged-sessions DESIGN.md "Still owed at build"
+// has the owner pick them (R7) in item 24, alongside the form they will point to.
+function NoSessions({ table, source }: { table: boolean; source: SourceFilter }) {
+  if (table) {
     return <EmptyResults title='No sessions yet' detail='Once you buy in at this table, each session you play there shows up here.' href={ALL_TABLES} action='All tables' />;
+  }
+  if (source === 'logged') {
+    return <EmptyResults title='No logged sessions' detail='Games you play away from a table show up here once you log them.' href={ALL_TABLES} action='All sessions' />;
   }
   return (
     <EmptyResults
@@ -190,20 +170,28 @@ function NoSessions({ filtered }: { filtered: boolean }) {
   );
 }
 
-/** The signed-in player's own winnings across every host's table (was /performance). */
+/**
+ * The signed-in player's own winnings: every host's table and every game they logged away from
+ * one (was /performance; logged-sessions DESIGN.md D5).
+ */
 export function MyPoker() {
-  const table = useSearchParams().get('table');
-  const { data, error, mutate } = useSWR('get_my_performance', fetchMyPerformance);
-  const rows = table ? data?.filter((row) => row.bar_id === table) : data;
+  const params = useSearchParams();
+  const table = params.get('table');
+  const source = parseSourceFilter(params.get('source'));
+  const { results, error, retry } = usePokerResults();
+  const rows = results && filterResults(results, { source, table });
 
   return (
-    <DataState rows={rows} error={error} onRetry={() => mutate()} empty={<NoSessions filtered={!!table} />}>
-      {(loaded) => (
-        <>
-          {table && <TableFilter name={loaded[0].bar_name} />}
-          <PerformanceView rows={loaded} />
-        </>
-      )}
-    </DataState>
+    <>
+      {!table && results && results.length > 0 && <SourceFilterBar active={source} />}
+      <DataState rows={rows} error={error} onRetry={retry} empty={<NoSessions table={!!table} source={source} />}>
+        {(loaded) => (
+          <>
+            {table && <TableFilter name={loaded[0].place} />}
+            <PerformanceView rows={loaded} />
+          </>
+        )}
+      </DataState>
+    </>
   );
 }
