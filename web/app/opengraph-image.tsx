@@ -58,7 +58,7 @@ export default async function OpenGraphImage() {
             BUY-IN
           </div>
           <BrassRule />
-          <div style={{ fontSize: 30, letterSpacing: 8, paddingLeft: 8, color: THEME_COLORS.mutedForeground }}>
+          <div style={{ fontSize: 30, letterSpacing: 8, paddingLeft: 8, color: THEME_COLORS.foreground }}>
             HOME BAR MANAGEMENT FOR POKER NIGHTS
           </div>
         </div>
