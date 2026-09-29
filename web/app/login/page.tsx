@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
-import { GoogleButton, OrDivider } from '@/components/auth/google-button';
+import { GoogleButton } from '@/components/auth/google-button';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 
 // useSearchParams() forces this subtree to opt out of static prerendering; Next.js
@@ -26,6 +26,7 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,31 +51,43 @@ function LoginForm() {
       <div className='w-full max-w-xs space-y-8'>
         <h1 className='text-center text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
 
-        <GoogleButton next={safeRedirectPath(searchParams.get('redirect'), '/')} />
-        <OrDivider />
-
-        <form onSubmit={handleSubmit} className='space-y-3'>
-          <Input
-            type='email'
-            placeholder='Email'
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete='email'
-            className='h-11'
-          />
-          <Input
-            type='password'
-            placeholder='Password'
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete='current-password'
-            className='h-11'
-          />
-          {error && <p className='text-xs text-destructive tracking-wide'>{error}</p>}
-          <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={loading}>
-            {loading ? 'Signing in…' : 'Enter'}
-          </Button>
-        </form>
+        <div className='space-y-3'>
+          {showEmail ? (
+            <form onSubmit={handleSubmit} className='space-y-3'>
+              <Input
+                type='email'
+                placeholder='Email'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete='email'
+                autoFocus
+                className='h-11'
+              />
+              <Input
+                type='password'
+                placeholder='Password'
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete='current-password'
+                className='h-11'
+              />
+              {error && <p className='text-xs text-destructive tracking-wide'>{error}</p>}
+              <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={loading}>
+                {loading ? 'Signing in…' : 'Enter'}
+              </Button>
+            </form>
+          ) : (
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => setShowEmail(true)}
+              className='w-full h-11 tracking-widest uppercase text-xs'
+            >
+              Continue with Email
+            </Button>
+          )}
+          <GoogleButton next={safeRedirectPath(searchParams.get('redirect'), '/')} />
+        </div>
 
         <p className='text-center text-xs text-muted-foreground tracking-wide'>
           Don&apos;t have an account?{' '}
