@@ -1107,7 +1107,9 @@ export type Database = {
         Args: { p_from: string; p_into: string }
         Returns: undefined
       }
+      my_bar_ids: { Args: never; Returns: string[] }
       my_payment_reports: { Args: { p_token: string }; Returns: Json }
+      my_staff_bar_ids: { Args: never; Returns: string[] }
       payment_report_player: {
         Args: { p_token: string }
         Returns: {
