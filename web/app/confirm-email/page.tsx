@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useConfirmationWatch } from '@/hooks/use-confirmation-watch';
 import { useResendConfirmation, type ResendState } from '@/hooks/use-resend-confirmation';
 import { safeRedirectPath } from '@/lib/safe-redirect';
+import { ALL_WEBMAIL, webmailFor, type Webmail } from '@/lib/webmail';
 
 function resendLabel({ status, cooldown }: ResendState): string {
   if (status === 'sending') return 'Sending…';
@@ -29,6 +30,29 @@ function ResendButton({ resend }: { resend: ResendState }) {
       </Button>
       {status === 'sent' && <p className='text-xs text-muted-foreground tracking-wide text-center'>Sent again.</p>}
       {typeof status === 'object' && <p className='text-xs text-destructive tracking-wide text-center'>{status.error}</p>}
+    </div>
+  );
+}
+
+function OpenMailLink({ mail, label }: { mail: Webmail; label: string }) {
+  return (
+    <Button asChild variant='outline' className='w-full h-11 tracking-widest uppercase text-xs'>
+      <a href={mail.url} target='_blank' rel='noopener noreferrer'>
+        {label}
+      </a>
+    </Button>
+  );
+}
+
+function OpenMail({ email }: { email: string }) {
+  const known = webmailFor(email);
+  if (known) return <OpenMailLink mail={known} label={`Open ${known.name}`} />;
+  return (
+    <div className='space-y-2'>
+      <p className='text-xs text-muted-foreground tracking-wide text-center'>Open your inbox</p>
+      {ALL_WEBMAIL.map((mail) => (
+        <OpenMailLink key={mail.name} mail={mail} label={mail.name} />
+      ))}
     </div>
   );
 }
@@ -66,6 +90,8 @@ function ConfirmEmail() {
             Waiting for you to confirm…
           </p>
         </div>
+
+        {email && <OpenMail email={email} />}
 
         {email && <ResendButton resend={resend} />}
 
