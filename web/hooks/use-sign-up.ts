@@ -3,12 +3,13 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import type { Role } from '@/components/auth/role-picker';
 import { createAccount, type AccountFields, type BarFields } from '@/lib/supabase/sign-up';
 import { createClient } from '@/lib/supabase/client';
 import { completePendingBar } from '@/lib/supabase/pending-bar';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 
-export type Role = 'host' | 'member';
+export type { Role };
 
 export interface SignUpFields extends AccountFields, BarFields {
   confirmPassword: string;

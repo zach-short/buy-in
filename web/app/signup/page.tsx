@@ -7,69 +7,11 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { GoogleButton, OrDivider } from '@/components/auth/google-button';
+import { HostFields } from '@/components/auth/host-fields';
 import { PasswordInput } from '@/components/auth/password-input';
+import { RolePicker } from '@/components/auth/role-picker';
 import { safeRedirectPath } from '@/lib/safe-redirect';
-import { useSignUp, type Role, type SignUpState } from '@/hooks/use-sign-up';
-import { cn } from '@/lib/utils';
-
-const ROLES: ReadonlyArray<{ role: Role; title: string; hint: string }> = [
-  { role: 'host', title: "I'm hosting a game", hint: 'Set up your table' },
-  { role: 'member', title: "I'm joining a game", hint: 'Enter an invite code next' },
-];
-
-function RolePicker({ value, onChange }: { value: Role | null; onChange: (role: Role) => void }) {
-  return (
-    <div role='group' aria-label='Account type' className='grid grid-cols-2 gap-3'>
-      {ROLES.map(({ role, title, hint }) => (
-        <button
-          key={role}
-          type='button'
-          aria-pressed={value === role}
-          onClick={() => onChange(role)}
-          className={cn(
-            'flex flex-col items-start justify-start gap-1 rounded-md border px-3 py-4 text-left transition-colors outline-none',
-            'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-            value === role ? 'border-primary bg-primary/10' : 'border-input hover:bg-accent',
-          )}
-        >
-          <span className='block text-sm font-medium'>{title}</span>
-          <span className='block text-xs text-muted-foreground'>{hint}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function HostFields({ fields, setField }: Pick<SignUpState, 'fields' | 'setField'>) {
-  return (
-    <div className='space-y-3 pt-2'>
-      <p className='text-xs text-muted-foreground tracking-widest uppercase'>Your table</p>
-      <Input
-        placeholder='Table name'
-        value={fields.barName}
-        onChange={(e) => setField('barName', e.target.value)}
-        required
-        className='h-11'
-      />
-      <Input
-        placeholder='Venmo handle (optional)'
-        value={fields.venmo}
-        onChange={(e) => setField('venmo', e.target.value)}
-        autoCapitalize='none'
-        autoCorrect='off'
-        className='h-11'
-      />
-      <Input
-        placeholder='Cash App handle (optional)'
-        value={fields.cashapp}
-        onChange={(e) => setField('cashapp', e.target.value)}
-        autoCapitalize='none'
-        autoCorrect='off'
-        className='h-11'
-      />
-    </div>
-  );
-}
+import { useSignUp, type SignUpState } from '@/hooks/use-sign-up';
 
 function AccountFields({ fields, setField, accountCreated }: Pick<SignUpState, 'fields' | 'setField' | 'accountCreated'>) {
   return (
@@ -139,21 +81,12 @@ function SignUpForm({ signUp }: { signUp: SignUpState }) {
   );
 }
 
-// The OAuth round trip leaves the page, so a host's table name cannot be collected and
-// create_bar cannot run afterwards; Google sign-up is for members and invited visitors only.
+// The OAuth round trip leaves the page, so a host's table name cannot be collected first. Google
+// sign-up asks no role: /auth/callback sends an account with no table or seat to /welcome, which does.
 function GoogleSignUp({ signUp }: { signUp: SignUpState }) {
   const searchParams = useSearchParams();
-  const { fields, invited } = signUp;
-  const role = invited ? 'member' : fields.role;
-  const next = safeRedirectPath(searchParams.get('redirect'), '/join');
-  return (
-    <div className='space-y-2'>
-      <GoogleButton next={next} disabled={role !== 'member'} />
-      {!invited && role === 'host' && (
-        <p className='text-xs text-muted-foreground tracking-wide'>Hosts set up their table with email below.</p>
-      )}
-    </div>
-  );
+  const next = safeRedirectPath(searchParams.get('redirect'), '/');
+  return <GoogleButton next={next} disabled={signUp.status.kind === 'submitting'} />;
 }
 
 // useSearchParams() (in useSignUp, for ?redirect=) forces this subtree to opt out of
