@@ -554,6 +554,57 @@ export type Database = {
           },
         ]
       }
+      player_claim_requests: {
+        Row: {
+          bar_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          player_id: string
+          requester_email: string | null
+          requester_name: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          bar_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          player_id: string
+          requester_email?: string | null
+          requester_name?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          bar_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          player_id?: string
+          requester_email?: string | null
+          requester_name?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_claim_requests_bar_id_fkey"
+            columns: ["bar_id"]
+            isOneToOne: false
+            referencedRelation: "bars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_claim_requests_player_id_bar_id_fkey"
+            columns: ["player_id", "bar_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id", "bar_id"]
+          },
+        ]
+      }
       player_share_links: {
         Row: {
           bar_id: string
@@ -794,6 +845,10 @@ export type Database = {
         Returns: undefined
       }
       claim_player: { Args: { p_token: string }; Returns: string }
+      close_stale_claim_requests: {
+        Args: { p_bar_id: string }
+        Returns: undefined
+      }
       create_bar: {
         Args: {
           p_cashapp_handle?: string
@@ -812,6 +867,10 @@ export type Database = {
       }
       create_scheduled_game: {
         Args: { p_bar_id: string; p_name: string; p_scheduled_at: string }
+        Returns: string
+      }
+      decide_player_claim: {
+        Args: { p_approve: boolean; p_request_id: string }
         Returns: string
       }
       delete_order: { Args: { p_order_id: string }; Returns: undefined }
@@ -838,6 +897,22 @@ export type Database = {
         Args: { p_name: string; p_token: string }
         Returns: string
       }
+      list_claimable_players: {
+        Args: { p_token: string }
+        Returns: {
+          has_pending_request: boolean
+          id: string
+          name: string
+        }[]
+      }
+      reassign_player_account: {
+        Args: { p_from: string; p_to: string }
+        Returns: undefined
+      }
+      request_player_claim: {
+        Args: { p_player_id: string; p_token: string }
+        Returns: string
+      }
       revoke_bar_invite: { Args: { p_token: string }; Returns: undefined }
       rsvp_scheduled_game: {
         Args: { p_status: string; p_token: string }
@@ -862,6 +937,11 @@ export type Database = {
         Args: { p_bar_id: string; p_name: string; p_players: Json }
         Returns: string
       }
+      swap_player_accounts: {
+        Args: { p_a: string; p_b: string }
+        Returns: undefined
+      }
+      unlink_player: { Args: { p_player_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

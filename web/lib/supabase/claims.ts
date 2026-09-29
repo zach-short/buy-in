@@ -1,6 +1,6 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
-import { claimsClient } from '@/lib/supabase/claims-schema';
+import { createClient } from '@/lib/supabase/client';
 
 // PASSOFF item 17 (owner, 2026-09-29): a migrated player claims their existing row from the
 // standing invite link, a host approves it, and a host can undo or swap any link. Every call
@@ -83,7 +83,7 @@ function hostError(error: PostgrestError): Error {
 
 /** The picker's names, and this account's own latest request among them. */
 export async function fetchClaimState(token: string): Promise<ClaimState> {
-  const client = claimsClient();
+  const client = createClient();
   const { data, error } = await client.rpc('list_claimable_players', { p_token: token });
   if (error?.code === FUNCTION_MISSING) return { kind: 'open', players: [], myRequest: null };
   if (error) {
@@ -98,7 +98,7 @@ export async function fetchClaimState(token: string): Promise<ClaimState> {
 // on this invite's list: a host also reads their own bar's requests through the staff policy, and
 // a request for a row that has since been claimed has nothing left to show.
 async function fetchMyRequest(players: ClaimablePlayer[]): Promise<MyClaimRequest | null> {
-  const client = claimsClient();
+  const client = createClient();
   const { data: auth } = await client.auth.getSession();
   const userId = auth.session?.user.id;
   if (!userId || !players.length) return null;
@@ -113,13 +113,13 @@ async function fetchMyRequest(players: ClaimablePlayer[]): Promise<MyClaimReques
 
 /** Asks the host to link this account to `playerId`. Safe to repeat for the same name. */
 export async function requestClaim(token: string, playerId: string): Promise<ClaimResult> {
-  const { error } = await claimsClient().rpc('request_player_claim', { p_token: token, p_player_id: playerId });
+  const { error } = await createClient().rpc('request_player_claim', { p_token: token, p_player_id: playerId });
   return error ? { ok: false, reason: classify(error) } : { ok: true };
 }
 
 /** Every request waiting on this bar's hosts, oldest first. */
 export async function fetchPendingClaims(barId: string): Promise<PendingClaim[]> {
-  const { data, error } = await claimsClient().from('player_claim_requests')
+  const { data, error } = await createClient().from('player_claim_requests')
     .select('id, player_id, requester_email, requester_name, created_at, players(name)')
     .eq('bar_id', barId).eq('status', 'pending')
     .order('created_at', { ascending: true });
@@ -135,7 +135,7 @@ export async function fetchPendingClaims(barId: string): Promise<PendingClaim[]>
 }
 
 export async function decideClaim(requestId: string, approve: boolean): Promise<DecideOutcome> {
-  const { data, error } = await claimsClient().rpc('decide_player_claim', { p_request_id: requestId, p_approve: approve });
+  const { data, error } = await createClient().rpc('decide_player_claim', { p_request_id: requestId, p_approve: approve });
   if (error) throw hostError(error);
   if (!isOutcome(data)) throw new Error(`Unexpected answer from the server: ${data}`);
   return data;
@@ -143,18 +143,18 @@ export async function decideClaim(requestId: string, approve: boolean): Promise<
 
 /** The row goes back to unclaimed; the account stops seeing it. */
 export async function unlinkPlayer(playerId: string): Promise<void> {
-  const { error } = await claimsClient().rpc('unlink_player', { p_player_id: playerId });
+  const { error } = await createClient().rpc('unlink_player', { p_player_id: playerId });
   if (error) throw hostError(error);
 }
 
 /** Each row takes the other's account; either side may have none. */
 export async function swapPlayerAccounts(a: string, b: string): Promise<void> {
-  const { error } = await claimsClient().rpc('swap_player_accounts', { p_a: a, p_b: b });
+  const { error } = await createClient().rpc('swap_player_accounts', { p_a: a, p_b: b });
   if (error) throw hostError(error);
 }
 
 /** Moves the account off a duplicate with no history onto its real row, deleting the duplicate. */
 export async function reassignPlayerAccount(from: string, to: string): Promise<void> {
-  const { error } = await claimsClient().rpc('reassign_player_account', { p_from: from, p_to: to });
+  const { error } = await createClient().rpc('reassign_player_account', { p_from: from, p_to: to });
   if (error) throw hostError(error);
 }
