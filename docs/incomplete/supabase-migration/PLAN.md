@@ -680,7 +680,7 @@ target that still has the data in the shape the old app expects.
 
 ### Phase 11 — Realtime
 
-**Status:** `PLANNED`. Lane A. Waits on phase 9. Deliberately after cutover (`D7`).
+**Status:** `BUILT` 2026-09-29, commit <hash> — runtime pass owed (`HANDOFF.md` step 34). `0006` written, unapplied; the owner applies it.
 
 **Scope.** Subscribe the session screen (and whatever else earns it) to the six published tables;
 set the poll dial to 0 where a subscription replaces it. State explicitly which surfaces

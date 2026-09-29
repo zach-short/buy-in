@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { centsToDollars, formatCents, toCents } from '@pb/core';
-import { SESSION_POLL_INTERVAL_MS } from '@/lib/config';
+import { useSessionRealtime } from '@/hooks/use-session-realtime';
 import { sumCents } from '@/lib/ledger';
 import {
   fetchDrinks, fetchInventory, fetchPlayers, fetchSession, fetchSessionBuyIns,
@@ -36,16 +36,21 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const router = useRouter();
 
+  // Phase 11: this screen subscribes (poll map: web/hooks/use-session-realtime.ts). While the
+  // channel is SUBSCRIBED the session-scoped keys do not poll; while it is not, they fall back
+  // to the 15 s poll — all four (the hook polls ['session', id]), since a rebuy, a cash-out or
+  // a close is as live as a pour.
+  const { refreshInterval } = useSessionRealtime(id);
   const { data: session, mutate: mutateSession } = useSWR(['session', id], ([, sessionId]) => fetchSession(sessionId));
   const { data: players = [], mutate: mutatePlayers } = useSWR('players', fetchPlayers);
   const { data: orders = [], mutate: mutateOrders } = useSWR(
-    ['orders', id], ([, sessionId]) => fetchSessionOrders(sessionId), { refreshInterval: SESSION_POLL_INTERVAL_MS }
+    ['orders', id], ([, sessionId]) => fetchSessionOrders(sessionId), { refreshInterval }
   );
   const { data: buyIns = [], mutate: mutateBuyIns } = useSWR(
-    ['buy_ins', id], ([, sessionId]) => fetchSessionBuyIns(sessionId)
+    ['buy_ins', id], ([, sessionId]) => fetchSessionBuyIns(sessionId), { refreshInterval }
   );
   const { data: cashouts = [], mutate: mutateCashouts } = useSWR(
-    ['cashouts', id], ([, sessionId]) => fetchSessionCashouts(sessionId)
+    ['cashouts', id], ([, sessionId]) => fetchSessionCashouts(sessionId), { refreshInterval }
   );
   const { data: drinks = [] } = useSWR('drinks', fetchDrinks);
   const { data: inventory = [], mutate: mutateInventory } = useSWR('inventory', fetchInventory);

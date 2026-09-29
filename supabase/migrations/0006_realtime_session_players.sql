@@ -1,0 +1,21 @@
+-- 0006 — publish session_players to Realtime (2026-09-29, phase 11). UNAPPLIED: the owner
+-- applies it to rxvznjtpskendwhwwgin; no agent write tool runs it (CLAUDE.md).
+--
+-- Why: a player added mid-night goes through add_session_player, which writes a
+-- session_players row, and the live session screen reads the roster from that table
+-- (fetchSession's session_players embed). 0001's publication (0001_init.sql:869) leaves it
+-- out, so a second device never learns of the new player (SCOPE-phase-11.md §1 row 5; the
+-- owner chose scope B, §7 Q1).
+--
+-- DELETE events carry the key only, and reach every subscriber: RLS is not applied to
+-- DELETE, and replica identity stays at its default (0001_init.sql:862-867 — never FULL).
+-- This table's key is (session_id, player_id), so such an event carries those two uuids and
+-- nothing else. Rows are only deleted by the cascade from delete_session.
+--
+-- Not re-runnable, on purpose: `add table` errors ("already member of publication") if
+-- session_players is already published. That error is the check — no guard is added that
+-- would hide a second apply. Verify afterwards with
+--   select tablename from pg_publication_tables where pubname = 'supabase_realtime';
+-- which should list seven tables, session_players among them.
+
+alter publication supabase_realtime add table session_players;
