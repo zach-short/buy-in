@@ -1,7 +1,6 @@
 -- 0022 — a member sees the next game at each table they sit at, and answers it in the app
--- (2026-09-29, PASSOFF.md item 21, member-home SCOPE.md §3 O3(c)). NOT APPLIED: the owner
--- applies it. The web card calls both functions, so it must reach production before the web
--- change that uses them.
+-- (2026-09-29, PASSOFF.md item 21, member-home SCOPE.md §3 O3(c)). Applied to production
+-- 2026-09-29 by the owner, after commit 59f0027.
 --
 -- Three parts in one file, because the read is only safe with the policy change beside it:
 --   1. get_my_upcoming_games() — per table the caller holds a claimed players row at, the
