@@ -10,8 +10,6 @@ import { fetchBuyIns, fetchCashouts, fetchOrders, fetchPayments, fetchPlayers } 
 import { createPlayer } from '@/lib/supabase/writes';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { VenmoNoteSetting } from '@/components/shared/venmo-note-setting';
-import { DefaultBuyInSetting } from '@/components/shared/default-buy-in-setting';
 
 export default function PlayersPage() {
   const router = useRouter();
@@ -135,11 +133,6 @@ export default function PlayersPage() {
             </div>
           </button>
         ))}
-      </div>
-
-      <div className='mt-10'>
-        <VenmoNoteSetting />
-        <DefaultBuyInSetting />
       </div>
     </main>
   );

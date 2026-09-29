@@ -8,7 +8,6 @@ import { sumCents } from '@/lib/ledger';
 import { fetchSessions, fetchSessionOrders } from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
 import { useAuthUser } from '@/hooks/use-auth-user';
-import { signOutToLanding } from '@/lib/supabase/sign-out';
 
 function Landing() {
   const router = useRouter();
@@ -49,15 +48,7 @@ function Dashboard() {
 
   return (
     <main className='min-h-screen px-6 py-10 max-w-sm mx-auto flex flex-col'>
-      <div className='flex items-center justify-between mb-12'>
-        <h1 className='text-xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
-        <button
-          onClick={signOutToLanding}
-          className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
-        >
-          Sign out
-        </button>
-      </div>
+      <h1 className='text-xl font-semibold tracking-widest uppercase text-primary mb-12'>Buy-In</h1>
 
       <div className='flex flex-col gap-3 mb-10'>
         {activeSession ? (
@@ -79,30 +70,8 @@ function Dashboard() {
         )}
       </div>
 
-      <nav className='flex flex-col border-t border-border'>
-        {[
-          { label: 'Sessions', path: '/sessions' },
-          { label: 'Schedule', path: '/schedule' },
-          { label: 'Invites', path: '/invites' },
-          { label: 'Players', path: '/players' },
-          { label: 'Stats', path: '/stats' },
-          { label: 'Inventory', path: '/inventory' },
-          { label: 'Drinks', path: '/drinks' },
-          { label: 'Menu', path: '/menu' },
-        ].map(({ label, path }) => (
-          <button
-            key={path}
-            onClick={() => router.push(path)}
-            className='flex items-center justify-between py-4 border-b border-border text-sm tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors text-left'
-          >
-            {label}
-            <span className='text-primary text-xs'>›</span>
-          </button>
-        ))}
-      </nav>
-
       {lastClosed && (
-        <div className='mt-10'>
+        <div>
           <p className='text-xs tracking-widest uppercase text-muted-foreground mb-4'>Last Session</p>
           <button className='w-full border border-border rounded-md p-4 text-left hover:border-primary/50 transition-colors' onClick={() => router.push(`/session/${lastClosed.id}`)}>
             <p className='text-sm font-medium mb-3'>{lastClosed.name}</p>
