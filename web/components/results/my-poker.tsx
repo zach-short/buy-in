@@ -1,20 +1,24 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import {
-  ResponsiveContainer, LineChart, Line,
-  XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine,
-} from 'recharts';
 
-import { centsToDollars, filterResults, formatDate, type PokerResult, type SourceFilter } from '@pb/core';
+import { centsToDollars, filterResults, type PokerResult, type SourceFilter } from '@pb/core';
 import { Plus } from 'lucide-react';
 import { DataState } from '@/components/shared/data-state';
 import { EmptyResults } from '@/components/results/results-tabs';
-import { PokerResultRow, resultDetail, signedAmount, toneClass } from '@/components/results/poker-result-row';
+import { PokerResultRow, signedAmount, toneClass } from '@/components/results/poker-result-row';
 import { SourceFilterBar, parseSourceFilter } from '@/components/results/source-filter';
 import { Button } from '@/components/ui/button';
 import { usePokerResults } from '@/hooks/use-poker-results';
+
+// recharts is ~120KB gzipped, so the plot loads on its own, client-only (it measures the DOM).
+// The placeholder is the plot's exact height, so the card does not jump when it arrives.
+const CumulativeNetPlot = dynamic(
+  () => import('@/components/results/poker-chart').then((m) => m.CumulativeNetPlot),
+  { ssr: false, loading: () => <div aria-hidden className='h-[220px]' /> },
+);
 
 function shortDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -22,7 +26,7 @@ function shortDate(date: string) {
 
 // `cumulative` is dollars only because recharts picks its axis ticks from it (the reason
 // bar-results.tsx gives); the running sum is taken in cents and converted once, here.
-interface ChartPoint {
+export interface ChartPoint {
   row: PokerResult;
   date: string;
   cumulativeCents: number;
@@ -35,21 +39,6 @@ function toChartPoints(rows: readonly PokerResult[]): ChartPoint[] {
     runningCents += row.netCents;
     return { row, date: shortDate(row.playedOn), cumulativeCents: runningCents, cumulative: centsToDollars(runningCents) };
   });
-}
-
-// text-foreground because the tooltip renders inside the chart's win/loss-coloured wrapper
-// and would otherwise inherit it.
-function CumTooltip({ active, payload }: { active?: boolean; payload?: { payload: ChartPoint }[] }) {
-  if (!active || !payload?.length) return null;
-  const { row, cumulativeCents } = payload[0].payload;
-  return (
-    <div className='bg-background text-foreground border border-border rounded px-3 py-2 text-xs shadow-md'>
-      <p className='font-semibold text-primary mb-1'>{row.place}</p>
-      <p className='text-muted-foreground'>{formatDate(row.playedOn)} · {resultDetail(row)}</p>
-      <p className='mt-1'>Running total: <span className={`font-bold ${toneClass(cumulativeCents)}`}>{signedAmount(cumulativeCents)}</span></p>
-      <p>Session: <span className={`font-medium ${toneClass(row.netCents)}`}>{signedAmount(row.netCents)}</span></p>
-    </div>
-  );
 }
 
 function Summary({ totalCents, sessions }: { totalCents: number; sessions: number }) {
@@ -69,44 +58,12 @@ function Summary({ totalCents, sessions }: { totalCents: number; sessions: numbe
 }
 
 function CumulativeChart({ points, totalCents }: { points: ChartPoint[]; totalCents: number }) {
-  const cumMin = Math.min(0, ...points.map((p) => p.cumulative));
-  const cumMax = Math.max(0, ...points.map((p) => p.cumulative));
-
   return (
     <div className='border border-border rounded-md p-5 mb-6'>
       <p className='text-xs tracking-widest uppercase text-muted-foreground mb-6'>Cumulative Net</p>
       {/* The line strokes in currentColor, so it takes the same win/loss class as the labels. */}
       <div className={toneClass(totalCents)}>
-        <ResponsiveContainer width='100%' height={220}>
-          <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray='3 3' stroke='var(--border)' vertical={false} />
-            <XAxis
-              dataKey='date'
-              tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-              axisLine={false}
-              tickLine={false}
-              dy={6}
-            />
-            <YAxis
-              tickFormatter={(v: number) => `$${v}`}
-              tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-              axisLine={false}
-              tickLine={false}
-              width={52}
-              domain={[cumMin - 5, cumMax + 5]}
-            />
-            <Tooltip content={<CumTooltip />} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
-            <ReferenceLine y={0} stroke='var(--border)' strokeDasharray='4 2' />
-            <Line
-              type='monotone'
-              dataKey='cumulative'
-              stroke='currentColor'
-              strokeWidth={2}
-              dot={points.length <= 12 ? { r: 3, fill: 'currentColor', strokeWidth: 0 } : false}
-              activeDot={{ r: 5, fill: 'currentColor', strokeWidth: 0 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <CumulativeNetPlot points={points} />
       </div>
     </div>
   );

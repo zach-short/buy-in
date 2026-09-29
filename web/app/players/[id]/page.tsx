@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { DEFAULT_VENMO_NOTE, venmoUrls } from '@pb/core';
 import { BackAction } from '@/components/shared/layout/back-action';
@@ -12,6 +12,9 @@ import {
   fetchBuyIns,
   fetchCashouts,
   fetchOrders,
+  fetchPlayerBuyIns,
+  fetchPlayerCashouts,
+  fetchPlayerOrders,
   fetchPlayerPayments,
   fetchPlayers,
   fetchSessions,
@@ -48,13 +51,24 @@ export default function PlayerDetailPage({
   const [paymentMode, setPaymentMode] = useState<PaymentMode | null>(null);
 
   const { data: sessions = [] } = useSWR('sessions', fetchSessions);
-  const { data: orders } = useSWR('orders', fetchOrders);
-  const { data: buyIns } = useSWR('buy_ins', fetchBuyIns);
-  const { data: cashouts } = useSWR('cashouts', fetchCashouts);
+  // Only this player's rows: the balance and the history read nothing else, and
+  // orders_player_idx / payments_player_idx serve these where the whole bar's lists did not.
+  const { data: orders } = useSWR(['orders', id], ([, playerId]) => fetchPlayerOrders(playerId));
+  const { data: buyIns } = useSWR(['buy_ins', id], ([, playerId]) => fetchPlayerBuyIns(playerId));
+  const { data: cashouts } = useSWR(['cashouts', id], ([, playerId]) => fetchPlayerCashouts(playerId));
   const { data: payments, mutate: mutatePayments } = useSWR(
     ['payments', id],
     ([, playerId]) => fetchPlayerPayments(playerId),
   );
+  // The merge preview sums the survivor's balance from these (use-merge-player.ts), so they
+  // stay whole-bar, on the keys merge revalidates. They gate only the roster panel, never
+  // this player's balance.
+  const { data: barOrders } = useSWR('orders', fetchOrders);
+  const { data: barBuyIns } = useSWR('buy_ins', fetchBuyIns);
+  const { data: barCashouts } = useSWR('cashouts', fetchCashouts);
+  const barLedger = barOrders && barBuyIns && barCashouts
+    ? { orders: barOrders, buyIns: barBuyIns, cashouts: barCashouts }
+    : null;
 
   // Null until every list the balance sums has loaded. A balance over a missing list is wrong
   // (it leaves payments out and overstates the debt), and a host acting on it could record the
@@ -72,7 +86,12 @@ export default function PlayerDetailPage({
     openVenmo(venmoUrls(player.venmo, balanceCents, DEFAULT_VENMO_NOTE));
   }
 
-  const sessionGroups = ledger ? sessionGroupsFor(id, { sessions, ...ledger }) : [];
+  const sessionGroups = useMemo(
+    () => (orders && buyIns && cashouts && payments
+      ? sessionGroupsFor(id, { sessions, orders, buyIns, cashouts, payments })
+      : []),
+    [id, sessions, orders, buyIns, cashouts, payments],
+  );
 
   const paymentHistory = [...(payments ?? [])].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -184,13 +203,13 @@ export default function PlayerDetailPage({
         </p>
       )}
 
-      {ledger && balanceCents !== null && (
+      {barLedger && balanceCents !== null && (
         <div className='mt-8'>
           <PlayerAdminPanel
             player={player}
             players={players ?? []}
             balanceCents={balanceCents}
-            ledger={ledger}
+            ledger={barLedger}
             confirm={confirm}
             onRosterChanged={() => void mutatePlayers()}
           />

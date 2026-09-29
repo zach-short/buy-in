@@ -4,13 +4,20 @@ import type { Tables } from '@pb/core';
 import { createClient } from '@/lib/supabase/client';
 
 // Phase 5 (PLAN.md): every read the Go API served, now straight from Postgres through the
-// BD-5 browser client. RLS scopes each one to the signed-in user's bar, so no query here
-// filters on bar_id. Each fetcher replaces one GET route and keeps that route's sort order,
-// cited, because screens render rows in the order they arrive (DESIGN.md §8.2).
+// BD-5 browser client. RLS scopes each one to the signed-in user's bars. RLS alone is a
+// per-row `is_bar_member(bar_id)` check the planner cannot seek on, so the ledger lists the
+// host's players screen sums also filter on bar_id (fetchBarOrders and its siblings), or on
+// player_id / session_id, which the indexes in 0001_init.sql serve. Each fetcher replaces
+// one GET route and keeps that route's sort order, cited, because screens render rows in
+// the order they arrive (DESIGN.md §8.2).
 //
 // SWR keys at the call sites: the table name for a whole-bar list ('orders'), and
-// [table, id] for a filtered one (['orders', sessionId]). The same query always uses the
-// same key, so screens share a cache entry exactly as they shared '/api/orders'.
+// [table, id] for a filtered one (['orders', sessionId], ['orders', playerId],
+// ['orders', barId]; ids are uuids, so the three never collide). The same query always
+// uses the same key, so screens share a cache entry exactly as they shared '/api/orders'.
+// SWR passes the key to the fetcher, so a fetcher used with a bare-string key must take no
+// argument: that is why the bar-filtered lists are separate functions, not an optional
+// parameter on fetchOrders.
 //
 // Money arrives as integer cents (`*_cents`) and dates as full timestamptz strings. Render
 // money with formatCents and dates with @pb/core's formatDate/formatTime — never a bare
@@ -33,9 +40,11 @@ const DRINK_COLUMNS = '*, ingredients:drink_ingredients(item_id, qty_used)';
 
 // The Data API returns at most `max_rows` rows per request — 1000 by default, set
 // server-wide. The Go API returned every row, and balances are sums over whole-bar lists,
-// so a single capped select would under-count a balance with no error at all. Page until
-// a page holds every row still left (its exact count), so a cap lower than PAGE_SIZE
-// still returns everything.
+// so a single capped select would under-count a balance with no error at all. Only the
+// first page asks for an exact count: if it already holds every row, that is the whole
+// list in one request. If not, its length is the server's real page size (PAGE_SIZE, or a
+// lower `max_rows`), and paging stops at the first page shorter than that — so a cap lower
+// than PAGE_SIZE still returns everything, without a count scan on every page.
 //
 // Pages are keyset, not offset (PLAN.md phase 6, N1 from the phase 5 audit): each page
 // asks for the rows strictly after the last one seen, on the same (column, id) order the
@@ -69,15 +78,25 @@ function afterFilter<Q extends { or(filters: string): Q }>(query: Q, cursor: str
   return cursor ? query.or(cursor) : query;
 }
 
+/** The select options for a page: the first page (no cursor yet) is the only one counted. */
+function countFirst(cursor: string | null): { count: 'exact' } | undefined {
+  return cursor ? undefined : { count: 'exact' };
+}
+
 async function selectAll<Row extends Keyed>(keyset: Keyset, page: (cursor: string | null) => Page<Row>): Promise<Row[]> {
-  const rows: Row[] = [];
+  const first = await page(null);
+  if (first.error) throw first.error;
+  if (first.count === null) throw new Error('selectAll needs countFirst(cursor) on its select');
+  const rows = [...(first.data ?? [])];
+  const serverPageSize = rows.length;
+  if (serverPageSize >= first.count) return rows;
+  // Rows exist but none came back: paging on would loop forever, stopping would under-count.
+  if (serverPageSize === 0) throw new Error(`Expected ${first.count} rows, the first page returned none`);
   for (;;) {
-    const cursor = rows.length ? after(rows[rows.length - 1], keyset) : null;
-    const { data, error, count } = await page(cursor);
+    const { data, error } = await page(after(rows[rows.length - 1], keyset));
     if (error) throw error;
-    if (count === null) throw new Error('selectAll needs { count: "exact" } on its select');
     rows.push(...(data ?? []));
-    if (!data?.length || data.length >= count) return rows;
+    if (!data || data.length < serverPageSize) return rows;
   }
 }
 
@@ -119,7 +138,7 @@ function withPlayerIds(row: Tables<'sessions'> & { session_players: SessionPlaye
 /** GET /api/sessions — `date` desc (sessions.go:21). */
 export async function fetchSessions(): Promise<SessionWithPlayers[]> {
   const rows = await selectAll({ column: 'played_on', ascending: false }, (cursor) =>
-    afterFilter(createClient().from('sessions').select(SESSION_COLUMNS, { count: 'exact' }), cursor)
+    afterFilter(createClient().from('sessions').select(SESSION_COLUMNS, countFirst(cursor)), cursor)
       .order('played_on', { ascending: false }).order('id').limit(PAGE_SIZE),
   );
   return rows.map(withPlayerIds);
@@ -135,7 +154,7 @@ export async function fetchSession(id: string): Promise<SessionWithPlayers | nul
 /** GET /api/players — `name` asc (players.go:21). */
 export async function fetchPlayers(): Promise<PlayerRow[]> {
   const rows = await selectAll(BY_ID, (cursor) =>
-    afterFilter(createClient().from('players').select('*', { count: 'exact' }), cursor).order('id').limit(PAGE_SIZE),
+    afterFilter(createClient().from('players').select('*', countFirst(cursor)), cursor).order('id').limit(PAGE_SIZE),
   );
   return rows.sort(byName);
 }
@@ -143,7 +162,7 @@ export async function fetchPlayers(): Promise<PlayerRow[]> {
 /** GET /api/drinks — `name` asc (drinks.go:21). */
 export async function fetchDrinks(): Promise<DrinkWithIngredients[]> {
   const rows = await selectAll(BY_ID, (cursor) =>
-    afterFilter(createClient().from('drinks').select(DRINK_COLUMNS, { count: 'exact' }), cursor).order('id').limit(PAGE_SIZE),
+    afterFilter(createClient().from('drinks').select(DRINK_COLUMNS, countFirst(cursor)), cursor).order('id').limit(PAGE_SIZE),
   );
   // drink_ingredients has no column for Mongo's array order (0001_init.sql:129-139), so
   // item_id is only a stable order, not the recipe's entry order.
@@ -154,7 +173,7 @@ export async function fetchDrinks(): Promise<DrinkWithIngredients[]> {
 /** GET /api/inventory — `category` asc, then `name` asc (inventory.go:21). */
 export async function fetchInventory(): Promise<InventoryRow[]> {
   const rows = await selectAll(BY_ID, (cursor) =>
-    afterFilter(createClient().from('inventory_items').select('*', { count: 'exact' }), cursor).order('id').limit(PAGE_SIZE),
+    afterFilter(createClient().from('inventory_items').select('*', countFirst(cursor)), cursor).order('id').limit(PAGE_SIZE),
   );
   return rows.sort((a, b) => compareBinary(a.category, b.category) || byName(a, b));
 }
@@ -162,7 +181,23 @@ export async function fetchInventory(): Promise<InventoryRow[]> {
 /** GET /api/orders — `timestamp` desc (orders.go:37). */
 export async function fetchOrders(): Promise<OrderRow[]> {
   return selectAll(NEWEST_FIRST, (cursor) =>
-    afterFilter(createClient().from('orders').select('*', { count: 'exact' }), cursor)
+    afterFilter(createClient().from('orders').select('*', countFirst(cursor)), cursor)
+      .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
+  );
+}
+
+/** fetchOrders narrowed to one bar, so Postgres can seek orders_bar_idx instead of testing every visible row. */
+export async function fetchBarOrders(barId: string): Promise<OrderRow[]> {
+  return selectAll(NEWEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('orders').select('*', countFirst(cursor)).eq('bar_id', barId), cursor)
+      .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
+  );
+}
+
+/** One player's orders, newest first as fetchOrders; served by orders_player_idx. */
+export async function fetchPlayerOrders(playerId: string): Promise<OrderRow[]> {
+  return selectAll(NEWEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('orders').select('*', countFirst(cursor)).eq('player_id', playerId), cursor)
       .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
   );
 }
@@ -170,7 +205,7 @@ export async function fetchOrders(): Promise<OrderRow[]> {
 /** GET /api/orders?sessionId= — `timestamp` desc (orders.go:37). */
 export async function fetchSessionOrders(sessionId: string): Promise<OrderRow[]> {
   return selectAll(NEWEST_FIRST, (cursor) =>
-    afterFilter(createClient().from('orders').select('*', { count: 'exact' }).eq('session_id', sessionId), cursor)
+    afterFilter(createClient().from('orders').select('*', countFirst(cursor)).eq('session_id', sessionId), cursor)
       .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
   );
 }
@@ -178,7 +213,23 @@ export async function fetchSessionOrders(sessionId: string): Promise<OrderRow[]>
 /** GET /api/buyins — `timestamp` asc (ledger.go:34). The first row is labelled "Buy-in", the rest "Re-buy". */
 export async function fetchBuyIns(): Promise<BuyInRow[]> {
   return selectAll(OLDEST_FIRST, (cursor) =>
-    afterFilter(createClient().from('buy_ins').select('*', { count: 'exact' }), cursor)
+    afterFilter(createClient().from('buy_ins').select('*', countFirst(cursor)), cursor)
+      .order('created_at').order('id').limit(PAGE_SIZE),
+  );
+}
+
+/** fetchBuyIns narrowed to one bar (buy_ins_bar_idx). */
+export async function fetchBarBuyIns(barId: string): Promise<BuyInRow[]> {
+  return selectAll(OLDEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('buy_ins').select('*', countFirst(cursor)).eq('bar_id', barId), cursor)
+      .order('created_at').order('id').limit(PAGE_SIZE),
+  );
+}
+
+/** One player's buy-ins, oldest first as fetchBuyIns, so a night's first row is still its "Buy-in". */
+export async function fetchPlayerBuyIns(playerId: string): Promise<BuyInRow[]> {
+  return selectAll(OLDEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('buy_ins').select('*', countFirst(cursor)).eq('player_id', playerId), cursor)
       .order('created_at').order('id').limit(PAGE_SIZE),
   );
 }
@@ -186,7 +237,7 @@ export async function fetchBuyIns(): Promise<BuyInRow[]> {
 /** GET /api/buyins?sessionId= — `timestamp` asc (ledger.go:34). */
 export async function fetchSessionBuyIns(sessionId: string): Promise<BuyInRow[]> {
   return selectAll(OLDEST_FIRST, (cursor) =>
-    afterFilter(createClient().from('buy_ins').select('*', { count: 'exact' }).eq('session_id', sessionId), cursor)
+    afterFilter(createClient().from('buy_ins').select('*', countFirst(cursor)).eq('session_id', sessionId), cursor)
       .order('created_at').order('id').limit(PAGE_SIZE),
   );
 }
@@ -194,7 +245,23 @@ export async function fetchSessionBuyIns(sessionId: string): Promise<BuyInRow[]>
 /** GET /api/cashouts — unsorted in Go (ledger.go:125), i.e. insertion order; `created_at` asc is that order stated. */
 export async function fetchCashouts(): Promise<CashoutRow[]> {
   return selectAll(OLDEST_FIRST, (cursor) =>
-    afterFilter(createClient().from('cashouts').select('*', { count: 'exact' }), cursor)
+    afterFilter(createClient().from('cashouts').select('*', countFirst(cursor)), cursor)
+      .order('created_at').order('id').limit(PAGE_SIZE),
+  );
+}
+
+/** fetchCashouts narrowed to one bar (cashouts_bar_idx). */
+export async function fetchBarCashouts(barId: string): Promise<CashoutRow[]> {
+  return selectAll(OLDEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('cashouts').select('*', countFirst(cursor)).eq('bar_id', barId), cursor)
+      .order('created_at').order('id').limit(PAGE_SIZE),
+  );
+}
+
+/** One player's cash-outs, oldest first as fetchCashouts. */
+export async function fetchPlayerCashouts(playerId: string): Promise<CashoutRow[]> {
+  return selectAll(OLDEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('cashouts').select('*', countFirst(cursor)).eq('player_id', playerId), cursor)
       .order('created_at').order('id').limit(PAGE_SIZE),
   );
 }
@@ -202,7 +269,7 @@ export async function fetchCashouts(): Promise<CashoutRow[]> {
 /** GET /api/cashouts?sessionId= — see fetchCashouts. */
 export async function fetchSessionCashouts(sessionId: string): Promise<CashoutRow[]> {
   return selectAll(OLDEST_FIRST, (cursor) =>
-    afterFilter(createClient().from('cashouts').select('*', { count: 'exact' }).eq('session_id', sessionId), cursor)
+    afterFilter(createClient().from('cashouts').select('*', countFirst(cursor)).eq('session_id', sessionId), cursor)
       .order('created_at').order('id').limit(PAGE_SIZE),
   );
 }
@@ -210,7 +277,23 @@ export async function fetchSessionCashouts(sessionId: string): Promise<CashoutRo
 /** GET /api/payments — `timestamp` desc (ledger.go:195). */
 export async function fetchPayments(): Promise<PaymentRow[]> {
   return selectAll(NEWEST_FIRST, (cursor) =>
-    afterFilter(createClient().from('payments').select('*', { count: 'exact' }), cursor)
+    afterFilter(createClient().from('payments').select('*', countFirst(cursor)), cursor)
+      .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
+  );
+}
+
+/** fetchPayments narrowed to one bar (payments_bar_idx). */
+export async function fetchBarPayments(barId: string): Promise<PaymentRow[]> {
+  return selectAll(NEWEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('payments').select('*', countFirst(cursor)).eq('bar_id', barId), cursor)
+      .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
+  );
+}
+
+/** The payments settle-up tagged with one session, newest first as fetchPayments. */
+export async function fetchSessionPayments(sessionId: string): Promise<PaymentRow[]> {
+  return selectAll(NEWEST_FIRST, (cursor) =>
+    afterFilter(createClient().from('payments').select('*', countFirst(cursor)).eq('session_id', sessionId), cursor)
       .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
   );
 }
@@ -218,7 +301,7 @@ export async function fetchPayments(): Promise<PaymentRow[]> {
 /** GET /api/payments?playerId= — `timestamp` desc (ledger.go:195). */
 export async function fetchPlayerPayments(playerId: string): Promise<PaymentRow[]> {
   return selectAll(NEWEST_FIRST, (cursor) =>
-    afterFilter(createClient().from('payments').select('*', { count: 'exact' }).eq('player_id', playerId), cursor)
+    afterFilter(createClient().from('payments').select('*', countFirst(cursor)).eq('player_id', playerId), cursor)
       .order('created_at', { ascending: false }).order('id').limit(PAGE_SIZE),
   );
 }

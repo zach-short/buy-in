@@ -156,12 +156,30 @@
   }
   .landing-halo-center { inset: -40% 10% 30%; }
 
+  /* A gold band sweeping across the text. Animating background-position on clipped text repainted
+     the text every frame, so the band is a pseudo-element moved by transform alone, and multiply
+     turns it gold only over the light glyphs: over the near-black page it multiplies to near-black.
+     Multiply needs an opaque backdrop inside its stacking context, which is why SpotlightCard is
+     opaque. The span is an inline-block so the band spans its box and the clip stops it widening
+     the page; padding and the matching negative margin keep glyph overhang out of that clip without
+     moving the text. At rest (reduced motion) the band sits where the old gradient's did. */
   .landing-shimmer {
-    background: linear-gradient(100deg, var(--foreground) 25%, var(--primary) 45%, var(--foreground) 65%);
-    background-size: 250% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    overflow: hidden;
+    padding: 0.15em;
+    margin: -0.15em;
+    color: var(--foreground);
+  }
+  .landing-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent, var(--primary) 50%, transparent);
+    mix-blend-mode: multiply;
+    transform: translateX(62.5%);
     animation: landing-shimmer 8s ease-in-out infinite;
   }
 
@@ -199,7 +217,22 @@
     mask-composite: exclude;
   }
 
-  .landing-cta { box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 40%, transparent); animation: landing-cta-pulse 3s ease-out infinite; }
+  /* A gold ring that leaves the button's edge and fades. Growing a box-shadow repainted every
+     frame, so the ring is a fixed shadow on a pseudo-element, moved by transform and opacity. An
+     outer shadow never paints inside its own box, which matters because the button's fill is
+     nearly transparent. The scale is wider on y than x so a ~160px by 48px button grows about the
+     same 8px on every side. */
+  .landing-cta { position: relative; }
+  .landing-cta::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: 0 0 0 6px color-mix(in oklch, var(--primary) 40%, transparent);
+    opacity: 0;
+    animation: landing-cta-pulse 3s ease-out infinite;
+  }
 
   .landing-flash {
     position: absolute;
@@ -223,8 +256,14 @@
 @keyframes landing-drift-a { to { transform: translate3d(18vw, 14vh, 0) scale(1.1); } }
 @keyframes landing-drift-b { to { transform: translate3d(-22vw, -12vh, 0) scale(0.9); } }
 @keyframes landing-breathe { 50% { opacity: 0.6; transform: scale(0.96); } }
-@keyframes landing-shimmer { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0% 0; } }
-@keyframes landing-cta-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 40%, transparent); } 70%, 100% { box-shadow: 0 0 0 14px transparent; } }
+/* The band's centre travels from 37.5% of the text's width before its start to 12.5% past its end
+   and back, the same path the old 250%-wide gradient's gold stop took. */
+@keyframes landing-shimmer { 0%, 100% { transform: translateX(-87.5%); } 50% { transform: translateX(62.5%); } }
+@keyframes landing-cta-pulse {
+  0% { opacity: 0; transform: none; }
+  10% { opacity: 1; transform: none; }
+  70%, 100% { opacity: 0; transform: scale(1.09, 1.27); }
+}
 @keyframes landing-flash { from { opacity: 1; } to { opacity: 0; } }
 @keyframes landing-ticker { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
 @keyframes landing-stamp { from { opacity: 0; transform: scale(0.3) rotate(-30deg); } to { opacity: 1; transform: none; } }
@@ -239,7 +278,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .auth-rise, .auth-fall { animation: none; }
-  .landing-glow-a, .landing-glow-b, .landing-halo, .landing-shimmer, .landing-cta,
+  .landing-glow-a, .landing-glow-b, .landing-halo, .landing-shimmer::after, .landing-cta::after,
   .landing-flash, .landing-ticker-in, .landing-stamp, .landing-print { animation: none; }
   .landing-reveal { opacity: 1; transform: none; transition: none; }
 }

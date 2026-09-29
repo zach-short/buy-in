@@ -1,5 +1,5 @@
 import {
-  computeBalanceCents, nightNet, type AmountLike, type NightNet, type OrderLike, type PaymentLike, type SharedTab,
+  balancesByPlayer, computeBalanceCents, nightNet, type AmountLike, type NightNet, type OrderLike, type PaymentLike, type SharedTab,
 } from '@pb/core';
 
 import type { BuyInRow, CashoutRow, OrderRow, PaymentRow } from '@/lib/supabase/queries';
@@ -38,6 +38,25 @@ export function playerBalanceCents(
 ): number {
   return computeBalanceCents(
     playerId,
+    orders.map(toOrderLike),
+    buyIns.map(toAmountLike),
+    cashouts.map(toAmountLike),
+    payments.map(toPaymentLike),
+  );
+}
+
+/**
+ * playerBalanceCents for every player at once, for the players list. One pass over each
+ * list instead of one per player; @pb/core's balancesByPlayer keeps computeBalanceCents'
+ * signs. A player with no rows is absent: read them with `?? 0`.
+ */
+export function balancesByPlayerFromRows(
+  orders: readonly OrderRow[],
+  buyIns: readonly BuyInRow[],
+  cashouts: readonly CashoutRow[],
+  payments: readonly PaymentRow[],
+): Map<string, number> {
+  return balancesByPlayer(
     orders.map(toOrderLike),
     buyIns.map(toAmountLike),
     cashouts.map(toAmountLike),

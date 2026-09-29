@@ -16,21 +16,40 @@ function byTime(a: { created_at: string }, b: { created_at: string }): number {
   return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
 }
 
+type SessionRow = { player_id: string; session_id: string | null };
+
+/** This player's rows by session id, in one pass; input order is kept, so buy-ins stay oldest first. */
+function bySession<T extends SessionRow>(rows: readonly T[], playerId: string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    if (row.player_id !== playerId || row.session_id === null) continue;
+    const group = groups.get(row.session_id);
+    if (group) group.push(row);
+    else groups.set(row.session_id, [row]);
+  }
+  return groups;
+}
+
 /**
  * Each night this player bought in or ordered, newest first. The net is nightNetFromRows over
  * that night's rows and the payments tagged to it, so it matches summary, receipt and portal;
- * a payment with no session counts in the balance and on no night.
+ * a payment with no session counts in the balance and on no night. Each list is grouped by
+ * session once, rather than filtered again for every session. Call it inside useMemo.
  */
 export function sessionGroupsFor(playerId: string, { sessions, orders, buyIns, cashouts, payments }: LedgerRows) {
-  const mine = <T extends { player_id: string; session_id: string | null }>(rows: T[], sessionId: string) =>
-    rows.filter((r) => r.session_id === sessionId && r.player_id === playerId);
+  const nightOrders = bySession(orders, playerId);
+  const nightBuyIns = bySession(buyIns, playerId);
+  const nightCashouts = bySession(cashouts, playerId);
+  const nightPayments = bySession(payments, playerId);
   return sessions
-    .filter((s) => mine(orders, s.id).length > 0 || mine(buyIns, s.id).length > 0)
+    .filter((s) => nightOrders.has(s.id) || nightBuyIns.has(s.id))
     .sort((a, b) => new Date(b.played_on).getTime() - new Date(a.played_on).getTime())
     .map((session) => {
-      const sessionOrders = mine(orders, session.id).sort(byTime);
-      const sessionBuyIns = mine(buyIns, session.id);
-      const night = nightNetFromRows(playerId, sessionOrders, sessionBuyIns, mine(cashouts, session.id), mine(payments, session.id));
+      const sessionOrders = [...(nightOrders.get(session.id) ?? [])].sort(byTime);
+      const sessionBuyIns = nightBuyIns.get(session.id) ?? [];
+      const night = nightNetFromRows(
+        playerId, sessionOrders, sessionBuyIns, nightCashouts.get(session.id) ?? [], nightPayments.get(session.id) ?? [],
+      );
       return { session, sessionOrders, sessionBuyIns, night };
     });
 }

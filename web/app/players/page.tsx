@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
@@ -8,9 +8,12 @@ import { formatCents, isSettled } from '@pb/core';
 import { Link2 } from 'lucide-react';
 import { DataState } from '@/components/shared/data-state';
 import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
-import { playerBalanceCents, sumCents } from '@/lib/ledger';
+import { balancesByPlayerFromRows, sumCents } from '@/lib/ledger';
+import { fetchBarSettings } from '@/lib/supabase/bar-settings';
 import { isPlayerArchived } from '@/lib/supabase/player-admin';
-import { fetchBuyIns, fetchCashouts, fetchOrders, fetchPayments, fetchPlayers, type PlayerRow } from '@/lib/supabase/queries';
+import {
+  fetchBarBuyIns, fetchBarCashouts, fetchBarOrders, fetchBarPayments, fetchPlayers, type PlayerRow,
+} from '@/lib/supabase/queries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -28,24 +31,44 @@ const FILTERS: { value: BalanceFilter; label: string }[] = [
 export default function PlayersPage() {
   const router = useRouter();
   const { data: players, error, mutate } = useSWR<PlayerRow[], Error>('players', fetchPlayers);
-  const { data: orders = [] }   = useSWR('orders', fetchOrders);
-  const { data: buyIns = [] }   = useSWR('buy_ins', fetchBuyIns);
-  const { data: cashouts = [] } = useSWR('cashouts', fetchCashouts);
-  const { data: payments = [] } = useSWR('payments', fetchPayments);
+  // The bar id comes from the 'bar_settings' entry useBarFeatures already shares, so the
+  // bar_id filter below usually costs no extra request.
+  const bar = useSWR('bar_settings', fetchBarSettings);
+  const barId = bar.data?.barId;
+  const orders   = useSWR(barId ? ['orders', barId] : null, ([, id]) => fetchBarOrders(id));
+  const buyIns   = useSWR(barId ? ['buy_ins', barId] : null, ([, id]) => fetchBarBuyIns(id));
+  const cashouts = useSWR(barId ? ['cashouts', barId] : null, ([, id]) => fetchBarCashouts(id));
+  const payments = useSWR(barId ? ['payments', barId] : null, ([, id]) => fetchBarPayments(id));
+  const ledgerQueries = [bar, orders, buyIns, cashouts, payments];
+  const ledgerError: Error | undefined = ledgerQueries.find((q) => q.error)?.error;
 
   const [adding, setAdding] = useState(false);
 
+  // Undefined until all four lists are in. A balance over a list still loading is wrong (no
+  // payments overstates every debt; no orders shows a debtor as Even, and hides them if
+  // archived), so the list waits for it rather than rendering one.
+  const balances = useMemo(
+    () => (orders.data && buyIns.data && cashouts.data && payments.data
+      ? balancesByPlayerFromRows(orders.data, buyIns.data, cashouts.data, payments.data)
+      : undefined),
+    [orders.data, buyIns.data, cashouts.data, payments.data],
+  );
   // Last played comes from the buy-ins and cash-outs already loaded for the balances: a
   // player's newest one is the last night they sat down. No session read is added for it.
-  const lastPlayed = lastPlayedByPlayer([...buyIns, ...cashouts]);
-  const playerRows: PlayerListRow<PlayerRow>[] = (players ?? [])
-    .map((player) => ({
-      player,
-      balanceCents: playerBalanceCents(player.id, orders, buyIns, cashouts, payments),
-      archived: isPlayerArchived(player),
-      lastPlayedAt: lastPlayed.get(player.id),
-    }))
-    .sort((a, b) => b.balanceCents - a.balanceCents);
+  const lastPlayed = useMemo(
+    () => lastPlayedByPlayer([...(buyIns.data ?? []), ...(cashouts.data ?? [])]),
+    [buyIns.data, cashouts.data],
+  );
+  const playerRows: PlayerListRow<PlayerRow>[] = balances
+    ? (players ?? [])
+      .map((player) => ({
+        player,
+        balanceCents: balances.get(player.id) ?? 0,
+        archived: isPlayerArchived(player),
+        lastPlayedAt: lastPlayed.get(player.id),
+      }))
+      .sort((a, b) => b.balanceCents - a.balanceCents)
+    : [];
 
   const view = usePlayerFilters(playerRows);
   const totalOwedCents = sumCents(playerRows.filter((r) => r.balanceCents > 0), (r) => r.balanceCents);
@@ -73,7 +96,12 @@ export default function PlayersPage() {
         />
       )}
 
-      <DataState rows={players} error={error} onRetry={() => void mutate()} empty={adding ? null : <NoPlayers />}>
+      <DataState
+        rows={balances && players}
+        error={error ?? ledgerError}
+        onRetry={() => { void mutate(); ledgerQueries.forEach((q) => void q.mutate()); }}
+        empty={adding ? null : <NoPlayers />}
+      >
         {() => (
           <>
             <Input

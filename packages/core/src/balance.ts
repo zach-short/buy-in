@@ -54,6 +54,32 @@ export function computeBalanceCents(
 }
 
 /**
+ * Every player's computeBalanceCents in one pass over the four lists, for a screen listing
+ * many players: calling computeBalanceCents per player rescans every list once per player.
+ * computeBalanceCents stays the rule; the signs here are its signs, row by row, and
+ * tests/balances-by-player.test.ts checks the two agree. A player with no rows is absent,
+ * which a caller reads as 0 — what computeBalanceCents returns for them.
+ */
+export function balancesByPlayer(
+  orders: readonly OrderLike[],
+  buyIns: readonly AmountLike[],
+  cashouts: readonly AmountLike[],
+  payments: readonly PaymentLike[],
+): Map<string, number> {
+  const balances = new Map<string, number>();
+  const add = (playerId: string, cents: number) => balances.set(playerId, (balances.get(playerId) ?? 0) + cents);
+  for (const o of orders) add(o.playerId, o.priceCents);
+  for (const b of buyIns) add(b.playerId, b.amountCents);
+  for (const c of cashouts) add(c.playerId, -c.amountCents);
+  for (const p of payments) {
+    // Tested one direction at a time, as sumPayments does: any other value counts for nothing.
+    if (p.direction === 'received') add(p.playerId, -p.amountCents);
+    else if (p.direction === 'sent') add(p.playerId, p.amountCents);
+  }
+  return balances;
+}
+
+/**
  * In integer cents "settled" is exact equality, not the float epsilon
  * `Math.abs(balance) < 0.01` the pre-migration code had to use
  * (web/lib/bar-api.ts:134-139). Same rule, stated exactly.

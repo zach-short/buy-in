@@ -6,6 +6,7 @@
 export { toCents, formatCents, centsToDollars } from './money';
 export {
   computeBalanceCents,
+  balancesByPlayer,
   isSettled,
   type OrderLike,
   type AmountLike,

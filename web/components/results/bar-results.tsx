@@ -1,10 +1,7 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import useSWR from 'swr';
-import {
-  ResponsiveContainer, AreaChart, Area, BarChart, Bar,
-  XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine,
-} from 'recharts';
 
 import { centsToDollars, formatCents } from '@pb/core';
 import { DataState } from '@/components/shared/data-state';
@@ -12,9 +9,16 @@ import { EmptyResults } from '@/components/results/results-tabs';
 import { sumCents } from '@/lib/ledger';
 import { fetchOrders, fetchSessions, type OrderRow, type SessionWithPlayers } from '@/lib/supabase/queries';
 
-function fmt(n: number) {
-  return `$${n.toFixed(2)}`;
-}
+// recharts is ~120KB gzipped, so the plots load on their own, client-only (they measure the DOM).
+// Each placeholder is the plot's exact height, so the cards do not jump when it arrives.
+const CumulativeProfitPlot = dynamic(
+  () => import('@/components/results/bar-charts').then((m) => m.CumulativeProfitPlot),
+  { ssr: false, loading: () => <div aria-hidden className='h-[220px]' /> },
+);
+const RevenueCostPlot = dynamic(
+  () => import('@/components/results/bar-charts').then((m) => m.RevenueCostPlot),
+  { ssr: false, loading: () => <div aria-hidden className='h-[200px]' /> },
+);
 
 function shortDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -24,7 +28,7 @@ function shortDate(date: string) {
 // axis ticks from them — its nice-tick step is not scale-invariant, so plotting cents would
 // change the `$${v}` tick labels. Every sum is taken in cents first (below); the dollar
 // values exist only for the chart and its tooltips.
-interface SessionStat {
+export interface SessionStat {
   name: string;
   date: string;
   revenue: number;
@@ -79,32 +83,6 @@ function toBarTotals(closed: readonly SessionWithPlayers[], orders: readonly Ord
   return totals;
 }
 
-function CumTooltip({ active, payload }: { active?: boolean; payload?: { payload: SessionStat }[] }) {
-  if (!active || !payload?.length) return null;
-  const d = payload[0].payload;
-  return (
-    <div className='bg-background border border-border rounded px-3 py-2 text-xs shadow-md'>
-      <p className='font-semibold text-primary mb-1'>{d.name}</p>
-      <p className='text-muted-foreground'>{d.date}</p>
-      <p className='mt-1'>Cumulative profit: <span className={`font-bold ${d.cumProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>{fmt(d.cumProfit)}</span></p>
-      <p>Night profit: <span className='font-medium'>{fmt(d.profit)}</span></p>
-    </div>
-  );
-}
-
-function BarTooltip({ active, payload }: { active?: boolean; payload?: { name: string; value: number; fill: string }[] }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className='bg-background border border-border rounded px-3 py-2 text-xs shadow-md'>
-      {payload.map((p) => (
-        <p key={p.name}>
-          {p.name}: <span className='font-medium' style={{ color: p.fill }}>{fmt(p.value)}</span>
-        </p>
-      ))}
-    </div>
-  );
-}
-
 function StatGrid({ items, className }: { items: { label: string; value: string; color: string }[]; className: string }) {
   return (
     <div className={`grid grid-cols-2 gap-3 ${className}`}>
@@ -150,44 +128,10 @@ function NightsSummary({ closed }: { closed: readonly SessionWithPlayers[] }) {
 }
 
 function CumulativeProfitChart({ data, profitCents }: { data: SessionStat[]; profitCents: number }) {
-  const cumMin = Math.min(0, ...data.map((d) => d.cumProfit));
-  const cumMax = Math.max(0, ...data.map((d) => d.cumProfit));
-  const profitColor = profitCents >= 0 ? 'var(--primary)' : 'var(--destructive)';
-
   return (
     <div className='border border-border rounded-md p-5 mb-6'>
       <p className='text-xs tracking-widest uppercase text-muted-foreground mb-6'>Cumulative Profit</p>
-      <ResponsiveContainer width='100%' height={220}>
-        <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id='profitGrad' x1='0' y1='0' x2='0' y2='1'>
-              <stop offset='5%' stopColor={profitColor} stopOpacity={0.15} />
-              <stop offset='95%' stopColor={profitColor} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray='3 3' stroke='var(--border)' vertical={false} />
-          <XAxis dataKey='date' tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} dy={6} />
-          <YAxis
-            tickFormatter={(v: number) => `$${v}`}
-            tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-            axisLine={false}
-            tickLine={false}
-            width={52}
-            domain={[cumMin - 5, cumMax + 5]}
-          />
-          <Tooltip content={<CumTooltip />} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
-          <ReferenceLine y={0} stroke='var(--border)' strokeDasharray='4 2' />
-          <Area
-            type='monotone'
-            dataKey='cumProfit'
-            stroke={profitColor}
-            strokeWidth={2}
-            fill='url(#profitGrad)'
-            dot={data.length <= 12 ? { r: 3, fill: profitColor, strokeWidth: 0 } : false}
-            activeDot={{ r: 5, fill: profitColor, strokeWidth: 0 }}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      <CumulativeProfitPlot data={data} profitCents={profitCents} />
     </div>
   );
 }
@@ -196,22 +140,7 @@ function RevenueCostChart({ data }: { data: SessionStat[] }) {
   return (
     <div className='border border-border rounded-md p-5'>
       <p className='text-xs tracking-widest uppercase text-muted-foreground mb-6'>Revenue vs Cost per Night</p>
-      <ResponsiveContainer width='100%' height={200}>
-        <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap='30%'>
-          <CartesianGrid strokeDasharray='3 3' stroke='var(--border)' vertical={false} />
-          <XAxis dataKey='date' tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} dy={6} />
-          <YAxis
-            tickFormatter={(v: number) => `$${v}`}
-            tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-            axisLine={false}
-            tickLine={false}
-            width={52}
-          />
-          <Tooltip content={<BarTooltip />} cursor={{ fill: 'var(--muted)' }} />
-          <Bar dataKey='revenue' name='Revenue' fill='var(--primary)' radius={[2, 2, 0, 0]} opacity={0.9} />
-          <Bar dataKey='cost' name='Cost' fill='var(--muted-foreground)' radius={[2, 2, 0, 0]} opacity={0.5} />
-        </BarChart>
-      </ResponsiveContainer>
+      <RevenueCostPlot data={data} />
       <div className='flex gap-4 mt-4 justify-end'>
         <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
           <span className='size-2 rounded-sm bg-primary inline-block' />Revenue
