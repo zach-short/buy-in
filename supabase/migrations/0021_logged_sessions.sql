@@ -1,5 +1,5 @@
 -- 0021 — logged sessions: a player's own record of a game played away from any table
--- (2026-09-29). Unapplied.
+-- (2026-09-29). Applied to production 2026-09-29 by the owner.
 --
 -- docs/incomplete/logged-sessions/, phase 1 (PASSOFF.md item 23). A player who also plays at a
 -- casino wants one P&L: "if i played 2/5 at Rivers Casino in Norfolk and was in for 300 and out
