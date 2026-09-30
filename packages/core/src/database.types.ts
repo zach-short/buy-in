@@ -1080,7 +1080,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      assign_invite_code: { Args: { p_token: string }; Returns: string }
+      check_invite_code_limit: { Args: { p_uid: string }; Returns: undefined }
       claim_player: { Args: { p_token: string }; Returns: string }
+      clear_lapsed_invite_code: { Args: { p_code: string }; Returns: undefined }
       close_stale_claim_requests: {
         Args: { p_bar_id: string }
         Returns: undefined
@@ -1114,12 +1117,6 @@ export type Database = {
         Args: { p_bar_id: string; p_name: string; p_scheduled_at: string }
         Returns: string
       }
-      decide_player_claim: {
-        Args: { p_approve: boolean; p_request_id: string }
-        Returns: string
-      }
-      delete_my_account: { Args: never; Returns: undefined }
-      delete_order: { Args: { p_order_id: string }; Returns: undefined }
       create_table_invite: {
         Args: {
           p_bar_id: string
@@ -1130,6 +1127,12 @@ export type Database = {
         }
         Returns: string
       }
+      decide_player_claim: {
+        Args: { p_approve: boolean; p_request_id: string }
+        Returns: string
+      }
+      delete_my_account: { Args: never; Returns: undefined }
+      delete_order: { Args: { p_order_id: string }; Returns: undefined }
       delete_session: { Args: { p_session_id: string }; Returns: undefined }
       dismiss_payment_report: { Args: { p_id: string }; Returns: undefined }
       email_has_account: { Args: { p_email: string }; Returns: boolean }
@@ -1152,9 +1155,9 @@ export type Database = {
         Args: never
         Returns: {
           bar_id: string
-          cashapp_handle: string | null
-          venmo_handle: string | null
-          venmo_note_template: string | null
+          cashapp_handle: string
+          venmo_handle: string
+          venmo_note_template: string
         }[]
       }
       get_my_tables: {
@@ -1188,6 +1191,7 @@ export type Database = {
         }[]
       }
       get_shared_tab: { Args: { p_token: string }; Returns: Json }
+      invite_expiry: { Args: { p_lifetime: string }; Returns: string }
       is_bar_member: { Args: { b: string }; Returns: boolean }
       is_bar_staff: { Args: { b: string }; Returns: boolean }
       join_bar_as_player: {
@@ -1235,6 +1239,7 @@ export type Database = {
         }
       }
       player_balance_cents: { Args: { p_player_id: string }; Returns: number }
+      random_invite_code: { Args: { p_length: number }; Returns: string }
       reassign_player_account: {
         Args: { p_from: string; p_to: string }
         Returns: undefined
@@ -1250,6 +1255,7 @@ export type Database = {
       }
       resolve_invite_code: { Args: { p_code: string }; Returns: string }
       revoke_bar_invite: { Args: { p_token: string }; Returns: undefined }
+      rotate_table_invites: { Args: { p_bar_id: string }; Returns: undefined }
       rsvp_my_game: {
         Args: { p_game_id: string; p_status: string }
         Returns: undefined
@@ -1280,6 +1286,10 @@ export type Database = {
       start_session: {
         Args: { p_bar_id: string; p_name: string; p_players: Json }
         Returns: string
+      }
+      store_invite_code: {
+        Args: { p_code: string; p_token: string }
+        Returns: undefined
       }
       swap_player_accounts: {
         Args: { p_a: string; p_b: string }
