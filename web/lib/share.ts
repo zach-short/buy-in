@@ -31,15 +31,8 @@ async function shareDataOrCopy(data: ShareData, fallback: string): Promise<Share
 }
 
 // A shared link goes out bare — no text or title for the share target to prepend (owner's call,
-// 2026-09-29, and it holds for every link, the payment reminder included).
-// **Superseded for table invites only, 2026-09-29:** the owner chose invite share text that names
-// the code (docs/incomplete/invite-codes/SCOPE.md A4), so an invite carrying a code goes out as a
-// sentence through shareTextOrCopy. A link-only invite, and every other link, still goes out bare.
-
-/** shareOrCopy for a sentence rather than a bare URL; the same results and the same silence on a dismissed sheet. */
-export async function shareTextOrCopy(text: string): Promise<ShareResult> {
-  return shareDataOrCopy({ text }, text);
-}
+// 2026-09-29, and it holds for every link, the payment reminder and the table invite included;
+// the invite's card names the table through its page metadata, not through message text).
 
 // `sms:<num>?&body=` is the form both iOS and Android parse: iOS wants `&` (or `;`) before
 // `body` and Android wants `?`, and `?&` satisfies both. The old `sms:<num>&body=` dropped the

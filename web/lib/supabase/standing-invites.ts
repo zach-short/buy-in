@@ -1,7 +1,7 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
 import {
-  codeStatus, hasLapsed, inviteShareText, type CodeStatus, type GeneratedCodeLength, type InviteKind,
+  codeStatus, hasLapsed, type CodeStatus, type GeneratedCodeLength, type InviteKind,
   type InviteLifetime, writeErrorMessage, type Tables,
 } from '@pb/core';
 import { createClient } from '@/lib/supabase/client';
@@ -111,10 +111,4 @@ export async function fetchRecentJoins(barId: string): Promise<RecentJoin[]> {
 
 export function joinUrl(token: string): string {
   return `${window.location.origin}/join/${token}`;
-}
-
-/** What Share sends for this invite: the link, the code, or both (SCOPE A4). */
-export function shareTextFor(invite: StandingInvite): string {
-  const code = invite.codeStatus === 'live' ? invite.code : null;
-  return inviteShareText({ kind: invite.kind, link: joinUrl(invite.token), code, joinPage: `${window.location.origin}/join` });
 }

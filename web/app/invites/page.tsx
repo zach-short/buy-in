@@ -12,11 +12,11 @@ import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useClaimRequests } from '@/hooks/use-claim-requests';
 import { useConfirm } from '@/hooks/use-confirm';
-import { shareOrCopy, shareTextOrCopy } from '@/lib/share';
+import { shareOrCopy } from '@/lib/share';
 import type { PendingClaim } from '@/lib/supabase/claims';
 import { fetchBarId } from '@/lib/supabase/queries';
 import {
-  createStandingInvite, fetchRecentJoins, fetchStandingInvites, joinUrl, revokeInvite, shareTextFor,
+  createStandingInvite, fetchRecentJoins, fetchStandingInvites, joinUrl, revokeInvite,
   type NewInvite, type RecentJoin, type StandingInvite,
 } from '@/lib/supabase/standing-invites';
 import { Button } from '@/components/ui/button';
@@ -41,15 +41,15 @@ function ListState<Row>({ rows, error, empty, children }: ListStateProps<Row>) {
 }
 
 // The row may not show the raw link, so a share sheet and a clipboard that both fail (a
-// plain-http origin, a denied permission) put the text in the error toast instead: the host
-// still has a way to copy it by hand. A dismissed sheet is the host's answer — no toast.
-// A link-only invite goes out as a url, as every other link does (web/lib/share.ts), so share
-// targets unfurl it; anything carrying a code is a sentence.
+// plain-http origin, a denied permission) put the link in the error toast instead: the host
+// still has a way to copy it by hand. A dismissed sheet is the host's answer — no toast. Only the
+// link goes out, with no sentence around it, so share targets unfurl it into the invite card
+// naming the table (owner, 2026-09-30); a code the host reads out or copies from the row.
 async function shareInvite(invite: StandingInvite): Promise<void> {
-  const text = shareTextFor(invite);
-  const result = await (text === joinUrl(invite.token) ? shareOrCopy(text) : shareTextOrCopy(text));
-  if (result === 'copied') toast.success('Invite copied');
-  if (result === 'failed') toast.error("Couldn't share or copy. Here it is:", { description: text, duration: 20000 });
+  const url = joinUrl(invite.token);
+  const result = await shareOrCopy(url);
+  if (result === 'copied') toast.success('Invite link copied');
+  if (result === 'failed') toast.error("Couldn't share or copy. Here it is:", { description: url, duration: 20000 });
 }
 
 function JoinRow({ player }: { player: RecentJoin }) {
@@ -107,15 +107,17 @@ export default function InvitesPage() {
   const [revoking, setRevoking] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
 
-  async function handleCreate(invite: NewInvite) {
-    if (!barId) return;
+  async function handleCreate(invite: NewInvite): Promise<boolean> {
+    if (!barId) return false;
     setCreating(true);
     try {
       await createStandingInvite(barId, invite);
       toast.success('Invite created');
       await invites.mutate();
+      return true;
     } catch (e) {
       toast.error((e as Error).message);
+      return false;
     } finally {
       setCreating(false);
     }
@@ -150,7 +152,7 @@ export default function InvitesPage() {
         actions={<BackAction fallback='/account' />}
       />
 
-      <CreateInviteForm disabled={!barId} creating={creating} onCreate={(invite) => void handleCreate(invite)} />
+      <CreateInviteForm disabled={!barId} creating={creating} onCreate={handleCreate} />
 
       <section className='mb-10'>
         <p className={SECTION_LABEL}>Waiting For You</p>

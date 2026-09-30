@@ -48,7 +48,7 @@ export function InviteRow({ invite, revoking, onRevoke, onShare, onChanged }: In
         <span className='text-xs text-muted-foreground'>{live && invite.kind === 'code' ? '' : statusLine(invite)}</span>
         {live && (
           <div className='flex gap-2 shrink-0'>
-            {invite.codeStatus !== 'lapsed' && (
+            {invite.kind !== 'code' && (
               <Button variant='outline' size='sm' className={SMALL} onClick={onShare}>
                 <Share2 aria-hidden='true' />
                 Share

@@ -75,21 +75,3 @@ export function codeStatus(invite: CodeFields, now: Date): CodeStatus {
   const live = invite.code !== null && invite.code_expires_at !== null && !hasLapsed(invite.code_expires_at, now);
   return live ? 'live' : 'lapsed';
 }
-
-interface ShareParts {
-  kind: InviteKind;
-  link: string;
-  code: string | null;
-  joinPage: string;
-}
-
-/**
- * What Share sends. The owner chose the plain register on 2026-09-29 (SCOPE A4) for a link with a
- * code; the link-only and code-only lines are that sentence with the missing half left out. A
- * link-only invite still goes out bare, as every other link in the app does (web/lib/share.ts).
- */
-export function inviteShareText({ kind, link, code, joinPage }: ShareParts): string {
-  if (kind === 'link' || code === null) return link;
-  if (kind === 'code') return `Join my poker table on Buy-In: enter code ${code} at ${joinPage}`;
-  return `Join my poker table on Buy-In: ${link} — or enter code ${code} at ${joinPage}`;
-}

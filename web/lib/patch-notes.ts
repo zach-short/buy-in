@@ -8,6 +8,16 @@ export type PatchRelease = { date: string; title: string; notes: PatchNote[] };
 // Add a release here when something users can notice ships.
 export const PATCH_RELEASES: PatchRelease[] = [
   {
+    date: 'Sep 30, 2026',
+    title: 'Simpler invites',
+    notes: [
+      { kind: 'new', text: 'Making an invite is now a short set of steps, one question at a time.' },
+      { kind: 'new', text: 'Sharing an invite sends just the link, which shows a card that names your table.' },
+      { kind: 'new', text: 'Your Home shows what you owe at each table, with a button to pay and to tell your host.' },
+      { kind: 'new', text: 'Add an optional phone number when you sign up.' },
+    ],
+  },
+  {
     date: 'Sep 29, 2026',
     title: 'Tighter money math and a smoother phone app',
     notes: [

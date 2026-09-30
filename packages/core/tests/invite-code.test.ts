@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  codeStatus, hasLapsed, INVITE_LIFETIME_LABELS, INVITE_LIFETIMES, inviteShareText, isInviteToken,
+  codeStatus, hasLapsed, INVITE_LIFETIME_LABELS, INVITE_LIFETIMES, isInviteToken,
   isValidCustomCode, neverExpires, normalizeInviteCode,
 } from '../src/invite-code';
 
@@ -68,29 +68,5 @@ describe('never-expiring invites (0030, infinity)', () => {
     expect(INVITE_LIFETIMES).toEqual(['1h', '24h', '7d', '30d', 'never']);
     expect(INVITE_LIFETIMES.map((l) => INVITE_LIFETIME_LABELS[l]))
       .toEqual(['1 hour', '24 hours', '7 days', '30 days', 'Never']);
-  });
-});
-
-describe('inviteShareText', () => {
-  const link = 'https://buyin.example/join/abc';
-  const joinPage = 'https://buyin.example/join';
-
-  it('sends a link-only invite bare', () => {
-    expect(inviteShareText({ kind: 'link', link, code: null, joinPage })).toBe(link);
-  });
-
-  it('names both ways in for a link with a code', () => {
-    expect(inviteShareText({ kind: 'both', link, code: '2734', joinPage }))
-      .toBe(`Join my poker table on Buy-In: ${link} — or enter code 2734 at ${joinPage}`);
-  });
-
-  it('leaves the link out of a code-only invite', () => {
-    const text = inviteShareText({ kind: 'code', link, code: 'ACES', joinPage });
-    expect(text).toBe(`Join my poker table on Buy-In: enter code ACES at ${joinPage}`);
-    expect(text).not.toContain(link);
-  });
-
-  it('falls back to the link when a code has lapsed', () => {
-    expect(inviteShareText({ kind: 'both', link, code: null, joinPage })).toBe(link);
   });
 });

@@ -24,6 +24,7 @@ export { settle, type PlayerBalance, type Transfer } from './settlement';
 export { leaveTableVerdict, type LeaveTableVerdict } from './leave-table';
 export { paidNotice } from './paid-notice';
 export { formatPhone, phoneDigits, validatePhone, PHONE_DIGITS } from './phone';
+export { inviteSteps, type InviteStep } from './invite-steps';
 export {
   tableRecords,
   withNextGames,
@@ -123,7 +124,6 @@ export {
   isInviteToken,
   hasCode,
   codeStatus,
-  inviteShareText,
   neverExpires,
   hasLapsed,
   INVITE_LIFETIMES,
