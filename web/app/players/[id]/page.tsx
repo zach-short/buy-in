@@ -191,7 +191,7 @@ export default function PlayerDetailPage({
         />
       )}
 
-      <PlayerAccountPanel player={player} players={players ?? []} onChanged={() => mutatePlayers()} />
+      <PlayerAccountPanel player={player} players={players ?? []} balanceCents={balanceCents} onChanged={() => mutatePlayers()} />
 
       <SessionHistory groups={sessionGroups} />
 

@@ -158,3 +158,13 @@ export async function reassignPlayerAccount(from: string, to: string): Promise<v
   const { error } = await createClient().rpc('reassign_player_account', { p_from: from, p_to: to });
   if (error) throw hostError(error);
 }
+
+/**
+ * Unlinks and archives a player at exactly $0.00, rejects their pending claims and replaces every
+ * live table invite (0028, 0029, 0030). The database refuses a balance, a seat in tonight's game
+ * or a host, each in its own sentence.
+ */
+export async function kickPlayer(playerId: string): Promise<void> {
+  const { error } = await createClient().rpc('kick_player', { p_player_id: playerId });
+  if (error) throw hostError(error);
+}

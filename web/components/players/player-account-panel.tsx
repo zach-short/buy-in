@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRightLeft, Unlink } from 'lucide-react';
+import { ArrowRightLeft, DoorOpen, Unlink } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -38,14 +38,43 @@ function PickAndAct({ label, options, busy, onPick }: PickProps) {
   );
 }
 
+interface KickProps {
+  balanceCents: number | null;
+  busy: boolean;
+  kicking: boolean;
+  onKick: () => void;
+}
+
+// Kick needs a balance of exactly $0.00 (SCOPE A6), so it is disabled, with the reason, for any
+// other balance; while the balance is still loading it is disabled with no reason yet. The
+// database checks again under lock (0029), so this is a courtesy, never the gate. Copy is the
+// owner's (R7, the terse set, 2026-09-29).
+function KickButton({ balanceCents, busy, kicking, onKick }: KickProps) {
+  const even = balanceCents === 0;
+  return (
+    <div className='space-y-1.5'>
+      <Button variant='destructive' className='w-full h-11 text-xs tracking-widest uppercase' onClick={onKick} disabled={!even || busy}>
+        <DoorOpen aria-hidden='true' />
+        {kicking ? 'Kicking…' : 'Kick'}
+      </Button>
+      {balanceCents !== null && !even && (
+        <p className='text-xs text-muted-foreground'>Balance must be $0.00 to kick.</p>
+      )}
+    </div>
+  );
+}
+
 /**
  * Who this row belongs to, and the host's override (PASSOFF item 17). Swap works whether or not
  * this row is linked; Move is only for a linked row — an account that joined as someone new and
- * needs to land on its real, unlinked row. All wording is provisional (R7).
+ * needs to land on its real, unlinked row. Kick (invite codes, PASSOFF item 31) is only for a
+ * linked row too. Unlink, swap and move wording is provisional (R7).
  */
-export function PlayerAccountPanel({ player, players, onChanged }: {
+export function PlayerAccountPanel({ player, players, balanceCents, onChanged }: {
   player: PlayerRow;
   players: PlayerRow[];
+  /** Null while any list the balance sums is still loading (the page's own rule). */
+  balanceCents: number | null;
   onChanged: () => Promise<unknown>;
 }) {
   const { confirm, confirmDialog } = useConfirm();
@@ -68,6 +97,9 @@ export function PlayerAccountPanel({ player, players, onChanged }: {
       <PickAndAct label='Swap with' options={swappable} busy={account.busy !== null} onPick={(p) => void account.swap(p)} />
       {linked && (
         <PickAndAct label='Move to' options={others.filter((p) => p.user_id === null)} busy={account.busy !== null} onPick={(p) => void account.move(p)} />
+      )}
+      {linked && (
+        <KickButton balanceCents={balanceCents} busy={account.busy !== null} kicking={account.busy === 'kick'} onKick={() => void account.kick()} />
       )}
       {confirmDialog}
     </div>

@@ -12,6 +12,33 @@ export const GENERATED_CODE_LENGTHS = [4, 5, 6] as const;
 
 export type GeneratedCodeLength = (typeof GENERATED_CODE_LENGTHS)[number];
 
+/** How long a link or a code works (SCOPE A11); 0030 stores the same keys and checks the same list. */
+export const INVITE_LIFETIMES = ['1h', '24h', '7d', '30d', 'never'] as const;
+
+export type InviteLifetime = (typeof INVITE_LIFETIMES)[number];
+
+export const INVITE_LIFETIME_LABELS: Readonly<Record<InviteLifetime, string>> = {
+  '1h': '1 hour',
+  '24h': '24 hours',
+  '7d': '7 days',
+  '30d': '30 days',
+  never: 'Never',
+};
+
+// 0030 stores "never" as Postgres 'infinity', which PostgREST sends as that word. new Date() reads
+// it as Invalid Date, and every comparison with Invalid Date is false — so it must be caught first.
+const NEVER = 'infinity';
+
+/** Whether a stored expiry means the thing never expires. */
+export function neverExpires(timestamp: string): boolean {
+  return timestamp === NEVER;
+}
+
+/** Whether a stored expiry has passed. 'infinity' never has. */
+export function hasLapsed(timestamp: string, now: Date): boolean {
+  return !neverExpires(timestamp) && new Date(timestamp) <= now;
+}
+
 // A host's own code is 4–8 letters or digits, stored upper-cased (0028 bar_invite_links_code_shape).
 const CUSTOM_CODE = /^[A-Z0-9]{4,8}$/;
 
@@ -45,7 +72,7 @@ interface CodeFields {
 export function codeStatus(invite: CodeFields, now: Date): CodeStatus {
   if (!hasCode(invite.kind)) return 'none';
   // 0028 nulls a lapsed code lazily, so a code still present may already be past its time.
-  const live = invite.code !== null && invite.code_expires_at !== null && new Date(invite.code_expires_at) > now;
+  const live = invite.code !== null && invite.code_expires_at !== null && !hasLapsed(invite.code_expires_at, now);
   return live ? 'live' : 'lapsed';
 }
 

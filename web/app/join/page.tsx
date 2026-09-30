@@ -1,42 +1,37 @@
 'use client';
 
-import { use, useState, type FormEvent } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { use, useEffect, useRef, type FormEvent } from 'react';
+import { ArrowRight } from 'lucide-react';
 
-import { JoinNameForm } from '@/components/join/join-name-form';
 import { JoinShell } from '@/components/join/join-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useJoinFlow } from '@/hooks/use-join-flow';
+import { useInviteCodeEntry } from '@/hooks/use-invite-code-entry';
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
-// The typed-code way in; /join/[token] is the same flow for a clicked link. A signed-out
-// visitor is sent to /login and returned here with ?code= set, so the code survives the detour.
+// The typed-code way in. A code (0028) or a pasted link token both end at /join/[token], so the
+// name form and the claim picker live in one place. A signed-out visitor is sent to /login and
+// returned here with ?code= set; arriving with one is the request itself, so it runs on arrival,
+// as the token page's sign-in check does.
 export default function JoinPage({ searchParams }: { searchParams: SearchParams }) {
   const { code: codeParam } = use(searchParams);
-  const [code, setCode] = useState(typeof codeParam === 'string' ? codeParam : '');
-  const flow = useJoinFlow();
-  const token = code.trim();
+  const initial = typeof codeParam === 'string' ? codeParam : '';
+  const entry = useInviteCodeEntry(initial);
+  const { submit } = entry;
+  const busy = entry.step !== 'idle';
+  // Once per arrival: a wrong code costs a try, and Strict Mode runs effects twice in dev.
+  const arrived = useRef(false);
 
-  if (flow.step === 'naming' || flow.step === 'joining') {
-    return (
-      <JoinShell>
-        <p className='text-sm text-muted-foreground'>Choose the name your host will see.</p>
-        <JoinNameForm flow={flow} token={token} />
-        <Button variant='ghost' className='w-full text-xs tracking-widest uppercase' onClick={flow.reset}>
-          <ArrowLeft aria-hidden='true' />
-          Use a different code
-        </Button>
-      </JoinShell>
-    );
-  }
-
-  const busy = flow.step === 'checking' || flow.step === 'redirecting';
+  useEffect(() => {
+    if (!initial || arrived.current) return;
+    arrived.current = true;
+    void submit(initial);
+  }, [initial, submit]);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (token) void flow.begin(`/join?${new URLSearchParams({ code: token })}`);
+    void submit(entry.code);
   }
 
   return (
@@ -45,25 +40,25 @@ export default function JoinPage({ searchParams }: { searchParams: SearchParams 
         <Input
           placeholder='Invite code'
           aria-label='Invite code'
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
+          value={entry.code}
+          onChange={(e) => entry.setCode(e.target.value)}
           autoComplete='off'
-          autoCapitalize='none'
+          autoCapitalize='characters'
           spellCheck={false}
-          className='h-11'
+          className='h-11 font-mono tracking-widest'
         />
-        {flow.error ? (
+        {entry.error ? (
           <p role='alert' className='text-xs text-destructive tracking-wide'>
-            {flow.error}
+            {entry.error}
           </p>
         ) : (
           <p className='text-xs text-muted-foreground tracking-wide'>
             Your host can send you an invite link or code.
           </p>
         )}
-        <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={busy || !token}>
+        <Button type='submit' className='w-full h-11 tracking-widest uppercase text-xs' disabled={busy || !entry.code.trim()}>
           <ArrowRight aria-hidden='true' />
-          {busy ? 'Checking…' : 'Continue'}
+          {entry.step === 'redirecting' ? 'Taking you to sign in…' : busy ? 'Checking…' : 'Continue'}
         </Button>
       </form>
     </JoinShell>

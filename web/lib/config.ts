@@ -1,3 +1,5 @@
+import type { InviteLifetime } from '@pb/core';
+
 // Dials (DESIGN.md §4), named rather than left as literals at their call sites.
 
 /**
@@ -67,3 +69,9 @@ export const LOGGED_SESSION_STAKES_PRESETS = [
   { smallCents: 200, bigCents: 500 },
   { smallCents: 500, bigCents: 1000 },
 ] as const;
+
+/**
+ * The lifetime a new invite's link and code start on (invite-codes SCOPE.md BD-7): between 0028's
+ * 24-hour code and 0004's 30-day link. The owner did not name one; change it here.
+ */
+export const INVITE_DEFAULT_LIFETIME = '7d' satisfies InviteLifetime;

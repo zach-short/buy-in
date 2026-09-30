@@ -1,6 +1,6 @@
 # Invite codes, and kicking a player — SCOPE
 
-**Status: `IN FLIGHT` 2026-09-29 — `0028` on production (HANDOFF step 73); `0029` (review fixes) on production (steps 74, 75, commit `8558b82`); `0030` (chosen lifetimes), `/join` codes and the kick button are `PASSOFF.md` item 31; web side unshipped.** Opened by an Opus 5.5 session (Default tier; no model was named for the ask). §6 holds what the owner has answered so far; §7 is what is still open.
+**Status: `BUILT` 2026-09-29, uncommitted — `0028` on production (HANDOFF step 73); `0029` (review fixes) on production (steps 74, 75, commit `8558b82`); `0030` (chosen lifetimes) written, harness-proved and **unapplied**, `/join` codes and the kick button built and walked on the local stack (step 76, `PASSOFF.md` item 31). The web build must not ship before `0030` is applied.** Opened by an Opus 5.5 session (Default tier; no model was named for the ask). §6 holds what the owner has answered so far; §7 is what is still open.
 
 Owner's asks, 2026-09-29, in order:
 1. "make the invite link also generate an invite code. 4 digits that does the same thing and if possible a code that the user can change."
@@ -76,5 +76,16 @@ Read-only Fable 5.1 subagent in its own worktree; nothing edited. Findings, each
 - **A11 — chosen lifetimes (supersedes A1's fixed 24-hour code; the try limit stays):** a host picks a link lifetime and a code lifetime from 1 hour, 24 hours, 7 days, 30 days, or never. A "same for both" toggle starts on, so one pick sets both.
 - **A12 — ship order:** `0029` = the review's fixes, now; `0030` = chosen lifetimes.
 - **BD-5** "Never" is `'infinity'::timestamptz` in `expires_at` / `code_expires_at`, so no not-null or comparison changes; the web reads `infinity` as never. Reverse: a nullable column plus a flag.
+  **As built (step 76):** `invite_expiry('never')` returns `'infinity'`; `@pb/core` `neverExpires`/`hasLapsed` catch the word before `new Date()` does (Invalid Date compared false, so a never code read as lapsed). **BD-9, a choice the design left open:** a Link + code invite's code is capped at its link's `expires_at`, because `resolve_invite_code` (0028) already refuses a code on a dead invite; the cap makes the shown date honest. Picking code "Never" with link "30 days" shows the code ending with the link. Open for the owner (HANDOFF 76). Reverse: drop the `least(...)` in `store_invite_code`.
 - **BD-6** Each invite stores the lifetimes it was made with (`link_lifetime`, `code_lifetime`, null = never), so "New code", a rename and a kick's replacement reuse them. Reverse: always fall back to the defaults.
+  **As built 2026-09-29 (step 76) — BD-8, deviates from the column shape above:** the two columns are `text not null`, one of `'1h'`, `'24h'`, `'7d'`, `'30d'`, `'never'` (checked), not a nullable `interval`, because the type generator reads `interval` as `unknown`, which conventions T1 bans. Existing rows backfill through the column defaults, `'30d'` and `'24h'`. Reverse: an interval column plus a hand-typed overlay.
 - **BD-7** The starting pick with the toggle on is a dial in `web/lib/config.ts`, `INVITE_DEFAULT_LIFETIME`, set to 7 days: between the old 24-hour code and 30-day link. The owner did not name one. Reverse: change the dial.
+
+## 11. Answered before item 31's build, 2026-09-29
+
+Asked in one batch (R6, R7); every answer was the first option offered.
+
+- **A13 — copy:** the terse set, as drafted. Kinds "Link + code" / "Link" / "Code"; "New invite"; "Works for", "Same for both", "Link works for" / "Code works for"; "Code works until <date>, <time>" / "Never expires"; "Change" / "New code"; "That code is taken. Try another."; "Too many tries. Wait a few minutes and try again."; "That code doesn't work."; Kick: "Kick", "Balance must be $0.00 to kick.", confirm "Kick <name>? They lose access to this table. Their history stays." [Kick], toast "<name> kicked. Your invites were replaced — share the new ones." **As built:** "Code never expires" on a Link + code row is composed from these and not asked (the code-only row says "Never expires"); open for the owner.
+- **A14 — N1:** a kick that cannot find a free code of the old length still fails loudly and changes nothing.
+- **A15 — N2:** left alone; a kicked account rejoining under the archived row's name picks another, or the host renames the archived row.
+- **A16 — N3:** `kick_player` refuses while the player sits in an active session with no cashout: "cash <name> out of tonight's game first" (capitalised by `hostError`). **As built (`0030`):** tested after 0029's ledger-row locks, so a concurrent seating waits and is then seen (proven by a race, HANDOFF 76).

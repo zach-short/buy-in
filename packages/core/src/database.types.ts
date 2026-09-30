@@ -45,10 +45,12 @@ export type Database = {
           code: string | null
           code_expires_at: string | null
           code_length: number | null
+          code_lifetime: string
           created_at: string
           created_by: string
           expires_at: string
           kind: string
+          link_lifetime: string
           revoked_at: string | null
           scheduled_game_id: string | null
           token: string
@@ -58,10 +60,12 @@ export type Database = {
           code?: string | null
           code_expires_at?: string | null
           code_length?: number | null
+          code_lifetime?: string
           created_at?: string
           created_by: string
           expires_at?: string
           kind?: string
+          link_lifetime?: string
           revoked_at?: string | null
           scheduled_game_id?: string | null
           token?: string
@@ -71,10 +75,12 @@ export type Database = {
           code?: string | null
           code_expires_at?: string | null
           code_length?: number | null
+          code_lifetime?: string
           created_at?: string
           created_by?: string
           expires_at?: string
           kind?: string
+          link_lifetime?: string
           revoked_at?: string | null
           scheduled_game_id?: string | null
           token?: string
@@ -1115,7 +1121,13 @@ export type Database = {
       delete_my_account: { Args: never; Returns: undefined }
       delete_order: { Args: { p_order_id: string }; Returns: undefined }
       create_table_invite: {
-        Args: { p_bar_id: string; p_code_length?: number; p_kind: string }
+        Args: {
+          p_bar_id: string
+          p_code_length?: number
+          p_code_lifetime?: string
+          p_kind: string
+          p_link_lifetime?: string
+        }
         Returns: string
       }
       delete_session: { Args: { p_session_id: string }; Returns: undefined }

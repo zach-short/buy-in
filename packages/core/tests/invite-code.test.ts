@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  codeStatus, inviteShareText, isInviteToken, isValidCustomCode, normalizeInviteCode,
+  codeStatus, hasLapsed, INVITE_LIFETIME_LABELS, INVITE_LIFETIMES, inviteShareText, isInviteToken,
+  isValidCustomCode, neverExpires, normalizeInviteCode,
 } from '../src/invite-code';
 
 const NOW = new Date('2026-09-29T12:00:00Z');
@@ -43,6 +44,30 @@ describe('codeStatus', () => {
   it('is lapsed once past its time, even before the database nulls it', () => {
     expect(codeStatus({ kind: 'both', code: '2734', code_expires_at: EARLIER }, NOW)).toBe('lapsed');
     expect(codeStatus({ kind: 'code', code: null, code_expires_at: EARLIER }, NOW)).toBe('lapsed');
+  });
+});
+
+describe('never-expiring invites (0030, infinity)', () => {
+  it('reads infinity as never, and never as not lapsed', () => {
+    expect(neverExpires('infinity')).toBe(true);
+    expect(neverExpires(LATER)).toBe(false);
+    expect(hasLapsed('infinity', NOW)).toBe(false);
+  });
+
+  it('still reads real timestamps', () => {
+    expect(hasLapsed(EARLIER, NOW)).toBe(true);
+    expect(hasLapsed(LATER, NOW)).toBe(false);
+  });
+
+  it('keeps a never-expiring code live, where new Date would have read it as lapsed', () => {
+    expect(new Date('infinity') > NOW).toBe(false);
+    expect(codeStatus({ kind: 'code', code: 'ACES', code_expires_at: 'infinity' }, NOW)).toBe('live');
+  });
+
+  it('labels every lifetime 0030 accepts, in order', () => {
+    expect(INVITE_LIFETIMES).toEqual(['1h', '24h', '7d', '30d', 'never']);
+    expect(INVITE_LIFETIMES.map((l) => INVITE_LIFETIME_LABELS[l]))
+      .toEqual(['1 hour', '24 hours', '7 days', '30 days', 'Never']);
   });
 });
 

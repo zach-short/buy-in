@@ -16,6 +16,13 @@ export type JoinFailure = 'invalid-invite' | 'name-taken' | 'unreachable';
 
 export type JoinResult = { ok: true; playerId: string } | { ok: false; reason: JoinFailure };
 
+export type CodeFailure = 'invalid-code' | 'too-many-tries' | 'unreachable';
+
+export type CodeResult = { ok: true; token: string } | { ok: false; reason: CodeFailure };
+
+// 0028 raises SQLSTATE PT429, which PostgREST answers as HTTP 429 with this code.
+const TOO_MANY_TRIES = 'PT429';
+
 /** Whether the visitor is signed in, asked of the auth server rather than the cached session. */
 export async function checkSignIn(): Promise<SignInCheck> {
   const { data, error } = await createClient().auth.getUser();
@@ -29,6 +36,22 @@ export async function joinBarAsPlayer(token: string, name: string): Promise<Join
   const { data, error } = await createClient().rpc('join_bar_as_player', { p_token: token, p_name: name });
   if (!error) return { ok: true, playerId: data };
   return { ok: false, reason: classifyJoinError(error.code) };
+}
+
+/**
+ * The token behind a typed invite code (0028). Requires a signed-in caller: every wrong try is
+ * charged to the account, and five in fifteen minutes lock it out for a while.
+ */
+export async function resolveInviteCode(code: string): Promise<CodeResult> {
+  const { data, error } = await createClient().rpc('resolve_invite_code', { p_code: code });
+  if (error) return { ok: false, reason: classifyCodeError(error.code) };
+  // The generated type says string; a wrong, lapsed or revoked code is null (0028).
+  return data ? { ok: true, token: data } : { ok: false, reason: 'invalid-code' };
+}
+
+function classifyCodeError(code: string): CodeFailure {
+  if (!code) return 'unreachable';
+  return code === TOO_MANY_TRIES ? 'too-many-tries' : 'invalid-code';
 }
 
 // Only Postgres sets a code; postgrest-js reports a transport failure with ''. Every raise in the

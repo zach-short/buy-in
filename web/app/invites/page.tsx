@@ -5,17 +5,19 @@ import useSWR from 'swr';
 import { toast } from 'sonner';
 
 import { formatDate } from '@pb/core';
-import { Ban, Check, Link2, Share2, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
+import { CreateInviteForm } from '@/components/invites/create-invite-form';
+import { InviteRow } from '@/components/invites/invite-row';
 import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useClaimRequests } from '@/hooks/use-claim-requests';
 import { useConfirm } from '@/hooks/use-confirm';
-import { shareOrCopy } from '@/lib/share';
+import { shareOrCopy, shareTextOrCopy } from '@/lib/share';
 import type { PendingClaim } from '@/lib/supabase/claims';
 import { fetchBarId } from '@/lib/supabase/queries';
 import {
-  createStandingInvite, fetchRecentJoins, fetchStandingInvites, joinUrl, revokeInvite,
-  type RecentJoin, type StandingInvite,
+  createStandingInvite, fetchRecentJoins, fetchStandingInvites, joinUrl, revokeInvite, shareTextFor,
+  type NewInvite, type RecentJoin, type StandingInvite,
 } from '@/lib/supabase/standing-invites';
 import { Button } from '@/components/ui/button';
 
@@ -38,49 +40,16 @@ function ListState<Row>({ rows, error, empty, children }: ListStateProps<Row>) {
   return <div className='space-y-2'>{children(rows)}</div>;
 }
 
-function statusLine({ status, expires_at, revoked_at }: StandingInvite): string {
-  if (revoked_at) return `Revoked ${formatDate(revoked_at)}`;
-  return `${status === 'live' ? 'Expires' : 'Expired'} ${formatDate(expires_at)}`;
-}
-
-// The row no longer shows the raw link, so a share sheet and a clipboard that both fail (a
-// plain-http origin, a denied permission) put the link in the error toast instead: the host
+// The row may not show the raw link, so a share sheet and a clipboard that both fail (a
+// plain-http origin, a denied permission) put the text in the error toast instead: the host
 // still has a way to copy it by hand. A dismissed sheet is the host's answer — no toast.
-async function shareInvite(token: string): Promise<void> {
-  const url = joinUrl(token);
-  const result = await shareOrCopy(url);
-  if (result === 'copied') toast.success('Invite link copied');
-  if (result === 'failed') toast.error("Couldn't share or copy. Here's the link:", { description: url, duration: 20000 });
-}
-
-interface InviteRowProps {
-  invite: StandingInvite;
-  revoking: boolean;
-  onRevoke: () => void;
-}
-
-function InviteRow({ invite, revoking, onRevoke }: InviteRowProps) {
-  const live = invite.status === 'live';
-  return (
-    <div className={`border border-border rounded-md px-4 py-3 space-y-2 ${live ? '' : 'opacity-60'}`}>
-      <p className='text-sm font-medium'>Invite link · made {formatDate(invite.created_at)}</p>
-      <div className='flex items-center justify-between gap-3'>
-        <span className='text-xs text-muted-foreground'>{statusLine(invite)}</span>
-        {live && (
-          <div className='flex gap-2 shrink-0'>
-            <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={() => void shareInvite(invite.token)}>
-              <Share2 aria-hidden='true' />
-              Share
-            </Button>
-            <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={onRevoke} disabled={revoking}>
-              <Ban aria-hidden='true' />
-              {revoking ? 'Revoking…' : 'Revoke'}
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+// A link-only invite goes out as a url, as every other link does (web/lib/share.ts), so share
+// targets unfurl it; anything carrying a code is a sentence.
+async function shareInvite(invite: StandingInvite): Promise<void> {
+  const text = shareTextFor(invite);
+  const result = await (text === joinUrl(invite.token) ? shareOrCopy(text) : shareTextOrCopy(text));
+  if (result === 'copied') toast.success('Invite copied');
+  if (result === 'failed') toast.error("Couldn't share or copy. Here it is:", { description: text, duration: 20000 });
 }
 
 function JoinRow({ player }: { player: RecentJoin }) {
@@ -138,12 +107,12 @@ export default function InvitesPage() {
   const [revoking, setRevoking] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
 
-  async function handleCreate() {
+  async function handleCreate(invite: NewInvite) {
     if (!barId) return;
     setCreating(true);
     try {
-      await createStandingInvite(barId);
-      toast.success('Invite link created');
+      await createStandingInvite(barId, invite);
+      toast.success('Invite created');
       await invites.mutate();
     } catch (e) {
       toast.error((e as Error).message);
@@ -154,7 +123,7 @@ export default function InvitesPage() {
 
   async function handleRevoke(token: string) {
     const ok = await confirm({
-      title: 'Revoke this invite link?',
+      title: 'Revoke this invite?',
       description: "It stops working for anyone who hasn't joined yet.",
       confirmLabel: 'Revoke',
       destructive: true,
@@ -163,7 +132,7 @@ export default function InvitesPage() {
     setRevoking(token);
     try {
       await revokeInvite(token);
-      toast.success('Invite link revoked');
+      toast.success('Invite revoked');
       await invites.mutate();
     } catch (e) {
       toast.error((e as Error).message);
@@ -177,14 +146,11 @@ export default function InvitesPage() {
       {confirmDialog}
       <PageHeader
         title='Invites'
-        subtitle='Anyone with a live link can join your table'
+        subtitle='Anyone with a live link or code can join your table'
         actions={<BackAction fallback='/account' />}
       />
 
-      <Button className='w-full h-10 text-xs tracking-widest uppercase mb-10' onClick={handleCreate} disabled={!barId || creating}>
-        <Link2 aria-hidden='true' />
-        {creating ? 'Creating…' : 'Create Invite Link'}
-      </Button>
+      <CreateInviteForm disabled={!barId} creating={creating} onCreate={(invite) => void handleCreate(invite)} />
 
       <section className='mb-10'>
         <p className={SECTION_LABEL}>Waiting For You</p>
@@ -201,14 +167,16 @@ export default function InvitesPage() {
       </section>
 
       <section className='mb-10'>
-        <p className={SECTION_LABEL}>Invite Links</p>
-        <ListState rows={invites.data} error={barError ?? invites.error} empty='No invite links yet'>
+        <p className={SECTION_LABEL}>Invites</p>
+        <ListState rows={invites.data} error={barError ?? invites.error} empty='No invites yet'>
           {(rows) => rows.map((invite) => (
             <InviteRow
               key={invite.token}
               invite={invite}
               revoking={revoking === invite.token}
               onRevoke={() => handleRevoke(invite.token)}
+              onShare={() => void shareInvite(invite)}
+              onChanged={() => invites.mutate()}
             />
           ))}
         </ListState>
