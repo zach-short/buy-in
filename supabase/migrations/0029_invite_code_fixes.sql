@@ -1,5 +1,4 @@
--- 0029 — fixes to 0028 from its Fable review (2026-09-29). UNAPPLIED: the owner applies it.
--- Apply before any web build that creates invite codes or calls kick_player ships.
+-- 0029 — fixes to 0028 from its Fable review (2026-09-29). Applied to production 2026-09-29 (HANDOFF step 75).
 --
 -- docs/incomplete/invite-codes/SCOPE.md §9 holds the review; each finding was re-verified on a
 -- scratch PG 17 cluster before this was written.

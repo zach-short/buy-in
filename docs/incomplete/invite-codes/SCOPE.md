@@ -1,6 +1,6 @@
 # Invite codes, and kicking a player — SCOPE
 
-**Status: `IN FLIGHT` 2026-09-29 — `0028` on production (HANDOFF step 73); `0029` (review fixes) written and harness-proved, unapplied (step 74); `0030` (chosen lifetimes), `/join` codes and the kick button are `PASSOFF.md` item 31; web side unshipped.** Opened by an Opus 5.5 session (Default tier; no model was named for the ask). §6 holds what the owner has answered so far; §7 is what is still open.
+**Status: `IN FLIGHT` 2026-09-29 — `0028` on production (HANDOFF step 73); `0029` (review fixes) on production (steps 74, 75, commit `8558b82`); `0030` (chosen lifetimes), `/join` codes and the kick button are `PASSOFF.md` item 31; web side unshipped.** Opened by an Opus 5.5 session (Default tier; no model was named for the ask). §6 holds what the owner has answered so far; §7 is what is still open.
 
 Owner's asks, 2026-09-29, in order:
 1. "make the invite link also generate an invite code. 4 digits that does the same thing and if possible a code that the user can change."
