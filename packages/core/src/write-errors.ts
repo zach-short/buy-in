@@ -31,6 +31,13 @@ const EXACT: Readonly<Record<string, string>> = {
   'payments can only be reported from your portal link': 'Open your portal link to report a payment.',
   'report not found': 'Report not found',
   'this report was already decided': 'This report was already decided.',
+  // 0028 invite codes, host side. Kick's refusals go through claims.ts hostError instead.
+  'too many tries — wait a few minutes and try again': 'Too many tries. Wait a few minutes and try again.',
+  'invite not found': 'Invite not found',
+  'this invite has expired': 'This invite has expired.',
+  'this invite has no code': 'This invite has no code.',
+  'a code is 4 to 8 letters or digits': 'A code is 4 to 8 letters or digits.',
+  'a code is 4 to 6 digits': 'A code is 4 to 6 digits.',
   // 0014 merge_players' internal-error guards: the merge rolled back, nothing changed.
   'a payment still names the merged player': 'The merge was undone: a payment still names that player.',
   'player row changed under lock': 'The merge was undone: a player changed while it ran. Try again.',

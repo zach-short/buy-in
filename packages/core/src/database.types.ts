@@ -42,27 +42,39 @@ export type Database = {
       bar_invite_links: {
         Row: {
           bar_id: string
+          code: string | null
+          code_expires_at: string | null
+          code_length: number | null
           created_at: string
           created_by: string
           expires_at: string
+          kind: string
           revoked_at: string | null
           scheduled_game_id: string | null
           token: string
         }
         Insert: {
           bar_id: string
+          code?: string | null
+          code_expires_at?: string | null
+          code_length?: number | null
           created_at?: string
           created_by: string
           expires_at?: string
+          kind?: string
           revoked_at?: string | null
           scheduled_game_id?: string | null
           token?: string
         }
         Update: {
           bar_id?: string
+          code?: string | null
+          code_expires_at?: string | null
+          code_length?: number | null
           created_at?: string
           created_by?: string
           expires_at?: string
+          kind?: string
           revoked_at?: string | null
           scheduled_game_id?: string | null
           token?: string
@@ -418,6 +430,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      invite_code_attempts: {
+        Row: {
+          attempted_at: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          id?: never
+          user_id: string
+        }
+        Update: {
+          attempted_at?: string
+          id?: never
+          user_id?: string
+        }
+        Relationships: []
       }
       logged_events: {
         Row: {
@@ -1084,6 +1114,10 @@ export type Database = {
       }
       delete_my_account: { Args: never; Returns: undefined }
       delete_order: { Args: { p_order_id: string }; Returns: undefined }
+      create_table_invite: {
+        Args: { p_bar_id: string; p_code_length?: number; p_kind: string }
+        Returns: string
+      }
       delete_session: { Args: { p_session_id: string }; Returns: undefined }
       dismiss_payment_report: { Args: { p_id: string }; Returns: undefined }
       email_has_account: { Args: { p_email: string }; Returns: boolean }
@@ -1139,6 +1173,7 @@ export type Database = {
         Args: { p_name: string; p_token: string }
         Returns: string
       }
+      kick_player: { Args: { p_player_id: string }; Returns: undefined }
       leave_table: {
         Args: { p_accept_credit?: boolean; p_bar_id: string }
         Returns: undefined
@@ -1183,6 +1218,7 @@ export type Database = {
         Args: { p_from: string; p_to: string }
         Returns: undefined
       }
+      refresh_invite_code: { Args: { p_token: string }; Returns: string }
       report_payment: {
         Args: { p_amount_cents: number; p_note?: string; p_token: string }
         Returns: string
@@ -1191,6 +1227,7 @@ export type Database = {
         Args: { p_player_id: string; p_token: string }
         Returns: string
       }
+      resolve_invite_code: { Args: { p_code: string }; Returns: string }
       revoke_bar_invite: { Args: { p_token: string }; Returns: undefined }
       rsvp_my_game: {
         Args: { p_game_id: string; p_status: string }
@@ -1209,6 +1246,10 @@ export type Database = {
           p_name: string
           p_price_cents: number
         }
+        Returns: string
+      }
+      set_invite_code: {
+        Args: { p_code: string; p_token: string }
         Returns: string
       }
       start_scheduled_game: {

@@ -114,3 +114,15 @@ export {
 // BD-6: generated from the live schema (`supabase gen types typescript`), not
 // hand-written — regenerate as part of every phase that changes the schema.
 export type { Database, Json, Tables } from './database.types';
+export {
+  GENERATED_CODE_LENGTHS,
+  normalizeInviteCode,
+  isValidCustomCode,
+  isInviteToken,
+  hasCode,
+  codeStatus,
+  inviteShareText,
+  type InviteKind,
+  type CodeStatus,
+  type GeneratedCodeLength,
+} from './invite-code';
