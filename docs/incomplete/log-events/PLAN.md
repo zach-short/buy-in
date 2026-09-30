@@ -75,7 +75,7 @@ phase. No subagent.
 
 ### Phase 1 — Table, types, registry, merge and reads
 
-**Status: `BUILT` 2026-09-29 — `HANDOFF.md` step 66; `0027` is proven on a scratch cluster and unapplied to production; types hand-written, regenerate after the apply; not seen in a browser (no UI).** Deviations: the database checks neither the 40-character name nor the odds range (§3 corrected below), so the form and zod carry them; `rowsFromPoker` lives in core with `resultDetail` passed in.
+**Status: `BUILT` 2026-09-29 — `HANDOFF.md` step 66; `0027` is proven on a scratch cluster, **and applied to production by the owner 2026-09-29 (step 71)**; types hand-written, regenerate after the apply; not seen in a browser (no UI).** Deviations: the database checks neither the 40-character name nor the odds range (§3 corrected below), so the form and zod carry them; `rowsFromPoker` lives in core with `resultDetail` passed in.
 
 **Scope:**
 1. **Migration** `supabase/migrations/<next free>_logged_events.sql`: `ls supabase/migrations` first (§0 row 12; `0026` is
@@ -180,7 +180,7 @@ drops input silently; that is the design (BD-3) and the pass confirms it does no
 
 ### Phase 3 — The Everything tab
 
-**Status: `BUILT` 2026-09-29 — `HANDOFF.md` step 70; walked on the local stack at phone width (member, host stats off and on), not on a real phone.** Deviations: no web test file (vitest runs core only; the maths is pinned in `event-result.test.ts`); "By type" shows only under All; chips wrap as pills rather than a segmented bar; the empty state is draft copy for item 30 to ask. **It mounts the `logged_events` read, so `0027` must be on production before this ships.**
+**Status: `BUILT` 2026-09-29 — `HANDOFF.md` step 70; walked on the local stack at phone width (member, host stats off and on), not on a real phone.** Deviations: no web test file (vitest runs core only; the maths is pinned in `event-result.test.ts`); "By type" shows only under All; chips wrap as pills rather than a segmented bar; the empty state is draft copy for item 30 to ask. It mounts the `logged_events` read; `0027` is on production (step 71), so it can ship.
 
 **Scope:**
 1. **`web/components/results/results-tabs.tsx`** (edit): `ResultsTab` gains `'everything'`; the strip lists "My poker",
