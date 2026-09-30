@@ -1148,6 +1148,15 @@ export type Database = {
           stakes_cents: number
         }[]
       }
+      get_my_table_pay_info: {
+        Args: never
+        Returns: {
+          bar_id: string
+          cashapp_handle: string | null
+          venmo_handle: string | null
+          venmo_note_template: string | null
+        }[]
+      }
       get_my_tables: {
         Args: never
         Returns: {

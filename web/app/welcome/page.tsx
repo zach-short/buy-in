@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, type ComponentProps } from 'react';
-import { ArrowLeft, ArrowRight, AtSign, Loader2, Plus, Spade, User, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, AtSign, Loader2, Phone, Plus, Spade, User, type LucideIcon } from 'lucide-react';
 
 import { RolePicker } from '@/components/auth/role-picker';
 import { WelcomeProgressBar } from '@/components/auth/welcome-progress';
@@ -106,7 +106,7 @@ function ProfileStep({ flow }: { flow: WelcomeFlow }) {
         title='Your details'
         hint={flow.invited
           ? 'Your name shows on the table you’re joining.'
-          : 'Your name shows on the table. Venmo is optional and lets others pay you.'}
+          : 'Your name shows on the table. Venmo and phone are optional. Venmo lets others pay you.'}
       />
       <IconInput
         icon={User}
@@ -126,6 +126,16 @@ function ProfileStep({ flow }: { flow: WelcomeFlow }) {
         autoCapitalize='none'
         autoCorrect='off'
         aria-invalid={flow.errorField === 'venmo'}
+      />
+      <IconInput
+        icon={Phone}
+        type='tel'
+        inputMode='tel'
+        autoComplete='tel-national'
+        placeholder='Phone number (optional)'
+        value={flow.phoneInput}
+        onChange={(e) => flow.setPhone(e.target.value)}
+        aria-invalid={flow.errorField === 'phone'}
       />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.submitting}>

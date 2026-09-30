@@ -2,6 +2,8 @@
 export interface SeatLike {
   barId: string;
   barName: string;
+  /** computeBalanceCents' sign, payments included: positive means the member owes the house. */
+  balanceCents: number;
 }
 
 /**
@@ -20,6 +22,11 @@ export interface TableRecord {
   barName: string;
   games: number;
   netCents: number;
+  /**
+   * What is owed right now, payments included — not `netCents`, which is games only. Positive
+   * means the member owes the house, the opposite of `netCents`.
+   */
+  balanceCents: number;
   /** null for a table joined but not yet played at. */
   lastPlayedOn: string | null;
 }
@@ -31,7 +38,7 @@ function recordFor(seat: SeatLike, played: readonly PlayedLike[]): TableRecord {
     (latest, row) => (latest === null || Date.parse(row.played_on) > Date.parse(latest) ? row.played_on : latest),
     null,
   );
-  return { barId: seat.barId, barName: seat.barName, games: here.length, netCents, lastPlayedOn };
+  return { barId: seat.barId, barName: seat.barName, games: here.length, netCents, balanceCents: seat.balanceCents, lastPlayedOn };
 }
 
 // Newest activity first (member-home SCOPE.md §3 O3); a table not yet played at sorts after

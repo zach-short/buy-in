@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 
+import { formatPhone, validatePhone } from '@pb/core';
+
 import type { Role } from '@/components/auth/role-picker';
 import type { WelcomeProgress } from '@/components/auth/welcome-progress';
 import { useAuthUser } from '@/hooks/use-auth-user';
@@ -14,7 +16,7 @@ import { normalizeVenmo, validateHandles } from '@/lib/supabase/payment-handles'
 import { acceptInvite, createHostTable, saveProfile, type Profile } from '@/lib/supabase/welcome';
 
 // A new account's first steps, after /login or Google (owner, 2026-09-29): host or member,
-// then name and optional Venmo, then — for a host — the table, after which home's setup guide
+// then name and optional Venmo and phone, then — for a host — the table, after which home's setup guide
 // takes over. A `next` (an invite or event link) means they came to join, so the role is
 // member and the choice is skipped. Account's "Host your own table" arrives with ?role=host.
 export type WelcomeStep = 'role' | 'profile' | 'table';
@@ -24,10 +26,17 @@ function metaVenmo(user: User | null): string {
   return typeof venmo === 'string' ? venmo : '';
 }
 
+function metaPhone(user: User | null): string {
+  const phone: unknown = user?.user_metadata.phone;
+  return typeof phone === 'string' ? phone : '';
+}
+
 function profileProblem(profile: Profile): { message: string; field: ErrorField } | null {
   if (!profile.name.trim()) return { message: 'Enter your name.', field: 'name' };
   const message = validateHandles(profile.venmo, '');
-  return message ? { message, field: 'venmo' } : null;
+  if (message) return { message, field: 'venmo' };
+  const phoneMessage = validatePhone(profile.phone);
+  return phoneMessage ? { message: phoneMessage, field: 'phone' } : null;
 }
 
 // A host has all three steps and a member has no table; an invite or ?role=host skips the role
@@ -41,7 +50,7 @@ function progressOf(step: WelcomeStep, role: Role | null, skipsRole: boolean): W
 
 // Which input a message belongs to, so the page can mark it; a failure from the server, which
 // names no field, marks none.
-export type ErrorField = 'name' | 'venmo' | 'table';
+export type ErrorField = 'name' | 'venmo' | 'phone' | 'table';
 
 export function useWelcome() {
   const router = useRouter();
@@ -56,12 +65,18 @@ export function useWelcome() {
   // null until typed in, so what Google or an earlier visit saved shows without an effect.
   const [name, setName] = useState<string | null>(null);
   const [venmo, setVenmo] = useState<string | null>(null);
+  const [phone, setPhone] = useState<string | null>(null);
   const [tableName, setTableName] = useState('');
   const [error, setError] = useState('');
   const [errorField, setErrorField] = useState<ErrorField | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const venmoInput = venmo ?? metaVenmo(user);
-  const profile: Profile = { name: name ?? (user ? displayNameOf(user) : ''), venmo: normalizeVenmo(venmoInput) };
+  const phoneInput = phone ?? formatPhone(metaPhone(user));
+  const profile: Profile = {
+    name: name ?? (user ? displayNameOf(user) : ''),
+    venmo: normalizeVenmo(venmoInput),
+    phone: formatPhone(phoneInput),
+  };
 
   // Someone who already runs a table has nothing to choose; a second one is not what they came for.
   useEffect(() => {
@@ -116,7 +131,7 @@ export function useWelcome() {
   }
 
   return {
-    step, role, invited, progress: progressOf(step, role, presetRole !== null), profile, venmoInput, setName, setVenmo, tableName, setTableName,
+    step, role, invited, progress: progressOf(step, role, presetRole !== null), profile, venmoInput, phoneInput, setName, setVenmo, setPhone: (raw: string) => setPhone(formatPhone(raw)), tableName, setTableName,
     choose, goTo, submitProfile, submitTable, submitting, error, errorField,
   };
 }

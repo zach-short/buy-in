@@ -8,13 +8,16 @@ export interface Profile {
   name: string;
   /** Normalized (normalizeVenmo) and validated already; blank means none. */
   venmo: string;
+  /** formatPhone's "(555) 123-4567" and validated already; blank means none. */
+  phone: string;
 }
 
 // full_name is what 0008 and 0012 show a host and what the join form starts from; venmo is
-// what 0023's trigger copies onto a seat when this account takes one.
+// what 0023's trigger copies onto a seat when this account takes one, and 0032's trigger does the
+// same for phone.
 export async function saveProfile(profile: Profile): Promise<void> {
   const { error } = await createClient().auth.updateUser({
-    data: { full_name: profile.name.trim(), venmo: profile.venmo || null, [WELCOMED_KEY]: true },
+    data: { full_name: profile.name.trim(), venmo: profile.venmo || null, phone: profile.phone || null, [WELCOMED_KEY]: true },
   });
   if (error) throw new Error(error.message);
 }

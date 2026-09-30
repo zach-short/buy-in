@@ -6,12 +6,14 @@ import Link from 'next/link';
 import { formatCents, isSettled, type RsvpAnswer, type TableRecord, type TableWithGame } from '@pb/core';
 import { Home, Plus, X } from 'lucide-react';
 import { NextGameRow } from '@/components/member/next-game';
+import { OwePanel } from '@/components/member/owe-panel';
 import { DataState } from '@/components/shared/data-state';
 import { Button } from '@/components/ui/button';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useHostPrompt } from '@/hooks/use-host-prompt';
 import { useTableRecords } from '@/hooks/use-table-records';
 import { MEMBER_HOME_TABLE_LIMIT } from '@/lib/config';
+import type { TablePayInfo } from '@/lib/supabase/table-pay-info';
 
 // Copy chosen by the owner 2026-09-29, plain register (member-home SCOPE.md §7, build-time answers).
 const EMPTY = "You're not at any tables yet. Ask a host for an invite link.";
@@ -36,7 +38,7 @@ type Answer = (gameId: string, status: RsvpAnswer) => Promise<void>;
 
 // The record half stays the link to Results; the next game sits below it, outside the link, so
 // answering never navigates.
-function TableCard({ record, onAnswer }: { record: TableWithGame; onAnswer: Answer }) {
+function TableCard({ record, pay, onAnswer }: { record: TableWithGame; pay: TablePayInfo | undefined; onAnswer: Answer }) {
   const line = netLine(record);
   return (
     <li className='border border-border rounded-md has-[>a:hover]:border-primary/50 transition-colors'>
@@ -50,18 +52,26 @@ function TableCard({ record, onAnswer }: { record: TableWithGame; onAnswer: Answ
         </div>
         <span className='text-primary text-xs'>›</span>
       </Link>
+      <OwePanel record={record} pay={pay} />
       {record.nextGame && <NextGameRow game={record.nextGame} onAnswer={onAnswer} />}
     </li>
   );
 }
 
-function TableList({ records, onAnswer }: { records: TableWithGame[]; onAnswer: Answer }) {
+function TableList({ records, payInfo, onAnswer }: { records: TableWithGame[]; payInfo: TablePayInfo[]; onAnswer: Answer }) {
   const [all, setAll] = useState(false);
   const shown = all ? records : records.slice(0, MEMBER_HOME_TABLE_LIMIT);
   return (
     <>
       <ul className='flex flex-col gap-3'>
-        {shown.map((record) => <TableCard key={record.barId} record={record} onAnswer={onAnswer} />)}
+        {shown.map((record) => (
+          <TableCard
+            key={record.barId}
+            record={record}
+            pay={payInfo.find((p) => p.barId === record.barId)}
+            onAnswer={onAnswer}
+          />
+        ))}
       </ul>
       {shown.length < records.length && (
         <button
@@ -109,7 +119,7 @@ function HostTableCard({ onDismiss }: { onDismiss: () => void }) {
 
 /** Home for an account that hosts nowhere: the tables it plays at, its record and next game at each. */
 export function MemberHome() {
-  const { records, error, retry, answer } = useTableRecords();
+  const { records, payInfo, error, retry, answer } = useTableRecords();
   const hostPrompt = useHostPrompt();
   return (
     <PageMain>
@@ -122,7 +132,7 @@ export function MemberHome() {
         onRetry={retry}
         empty={<p className='text-xs text-muted-foreground py-4'>{EMPTY}</p>}
       >
-        {(rows) => <TableList records={rows} onAnswer={answer} />}
+        {(rows) => <TableList records={rows} payInfo={payInfo} onAnswer={answer} />}
       </DataState>
       <LogSessionButton />
     </PageMain>

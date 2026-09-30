@@ -6,12 +6,15 @@ import { toast } from 'sonner';
 import { tableRecords, withNextGames, type NextGameLike, type RsvpAnswer, type TableWithGame } from '@pb/core';
 import { fetchMyUpcomingGames, rsvpMyGame } from '@/lib/supabase/member-games';
 import { fetchMyPerformance } from '@/lib/supabase/performance';
+import { fetchMyTablePayInfo, type TablePayInfo } from '@/lib/supabase/table-pay-info';
 import { fetchMyTables } from '@/lib/supabase/tables';
 
 const GAMES_KEY = 'get_my_upcoming_games';
 
 export interface TableRecordsState {
   records: TableWithGame[] | undefined;
+  /** The hosts' pay handles. Empty while loading or when the read failed: the card just has no Pay button. */
+  payInfo: TablePayInfo[];
   error: Error | undefined;
   retry: () => void;
   /** Answers a table's next game from its card; the card shows the new answer at once. */
@@ -31,6 +34,7 @@ export function useTableRecords(): TableRecordsState {
   const tables = useSWR('my_tables', fetchMyTables);
   const played = useSWR('get_my_performance', fetchMyPerformance);
   const games = useSWR(GAMES_KEY, fetchMyUpcomingGames);
+  const pay = useSWR('get_my_table_pay_info', fetchMyTablePayInfo, { shouldRetryOnError: false });
   const records = tables.data && played.data && games.data
     ? withNextGames(tableRecords(tables.data, played.data), games.data)
     : undefined;
@@ -46,11 +50,13 @@ export function useTableRecords(): TableRecordsState {
 
   return {
     records,
+    payInfo: pay.data ?? [],
     error: tables.error ?? played.error ?? games.error,
     retry: () => {
       void tables.mutate();
       void played.mutate();
       void games.mutate();
+      void pay.mutate();
     },
     answer,
   };
