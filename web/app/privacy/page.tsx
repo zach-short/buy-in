@@ -10,8 +10,9 @@ export default function PrivacyPage() {
   return (
     <LegalPage title='Privacy Policy' updated='September 29, 2026'>
       <p>
-        Buy-In (buy-in.win) helps hosts run home poker nights: the table, the drink tab, settling up and
-        scheduling. This page explains what we collect, why, and what you can do about it.
+        Buy-In (buy-in.win) helps hosts run home poker nights (the table, the drink tab, settling up and
+        scheduling) and lets players keep a private record of their own results. This page explains what
+        we collect, why, and what you can do about it.
       </p>
 
       <LegalSection title='What we collect'>
@@ -30,6 +31,11 @@ export default function PrivacyPage() {
             no account, with a name and optionally a phone number or Venmo handle. Hosts should only add
             details the player is happy to share.
           </li>
+          <li>
+            <strong className='text-foreground'>Results you log.</strong> Poker sessions, casino games and
+            sports bets you record for yourself: the amounts in and out, the date, the place and any notes.
+            This is a record of your gambling results, so treat your account as private.
+          </li>
         </ul>
       </LegalSection>
 
@@ -45,7 +51,8 @@ export default function PrivacyPage() {
         <p>
           The host and members of a bar can see that bar’s games and balances. Anyone holding a receipt,
           invite or RSVP link can see what that link shows, so share those links only with the people they
-          are for.
+          are for. Results you log for yourself are visible only to you: not your host, not your tables, and
+          not anyone holding a link.
         </p>
       </LegalSection>
 

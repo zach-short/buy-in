@@ -15,15 +15,17 @@ export default function TermsPage() {
 
       <LegalSection title='What Buy-In is'>
         <p>
-          Buy-In is a record-keeping tool for private home games. It tracks buy-ins, cash-outs, drinks and
-          who owes whom. It does not hold, move or process money: every payment happens between players,
+          Buy-In is a record-keeping tool. Hosts use it to run private home games: buy-ins, cash-outs,
+          drinks and who owes whom. Players can also keep a private log of their own results from poker,
+          casino games and sports bets. It does not hold, move or process money, and it does not take bets,
+          set or quote odds, or connect to any sportsbook or casino: every payment and every bet happens
           outside Buy-In, for example in Venmo.
         </p>
       </LegalSection>
 
       <LegalSection title='Your responsibilities'>
         <ul className='list-disc space-y-2 pl-5'>
-          <li>You are responsible for making sure your games follow the laws where you play.</li>
+          <li>You are responsible for making sure your games and bets follow the laws where you play.</li>
           <li>Check the numbers before anyone pays. Balances are only as accurate as what was entered.</li>
           <li>Only add other people’s details with their permission, and keep your account secure.</li>
           <li>Do not misuse the service, try to break it, or access data that is not yours.</li>

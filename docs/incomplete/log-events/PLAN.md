@@ -1,6 +1,6 @@
 # Log an event — PLAN
 
-**Status: `PLANNED` 2026-09-29 — GATE 2 answered the same day (§7), every recommendation taken; the plan is approved.** Builds `SCOPE.md` §7 (K1(a), K2(a), plain copy). SCOPE says what
+**Status: `BUILT` 2026-09-29, all four phases (`HANDOFF.md` steps 66, 68, 70, 72); archive waits on the owner's runtime pass.** Was `PLANNED` 2026-09-29 — GATE 2 answered the same day (§7), every recommendation taken; the plan is approved.** Builds `SCOPE.md` §7 (K1(a), K2(a), plain copy). SCOPE says what
 and why; this says in what order, by whom, and what "done" means. Process: `docs/AGENT-PRACTICES.md` Parts 4–7; code:
 `docs/conventions-typescript.md`, read in full before any edit. Opened by `/scope` follow-up on Sonnet 5.5; the build
 sessions are the drivers in §2.
@@ -208,6 +208,8 @@ drops input silently; that is the design (BD-3) and the pass confirms it does no
 The strip change reaches every account, so re-walk the host view.
 
 ### Phase 4 — Words and close-out
+
+**Status: `BUILT` 2026-09-29 — `HANDOFF.md` step 72.** Every copy question was answered plain by the owner in one batch: Terms, Privacy, the §8 rows and the Everything empty state (kept as drafted). The `updated=` date was already 2026-09-29, so it did not move. No deviation. Archive waits on the owner's runtime pass.
 
 **Scope:**
 1. **Copy (R7), asked first, 2–3 variants each:** the Terms sentence and section ("What Buy-In is"), the privacy page's

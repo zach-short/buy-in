@@ -227,13 +227,13 @@ Keep Mongo readable until the web app is fully cut over.
 
 | Guideline | Requirement | Action |
 |---|---|---|
-| **5.3.4** | Real-money gaming needs licensing + geo-restriction | **Avoided by design** — ledger only, no funds movement. Deep links hand off to installed apps, same as Splitwise. |
+| **5.3.4** | Real-money gaming needs licensing + geo-restriction | **Avoided by design** — ledger only, no funds movement. Logged bets and casino results are records the player types in after the fact; Buy-In takes no bets, sets or quotes no odds, and connects to no book. Deep links hand off to installed apps, same as Splitwise. |
 | **4.8** | Third-party login obliges an equivalent private option | Add Sign in with Apple (Google is already advertised in the README) |
 | **5.1.1(v)** | In-app account deletion | Edge Function calling `auth.admin.deleteUser` |
-| Age rating | Alcohol + simulated gambling references | Rate 17+ |
+| Age rating | Alcohol, simulated gambling references, and a private log of real-money gambling results | Rate 17+ |
 | Privacy | Nutrition labels + privacy manifest | Declare email, name, and any push tokens |
 
-**Positioning matters for review.** Store copy should read as an expense/ledger tracker for home games. Avoid "play poker," "win," "cash out" as headline verbs. Precedent: [PokerPot](https://apps.apple.com/us/app/-/id6758568455), [ChipUp](https://apps.apple.com/il/app/chipup/id6747723921), and [Poker Ledger Pro](https://apps.apple.com/us/app/poker-ledger-pro/id6753264258) all ship this exact shape — and none of them move money.
+**Positioning matters for review.** Store copy should read as an expense/ledger tracker for home games, with a private results log. Avoid "play poker," "bet," "win," "cash out" as headline verbs. *(Reworded 2026-09-29, log-events item 30: logging sports bets and casino results added the private log, the "bet" verb and the no-odds clause above; the owner picked the plain wording.)* Precedent: [PokerPot](https://apps.apple.com/us/app/-/id6758568455), [ChipUp](https://apps.apple.com/il/app/chipup/id6747723921), and [Poker Ledger Pro](https://apps.apple.com/us/app/poker-ledger-pro/id6753264258) all ship this exact shape — and none of them move money.
 
 ---
 

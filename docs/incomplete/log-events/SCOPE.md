@@ -1,6 +1,6 @@
 # Log an event — one P&L for poker, blackjack, sports betting and the rest — SCOPE
 
-**Status: `SCOPED` 2026-09-29 — gate answered (§7).** §1–§6 are the pre-gate proposal, kept as written; where §7 differs, §7 wins. Opened by `/scope` on Sonnet 5.5.
+**Status: `BUILT` 2026-09-29 — all four phases (`HANDOFF.md` steps 66, 68, 70, 72); `0027` on production (step 71); not walked on a real phone.** Was `SCOPED` 2026-09-29, gate answered (§7). §1–§6 are the pre-gate proposal, kept as written; where §7 differs, §7 wins. Opened by `/scope` on Sonnet 5.5.
 Owner's asks, 2026-09-29, in order:
 1. "start with a way to record profits and losses in whatever format is needed and integrate it with the poker p&l" (first read: sports bets).
 2. Widened: "log an event should probably allow for a bunch of different events like Poker, Black Jack, Sports Betting etc. and then the form changes based on the option chosen from a drop down/search".
@@ -54,6 +54,8 @@ Vocabulary is the repo's: a **table** is a bar, a **game** is a session, a **log
 - **Not part of any table's money.** Nothing here touches `sessions`, `buy_ins`, `cashouts`, a balance, a settle-up, a receipt or `get_my_tables`.
 - **Not a rewrite of poker.** Poker home games and poker logged sessions keep their tables, their form, their `/results/log/[id]` edit route and their stakes fields (§3 K1).
 
+*As built (item 30, 2026-09-29):* the "not a sportsbook" line is now the product's own words. Terms ("What Buy-In is") names the private results log and says Buy-In does not take bets, set or quote odds, or connect to any sportsbook or casino; the responsibilities line reads "your games and bets". Privacy names "Results you log" under What we collect and says only the player can see them. `docs/migration-plan.md` §8 carries the same line. All plain register, picked by the owner in chat.
+
 ## 3. Options
 
 ### K1 — How events are stored
@@ -74,6 +76,8 @@ Vocabulary is the repo's: a **table** is a bar, a **game** is a session, a **log
 
 *Recommend (a).*
 
+*As built (phase 3, step 70):* "By type" shows only under All, not under a chip; the chips wrap as pills rather than a segmented bar; no web test file (vitest runs core only, the maths is pinned in `event-result.test.ts`). The empty state is the owner's plain pick (item 30): "Nothing logged yet".
+
 ### K3 — The searchable dropdown
 
 - **(a) A combobox built from the existing `popover.tsx` plus an input, for the type picker only.** *Defense:* real search, phone-friendly, matches the "drop down/search" ask, and it stays a single small component. *Against:* it is new UI with its own keyboard and touch behaviour to get right, and the kit has no precedent to copy (§1 row 11).
@@ -81,6 +85,8 @@ Vocabulary is the repo's: a **table** is a bar, a **game** is a session, a **log
 - **(c) A plain list of buttons or chips, no search.** *Defense:* trivially reliable at nine types. *Against:* not what was asked, and it stops scaling past about a dozen.
 
 *Recommend (a), with "Other" as a real entry that asks for a name,* so search never dead-ends.
+
+*As built (phase 2, step 68):* the list also closes on blur, because Radix's outside-dismiss did not fire in the walk; Other's field is labelled "Name" and the picker "What", both provisional, not asked. Put in and Got back stack one per row (the long label wraps at 375 px), and Delete sits outside the `<form>`.
 
 ### K4 — Which types ship first
 
@@ -107,6 +113,8 @@ Every number is proposed with a default, and belongs in `web/lib/config.ts` (row
 | 7 | Odds range | American odds as an integer, `abs(odds) >= 100`, optional | integer, so no float; decimal odds are banned as a float |
 | 8 | Type filter chips shown | only types the player has logged | nine empty chips on a new account is noise |
 | 9 | Event type slug format | `^[a-z][a-z0-9_]{0,39}$` in the DB, the registry decides the rest | new types need no migration (K1a) |
+
+*As built (phase 1, step 66):* Dial 4's 40 and Dial 7's odds range are **not** database checks (`title` is 1–100, odds live in `details`); the form caps the name at 40 and zod enforces the odds. Dial 6's check is `(stake_cents > 0 or payout_cents > 0)`, not a sum, which would overflow near 2³¹ (PLAN §0 row 13). Nothing was added to `config.ts`.
 
 ## 5. Hazards this work walks into
 

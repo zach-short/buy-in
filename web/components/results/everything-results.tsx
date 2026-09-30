@@ -92,7 +92,7 @@ function LogEventButton() {
   );
 }
 
-// Draft words, plain register; item 30 asks the owner for this empty state (PLAN phase 4 step 1).
+// The owner's pick, plain register (log-events PLAN phase 4, 2026-09-29).
 function NothingYet() {
   return (
     <EmptyResults
