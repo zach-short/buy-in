@@ -56,7 +56,8 @@ export function useClaimFlow(token: string, enabled: boolean) {
     refreshInterval: (data) => (isWaiting(data) ? WAITING_POLL_MS : 0),
   });
   const [choseNew, setChoseNew] = useState(false);
-  const [requesting, setRequesting] = useState(false);
+  // The row being asked for, so the picker can say so on that row; null when nothing is in flight.
+  const [requestingId, setRequestingId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const view = state.error && !state.data ? 'failed' : viewOf(state.data, choseNew);
@@ -70,10 +71,10 @@ export function useClaimFlow(token: string, enabled: boolean) {
   }, [view, router]);
 
   async function pick(playerId: string) {
-    setRequesting(true);
+    setRequestingId(playerId);
     setError('');
     const result = await requestClaim(token, playerId);
-    setRequesting(false);
+    setRequestingId(null);
     if (!result.ok) setError(CLAIM_ERRORS[result.reason]);
     await state.mutate();
   }
@@ -81,7 +82,8 @@ export function useClaimFlow(token: string, enabled: boolean) {
   return {
     view,
     players,
-    requesting,
+    requesting: requestingId !== null,
+    requestingId,
     error: error || (state.data?.kind === 'failed' ? CLAIM_ERRORS[state.data.reason] : state.error ? UNREACHABLE : ''),
     waitingFor: nameOf(players, open?.myRequest?.playerId),
     rejectedName: open?.myRequest?.status === 'rejected' ? nameOf(players, open.myRequest.playerId) : '',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { formatCents } from '@pb/core';
 import { Archive, Check, Plus, Trash2, X } from 'lucide-react';
 
@@ -26,15 +26,25 @@ export function DrinkEditor({ drink, inventory, onSave, onCancel, isNew = false,
     setForm((f) => ({ ...f, [k]: v }));
   }
 
-  async function handleSave() {
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    if (saving || !form.name.trim()) return;
     setSaving(true);
     await onSave(form);
     setSaving(false);
   }
 
   return (
-    <div className='space-y-3 pt-3 border-t border-border'>
-      <Input placeholder='Drink name' value={form.name} onChange={(e) => setField('name', e.target.value)} className='h-11' />
+    <form onSubmit={(e) => void handleSave(e)} className='space-y-3 pt-3 border-t border-border'>
+      <Input
+        placeholder='Drink name'
+        aria-label='Drink name'
+        autoCapitalize='words'
+        autoComplete='off'
+        value={form.name}
+        onChange={(e) => setField('name', e.target.value)}
+        className='h-11'
+      />
       <div className='flex gap-3 items-center'>
         <MoneyInput
           placeholder='Price'
@@ -47,7 +57,7 @@ export function DrinkEditor({ drink, inventory, onSave, onCancel, isNew = false,
       </div>
 
       {isNew && (
-        <label className='flex items-center gap-2 text-sm min-h-10'>
+        <label className='flex items-center gap-2 text-sm min-h-11'>
           <input
             type='checkbox'
             checked={form.trackStock}
@@ -63,17 +73,17 @@ export function DrinkEditor({ drink, inventory, onSave, onCancel, isNew = false,
         : <IngredientList ingredients={form.ingredients} inventory={inventory} onChange={(ings) => setField('ingredients', ings)} />}
 
       <div className='flex gap-2'>
-        <Button className='flex-1 h-10' onClick={handleSave} disabled={saving || !form.name.trim()}>
+        <Button type='submit' className='flex-1 h-11' disabled={saving || !form.name.trim()}>
           <Check className='size-4' /> {saving ? 'Saving…' : 'Save'}
         </Button>
-        <Button variant='outline' className='h-10 px-4' onClick={onCancel}><X aria-hidden='true' /> Cancel</Button>
+        <Button type='button' variant='outline' className='h-11 px-4' onClick={onCancel}><X aria-hidden='true' /> Cancel</Button>
         {onArchive && (
-          <Button variant='outline' className='h-10 px-4' onClick={onArchive} disabled={saving}>
+          <Button type='button' variant='outline' className='h-11 px-4' onClick={onArchive} disabled={saving}>
             <Archive className='size-4' /> Archive
           </Button>
         )}
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -138,7 +148,8 @@ function IngredientList({ ingredients, inventory, onChange }: {
             <select
               value={ing.itemId}
               onChange={(e) => update(i, 'itemId', e.target.value)}
-              className='flex-1 min-w-0 h-10 rounded-md border border-input bg-transparent px-2 text-sm'
+              aria-label='Ingredient'
+              className='flex-1 min-w-0 h-11 rounded-md border border-input bg-transparent px-2 text-base md:text-sm'
             >
               <option value=''>Select item…</option>
               {inventory.map((item) => (
@@ -149,16 +160,17 @@ function IngredientList({ ingredients, inventory, onChange }: {
               type='text'
               inputMode='decimal'
               placeholder='Qty'
+              aria-label='Quantity used'
               value={ing.qtyUsed}
               onChange={(e) => update(i, 'qtyUsed', e.target.value)}
-              className='h-10 w-20'
+              className='h-11 w-20'
             />
             <span className='text-xs text-muted-foreground w-8 shrink-0'>{invItem?.unit ?? ''}</span>
             <button
               type='button'
               aria-label='Remove ingredient'
               onClick={() => onChange(ingredients.filter((_, idx) => idx !== i))}
-              className='size-10 flex items-center justify-center text-muted-foreground hover:text-destructive'
+              className='size-11 shrink-0 flex items-center justify-center text-muted-foreground hover:text-destructive'
             >
               <Trash2 className='size-4' />
             </button>
@@ -168,7 +180,7 @@ function IngredientList({ ingredients, inventory, onChange }: {
       <button
         type='button'
         onClick={() => onChange([...ingredients, { itemId: '', qtyUsed: '' }])}
-        className='flex items-center gap-1.5 text-sm text-primary min-h-[40px]'
+        className='flex items-center gap-1.5 text-sm text-primary min-h-11'
       >
         <Plus className='size-3.5' /> Add ingredient
       </button>

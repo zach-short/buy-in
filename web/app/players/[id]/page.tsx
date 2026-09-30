@@ -22,15 +22,15 @@ import {
 import { useConfirm } from '@/hooks/use-confirm';
 import { PlayerAccountPanel } from '@/components/players/player-account-panel';
 import { BalanceLabel } from '@/components/players/balance-label';
+import { PaymentActions } from '@/components/players/payment-actions';
 import { PaymentHistory } from '@/components/players/payment-history';
 import { PlayerAdminPanel } from '@/components/players/player-admin-panel';
 import { PlayerEditForm } from '@/components/players/player-edit-form';
+import { PortalLinkPanel } from '@/components/players/portal-link-panel';
 import { RecordPaymentForm, type PaymentMode } from '@/components/players/record-payment-form';
 import { ReportedPayments } from '@/components/players/reported-payments';
 import { SessionHistory, sessionGroupsFor } from '@/components/players/session-history';
 import { usePlayerLinks } from '@/components/players/use-player-links';
-
-const OUTLINE_ACTION = 'flex-1 min-h-11 py-3 border border-border rounded text-xs tracking-widest uppercase text-muted-foreground transition-colors';
 
 export default function PlayerDetailPage({
   params,
@@ -53,10 +53,10 @@ export default function PlayerDetailPage({
   const { data: sessions = [] } = useSWR('sessions', fetchSessions);
   // Only this player's rows: the balance and the history read nothing else, and
   // orders_player_idx / payments_player_idx serve these where the whole bar's lists did not.
-  const { data: orders } = useSWR(['orders', id], ([, playerId]) => fetchPlayerOrders(playerId));
-  const { data: buyIns } = useSWR(['buy_ins', id], ([, playerId]) => fetchPlayerBuyIns(playerId));
-  const { data: cashouts } = useSWR(['cashouts', id], ([, playerId]) => fetchPlayerCashouts(playerId));
-  const { data: payments, mutate: mutatePayments } = useSWR(
+  const { data: orders, error: ordersError, mutate: mutateOrders } = useSWR(['orders', id], ([, playerId]) => fetchPlayerOrders(playerId));
+  const { data: buyIns, error: buyInsError, mutate: mutateBuyIns } = useSWR(['buy_ins', id], ([, playerId]) => fetchPlayerBuyIns(playerId));
+  const { data: cashouts, error: cashoutsError, mutate: mutateCashouts } = useSWR(['cashouts', id], ([, playerId]) => fetchPlayerCashouts(playerId));
+  const { data: payments, error: paymentsError, mutate: mutatePayments } = useSWR(
     ['payments', id],
     ([, playerId]) => fetchPlayerPayments(playerId),
   );
@@ -77,6 +77,15 @@ export default function PlayerDetailPage({
   const balanceCents = ledger
     ? playerBalanceCents(id, ledger.orders, ledger.buyIns, ledger.cashouts, ledger.payments)
     : null;
+  // The app's SWRConfig does not retry on error, so a failed read would leave "…" up forever
+  // and hide every payment action. Retry re-reads all four; the balance rule above is unchanged.
+  const ledgerError = ordersError ?? buyInsError ?? cashoutsError ?? paymentsError;
+  function retryLedger() {
+    void mutateOrders();
+    void mutateBuyIns();
+    void mutateCashouts();
+    void mutatePayments();
+  }
 
   function handlePayVenmo() {
     if (!player?.venmo || balanceCents === null || balanceCents >= 0) return;
@@ -111,8 +120,6 @@ export default function PlayerDetailPage({
         subtitle={player.phone}
         actions={
           <>
-            <HeaderAction onClick={() => links.copyPortalLink(false)}>Portal</HeaderAction>
-            <HeaderAction onClick={() => links.copyPortalLink(true)}>New link</HeaderAction>
             <HeaderAction onClick={() => setEditing(true)}>Edit</HeaderAction>
             <BackAction fallback='/players' />
           </>
@@ -127,60 +134,25 @@ export default function PlayerDetailPage({
         <p className='text-xs tracking-widest uppercase text-muted-foreground mb-2'>
           Running Balance
         </p>
-        {balanceCents === null
-          ? <span className='text-3xl font-bold text-muted-foreground' aria-label='Loading balance'>…</span>
-          : <BalanceLabel cents={balanceCents} />}
+        {balanceCents !== null
+          ? <BalanceLabel cents={balanceCents} />
+          : ledgerError
+            ? <LedgerError message={(ledgerError as Error).message} onRetry={retryLedger} />
+            : <span className='text-3xl font-bold text-muted-foreground' aria-label='Loading balance'>…</span>}
       </div>
 
       <ReportedPayments playerId={id} onLedgerChanged={() => void mutatePayments()} />
 
       {balanceCents === null ? null : paymentMode === null ? (
-        <div className='space-y-3 mb-8'>
-          <div className='flex gap-3'>
-            <button
-              type='button'
-              onClick={() => setPaymentMode('received')}
-              className={`${OUTLINE_ACTION} hover:border-primary hover:text-primary`}
-            >
-              They Paid Me
-            </button>
-            <button
-              type='button'
-              onClick={() => setPaymentMode('sent')}
-              className={`${OUTLINE_ACTION} hover:border-green-500 hover:text-green-500`}
-            >
-              I Paid Them
-            </button>
-            {player.venmo && balanceCents < 0 && (
-              <button
-                type='button'
-                onClick={handlePayVenmo}
-                className='flex-1 min-h-11 py-3 rounded text-xs tracking-widest uppercase font-semibold text-white transition-opacity hover:opacity-90'
-                style={{ background: '#3D95CE' }}
-              >
-                Pay
-              </button>
-            )}
-          </div>
-          {balanceCents > 0 && (
-            <button
-              type='button'
-              onClick={() => void links.remind(balanceCents)}
-              className={`w-full ${OUTLINE_ACTION} hover:border-primary hover:text-primary`}
-            >
-              {player.phone ? 'Remind · Text' : 'Remind · Share'}
-            </button>
-          )}
-          {player.phone && (
-            <button
-              type='button'
-              onClick={() => void links.requestReceipt()}
-              className={`w-full ${OUTLINE_ACTION} hover:border-primary hover:text-primary`}
-            >
-              Request · Text Full History
-            </button>
-          )}
-        </div>
+        <PaymentActions
+          balanceCents={balanceCents}
+          hasPhone={Boolean(player.phone)}
+          canPayVenmo={Boolean(player.venmo) && balanceCents < 0}
+          onRecord={setPaymentMode}
+          onPayVenmo={handlePayVenmo}
+          onRemind={() => void links.remind(balanceCents)}
+          onRequest={() => void links.requestReceipt()}
+        />
       ) : (
         <RecordPaymentForm
           player={player}
@@ -191,7 +163,7 @@ export default function PlayerDetailPage({
         />
       )}
 
-      <PlayerAccountPanel player={player} players={players ?? []} balanceCents={balanceCents} onChanged={() => mutatePlayers()} />
+      <PortalLinkPanel links={links} />
 
       <SessionHistory groups={sessionGroups} />
 
@@ -203,20 +175,33 @@ export default function PlayerDetailPage({
         </p>
       )}
 
+      <div className='mt-8'>
+        <PlayerAccountPanel player={player} players={players ?? []} balanceCents={balanceCents} onChanged={() => mutatePlayers()} />
+      </div>
+
       {barLedger && balanceCents !== null && (
-        <div className='mt-8'>
-          <PlayerAdminPanel
-            player={player}
-            players={players ?? []}
-            balanceCents={balanceCents}
-            ledger={barLedger}
-            confirm={confirm}
-            onRosterChanged={() => void mutatePlayers()}
-          />
-        </div>
+        <PlayerAdminPanel
+          player={player}
+          players={players ?? []}
+          balanceCents={balanceCents}
+          ledger={barLedger}
+          confirm={confirm}
+          onRosterChanged={() => void mutatePlayers()}
+        />
       )}
 
       {confirmDialog}
     </PageMain>
+  );
+}
+
+function LedgerError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className='text-center space-y-2' role='alert'>
+      <p className='text-sm text-destructive'>Couldn&apos;t load the balance. {message}</p>
+      <button type='button' onClick={onRetry} className='min-h-11 px-4 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>
+        Retry
+      </button>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { use } from 'react';
 import useSWR from 'swr';
 
 import { formatCents, formatDate, formatTime, renderVenmoNote, VENMO_NOTE_PREFIX, venmoUrls } from '@pb/core';
+import { NO_PAY_METHOD } from '@/components/portal/pay-panel';
 import { netParts, paidLine } from '@/components/settle/net-copy';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { sharedNightNet } from '@/lib/ledger';
@@ -19,7 +20,7 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
 
   // A session-scoped link (D15): every row in it is this player's, for this one night, so
   // nothing is filtered here — the RPC already did it.
-  const { data: tab, error } = useSWR(['shared_tab', token, 'session'], ([, t]) => fetchSharedTab(t, 'session'));
+  const { data: tab, error, mutate } = useSWR(['shared_tab', token, 'session'], ([, t]) => fetchSharedTab(t, 'session'));
 
   if (!tab && !error) return <StatusScreen kind='loading' />;
 
@@ -27,7 +28,15 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
   const player = tab?.player;
 
   if (!tab || !session || !player) {
-    return <StatusScreen kind='error' title='Receipt not found' message='This link may be outdated. Ask for a new one.' />;
+    return (
+      <StatusScreen
+        kind='error'
+        title='Receipt not found'
+        message='This link may be outdated. Ask for a new one.'
+        action={{ label: 'Try again', onClick: () => void mutate() }}
+        secondaryAction={{ label: 'Go to Buy-In', href: '/' }}
+      />
+    );
   }
 
   const playerOrders = [...tab.orders].sort(byCreatedAt);
@@ -47,6 +56,8 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
   const template = tab.bar.venmo_note_template ?? `${VENMO_NOTE_PREFIX} — {{session}}`;
   const note = renderVenmoNote(template, { amountCents: night.netCents, sessionName: session.name });
   const venmo = handle && total.kind === 'owes' ? venmoUrls(handle, night.netCents, note) : null;
+  // This page offers Venmo only, but a Cash App handle is still a way to pay, so it is not "none".
+  const noPayMethod = total.kind === 'owes' && !handle && !tab.bar.cashapp_handle;
 
   return (
     <>
@@ -75,7 +86,7 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
 
         .r-venue {
           text-align: center;
-          font-size: 0.65rem;
+          font-size: 0.6875rem;
           letter-spacing: 0.3em;
           text-transform: uppercase;
           color: var(--muted-foreground);
@@ -94,7 +105,7 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
 
         .r-date {
           text-align: center;
-          font-size: 0.65rem;
+          font-size: 0.6875rem;
           color: var(--muted-foreground);
           letter-spacing: 0.08em;
           margin-bottom: 1.5rem;
@@ -117,7 +128,7 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
         }
 
         .r-time {
-          font-size: 0.65rem;
+          font-size: 0.6875rem;
           color: var(--muted-foreground);
           min-width: 50px;
           flex-shrink: 0;
@@ -147,7 +158,7 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
 
         .r-footer {
           text-align: center;
-          font-size: 0.6rem;
+          font-size: 0.6875rem;
           color: var(--muted-foreground);
           letter-spacing: 0.2em;
           text-transform: uppercase;
@@ -182,6 +193,14 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
           text-align: center;
           font-size: 0.8rem;
           color: #22c55e;
+        }
+
+        .r-no-pay {
+          width: 100%;
+          max-width: 340px;
+          text-align: center;
+          font-size: 0.8rem;
+          color: var(--muted-foreground);
         }
 
         .venmo-amount {
@@ -271,6 +290,8 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
             <span className='venmo-amount'>{total.amount}</span>
           </button>
         )}
+
+        {noPayMethod && <p className='r-no-pay'>{NO_PAY_METHOD}</p>}
 
         {total.kind === 'owed' && <p className='r-owed-note'>The host owes you {total.amount}</p>}
 

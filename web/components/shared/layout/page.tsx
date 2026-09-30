@@ -35,13 +35,26 @@ export function PageHeader({
   );
 }
 
+const HEADER_ACTION_TONE = {
+  // Back, Edit and the like: grey until hovered.
+  default: 'text-muted-foreground hover:text-foreground',
+  // The page's main action ("+ Add"), gold so it does not read like Back beside it.
+  primary: 'font-semibold text-primary hover:text-primary/80',
+} as const;
+
 // The padding grows the tap target without growing the row, which would move the title.
-export function HeaderAction({ className, type = 'button', ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
+export function HeaderAction({
+  className,
+  type = 'button',
+  tone = 'default',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { tone?: keyof typeof HEADER_ACTION_TONE }) {
   return (
     <button
       type={type}
       className={cn(
-        '-my-3.5 py-3.5 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors',
+        '-my-3.5 py-3.5 text-xs tracking-widest uppercase transition-colors',
+        HEADER_ACTION_TONE[tone],
         className,
       )}
       {...props}

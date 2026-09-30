@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import { formatCents, formatDate, formatTime } from '@pb/core';
 import { netParts, paidLine } from '@/components/settle/net-copy';
 import { sendReceipt } from '@/components/settle/send-receipt';
+import { BackAction } from '@/components/shared/layout/back-action';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { useGoBack } from '@/hooks/use-go-back';
 import { nightNetFromRows } from '@/lib/ledger';
@@ -80,7 +81,7 @@ export default function PlayerReceiptPage({
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 2rem 1.5rem 8rem;
+          padding: 2rem 1.5rem calc(8rem + env(safe-area-inset-bottom));
         }
 
         .receipt-toolbar {
@@ -189,7 +190,7 @@ export default function PlayerReceiptPage({
           bottom: 0;
           left: 0;
           right: 0;
-          padding: 1rem 1.5rem;
+          padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom));
           display: flex;
           gap: 0.75rem;
           background: var(--background);
@@ -202,6 +203,7 @@ export default function PlayerReceiptPage({
           align-items: center;
           justify-content: center;
           gap: 0.5rem;
+          min-height: 44px;
           padding: 0.75rem;
           border-radius: 4px;
           font-size: 0.7rem;
@@ -236,12 +238,7 @@ export default function PlayerReceiptPage({
 
       <div className='receipt-page'>
         <div className='receipt-toolbar'>
-          <button
-            onClick={goBack}
-            className='text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
-          >
-            ← Back
-          </button>
+          <BackAction fallback='/sessions' />
         </div>
 
         <div className='receipt-card'>

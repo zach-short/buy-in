@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { Check, X } from 'lucide-react';
 
@@ -18,8 +18,9 @@ export function PlayerEditForm({ player, onSaved, onClose }: {
   const [venmo, setVenmo] = useState(player.venmo ?? '');
   const [saving, setSaving] = useState(false);
 
-  async function save() {
-    if (!name.trim()) return;
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || saving) return;
     setSaving(true);
     try {
       await updatePlayer(player.id, { name: name.trim(), phone: phone.trim(), venmo: venmo.trim() });
@@ -34,7 +35,7 @@ export function PlayerEditForm({ player, onSaved, onClose }: {
   }
 
   return (
-    <div className='border border-border rounded-md p-4 mb-8 space-y-3'>
+    <form onSubmit={(e) => void save(e)} className='border border-border rounded-md p-4 mb-8 space-y-3'>
       <p className='text-xs tracking-widest uppercase text-muted-foreground'>
         Edit Player
       </p>
@@ -44,15 +45,18 @@ export function PlayerEditForm({ player, onSaved, onClose }: {
         className='h-11'
         placeholder='Name'
         aria-label='Name'
+        autoCapitalize='words'
+        autoComplete='off'
         autoFocus
       />
       <Input
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
         className='h-11'
-        placeholder='Phone (e.g. +15551234567)'
+        placeholder='Phone (optional)'
         aria-label='Phone'
         type='tel'
+        autoComplete='tel'
       />
       <Input
         value={venmo}
@@ -60,9 +64,12 @@ export function PlayerEditForm({ player, onSaved, onClose }: {
         className='h-11'
         placeholder='Venmo handle (e.g. @john-doe)'
         aria-label='Venmo handle'
+        autoCapitalize='none'
+        autoCorrect='off'
       />
       <div className='flex gap-2'>
         <Button
+          type='button'
           variant='outline'
           className='flex-1 h-11 text-xs tracking-widest uppercase'
           onClick={onClose}
@@ -72,14 +79,14 @@ export function PlayerEditForm({ player, onSaved, onClose }: {
           Cancel
         </Button>
         <Button
+          type='submit'
           className='flex-1 h-11 text-xs tracking-widest uppercase'
-          onClick={save}
           disabled={saving || !name.trim()}
         >
           <Check aria-hidden='true' />
           {saving ? 'Saving…' : 'Save'}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

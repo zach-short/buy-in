@@ -42,9 +42,13 @@ export default function AccountPage() {
     <PageMain>
       <PageHeader title='Account' subtitle={user?.email} />
 
-      <InstallCard />
-
-      <MyTables />
+      {/* The links lead: a host in a browser came here for Invites, Inventory or Drinks, and the
+          install card and table list below them would push those off a phone's first screen. */}
+      <nav aria-label='More' className='flex flex-col gap-2 mb-10'>
+        {MORE_LINKS.filter((link) => showsLink(link, isHost, visible)).map(({ label, href, icon }) => (
+          <LinkRow key={href} href={href} label={label} icon={icon} />
+        ))}
+      </nav>
 
       {isHost === false && (
         <div className='mb-10'>
@@ -52,11 +56,9 @@ export default function AccountPage() {
         </div>
       )}
 
-      <nav aria-label='More' className='flex flex-col gap-2 mb-10'>
-        {MORE_LINKS.filter((link) => showsLink(link, isHost, visible)).map(({ label, href, icon }) => (
-          <LinkRow key={href} href={href} label={label} icon={icon} />
-        ))}
-      </nav>
+      <InstallCard />
+
+      <MyTables />
 
       <SignoutButton />
     </PageMain>

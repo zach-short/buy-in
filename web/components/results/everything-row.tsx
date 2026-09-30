@@ -8,7 +8,7 @@ import { signedAmount, toneClass } from '@/components/results/poker-result-row';
 
 function TypeTag({ type }: { type: string }) {
   return (
-    <span className='shrink-0 rounded border border-border px-1.5 py-px text-[10px] tracking-widest uppercase text-muted-foreground'>
+    <span className='shrink-0 rounded border border-border px-1.5 py-px text-[11px] tracking-widest uppercase text-muted-foreground'>
       {typeLabel(type)}
     </span>
   );

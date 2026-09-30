@@ -44,7 +44,7 @@ export function NextGameRow({ game, onAnswer }: NextGameRowProps) {
             variant={game.myStatus === choice.status ? 'default' : 'outline'}
             aria-pressed={game.myStatus === choice.status}
             onClick={() => game.myStatus !== choice.status && void onAnswer(game.gameId, choice.status)}
-            className='w-14 tracking-widest uppercase text-xs'
+            className='h-11 w-14 tracking-widest uppercase text-xs'
           >
             {choice.label}
           </Button>

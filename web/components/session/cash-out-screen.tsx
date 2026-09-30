@@ -1,5 +1,6 @@
 'use client';
 
+import type { KeyboardEvent } from 'react';
 import { formatCents } from '@pb/core';
 import { ArrowLeft, Lock } from 'lucide-react';
 
@@ -17,15 +18,29 @@ interface CashOutScreenProps {
   onBack: () => void;
 }
 
+// Enter walks down the list like a paper sheet. On the last field it only closes the keyboard:
+// Enter must never close the night, which writes every balance.
+function focusNextField(e: KeyboardEvent<HTMLInputElement>) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const fields = Array.from(document.querySelectorAll<HTMLInputElement>('[data-cashout-field]'));
+  const next = fields[fields.indexOf(e.currentTarget) + 1];
+  if (next) next.focus();
+  else e.currentTarget.blur();
+}
+
 export function CashOutScreen({ close, buyInCents, tabCents, onBack }: CashOutScreenProps) {
   const { entries, remainingCents, totalInCents, outCents, missing, closing } = close;
   const isOver = remainingCents < 0;
 
   return (
-    <PageMain className='flex flex-col'>
+    // pb-0: the sticky action bar below carries its own bottom padding. This route has no nav,
+    // so the bar clears the home indicator itself.
+    <PageMain className='flex flex-col pb-0'>
       <PageHeader title='Cash Out' subtitle='Enter each player&apos;s chip value to close the session.' />
 
-      <div className='border border-border rounded-md px-5 py-4 mb-6 flex items-center justify-between'>
+      {/* Sticky so the running total stays in view while the host types down a long table. */}
+      <div className='sticky top-[env(safe-area-inset-top)] z-10 bg-background border border-border rounded-md px-5 py-4 mb-6 flex items-center justify-between'>
         <div>
           <p className='text-xs tracking-widest uppercase text-muted-foreground'>Pot remaining</p>
           <p className={cn('text-2xl font-bold mt-0.5 tabular-nums', isOver ? 'text-destructive' : remainingCents === 0 ? 'text-green-500' : 'text-foreground')}>
@@ -61,7 +76,7 @@ export function CashOutScreen({ close, buyInCents, tabCents, onBack }: CashOutSc
       )}
 
       <div className='space-y-4 flex-1'>
-        {entries.map(({ playerId, name, cents }) => {
+        {entries.map(({ playerId, name, cents }, i) => {
           const drinksCents = tabCents(playerId);
           return (
             <div key={playerId} className='border border-border rounded-md px-4 py-4'>
@@ -78,6 +93,9 @@ export function CashOutScreen({ close, buyInCents, tabCents, onBack }: CashOutSc
                   placeholder='Not entered'
                   value={close.amounts[playerId] ?? ''}
                   onValueChange={(v) => close.setAmount(playerId, v)}
+                  onKeyDown={focusNextField}
+                  enterKeyHint={i < entries.length - 1 ? 'next' : 'done'}
+                  data-cashout-field
                   containerClassName='flex-1'
                   disabled={closing}
                 />
@@ -100,7 +118,7 @@ export function CashOutScreen({ close, buyInCents, tabCents, onBack }: CashOutSc
         })}
       </div>
 
-      <div className='flex gap-3 mt-8'>
+      <div className='sticky bottom-0 z-10 -mx-6 mt-8 flex gap-3 border-t border-border bg-background/95 px-6 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur'>
         <Button variant='outline' className='flex-1 h-12 text-xs tracking-widest uppercase' onClick={onBack} disabled={closing}>
           <ArrowLeft aria-hidden='true' />
           Back

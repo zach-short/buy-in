@@ -85,7 +85,7 @@ function ErrorLine({ error }: { error: string }) {
 
 function BackLink({ onClick }: { onClick: () => void }) {
   return (
-    <Button type='button' variant='ghost' size='sm' onClick={onClick} className='-ml-2 mb-3 h-7 text-xs text-muted-foreground'>
+    <Button type='button' variant='ghost' size='sm' onClick={onClick} className='-ml-2 mb-3 h-11 text-xs text-muted-foreground'>
       <ArrowLeft aria-hidden='true' />
       Back
     </Button>

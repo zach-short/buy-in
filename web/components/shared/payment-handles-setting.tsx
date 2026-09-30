@@ -1,5 +1,6 @@
 'use client';
 
+import { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 import { Check } from 'lucide-react';
 
@@ -10,6 +11,7 @@ import { Label } from '@/components/ui/label';
 
 export function PaymentHandlesSetting() {
   const { venmo, cashapp, setVenmo, setCashapp, isLoading, error, dirty, saving, save } = usePaymentHandles();
+  const { mutate } = useSWRConfig();
 
   async function handleSave() {
     try {
@@ -21,7 +23,15 @@ export function PaymentHandlesSetting() {
   }
 
   if (error) {
-    return <p className='text-xs text-destructive mb-6'>Couldn&apos;t load your payment handles: {error.message}</p>;
+    // The app's SWRConfig does not retry on error; this is the host's only way back without a reload.
+    return (
+      <div className='mb-6' role='alert'>
+        <p className='text-xs text-destructive'>Couldn&apos;t load your payment handles: {error.message}</p>
+        <button type='button' onClick={() => void mutate('payment_handles')} className='min-h-11 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -55,7 +65,7 @@ export function PaymentHandlesSetting() {
         className='h-11'
       />
       <p className='text-xs text-muted-foreground'>Where players pay you. Leave one blank to remove it.</p>
-      <Button className='w-full h-10 text-xs tracking-widest uppercase' onClick={handleSave} disabled={!dirty || saving || isLoading}>
+      <Button className='w-full h-11 text-xs tracking-widest uppercase' onClick={handleSave} disabled={!dirty || saving || isLoading}>
         <Check aria-hidden='true' />
         {saving ? 'Saving…' : 'Save Handles'}
       </Button>

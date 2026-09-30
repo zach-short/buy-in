@@ -36,7 +36,7 @@ interface SettleUpProps {
 }
 
 const ACTION_CLASS =
-  'h-9 px-3 rounded border border-border text-[10px] tracking-widest uppercase text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-50';
+  'h-11 px-3 rounded border border-border text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-50';
 
 const STATUS_CLASS = {
   owes: 'text-destructive',
@@ -204,11 +204,11 @@ function RecordPaymentForm({ player, sessionId, net, confirm, onDone }: RecordPa
           Full ${full}
         </button>
         <div className='flex gap-2 ml-auto'>
-          <Button variant='outline' size='sm' disabled={saving} onClick={() => void onDone(false)}>
+          <Button variant='outline' size='sm' className='h-11' disabled={saving} onClick={() => void onDone(false)}>
             <X aria-hidden='true' />
             Cancel
           </Button>
-          <Button size='sm' disabled={saving} onClick={() => void save()}>
+          <Button size='sm' className='h-11' disabled={saving} onClick={() => void save()}>
             <Check aria-hidden='true' />
             {saving ? 'Saving…' : 'Record'}
           </Button>

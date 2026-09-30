@@ -35,7 +35,7 @@ export default function JoinInvitePage({ params }: { params: Promise<{ token: st
         <p className='text-sm'>You&apos;ve been invited to join a poker table.</p>
         <JoinNameForm flow={flow} token={token} />
         {claim.players.length > 0 && (
-          <Button variant='ghost' className='w-full text-xs tracking-widest uppercase' onClick={claim.backToNames}>
+          <Button variant='ghost' className='w-full h-11 text-xs tracking-widest uppercase' onClick={claim.backToNames}>
             <ArrowLeft aria-hidden='true' />
             Back to names
           </Button>

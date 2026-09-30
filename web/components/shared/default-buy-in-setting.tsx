@@ -1,5 +1,6 @@
 'use client';
 
+import { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 import { Check } from 'lucide-react';
 
@@ -10,6 +11,7 @@ import { Label } from '@/components/ui/label';
 
 export function DefaultBuyInSetting() {
   const { value, setValue, isLoading, error, dirty, saving, save } = useDefaultBuyIn();
+  const { mutate } = useSWRConfig();
 
   async function handleSave() {
     try {
@@ -21,7 +23,15 @@ export function DefaultBuyInSetting() {
   }
 
   if (error) {
-    return <p className='text-xs text-destructive mb-6'>Couldn&apos;t load the default buy-in: {error.message}</p>;
+    // The app's SWRConfig does not retry on error; this is the host's only way back without a reload.
+    return (
+      <div className='mb-6' role='alert'>
+        <p className='text-xs text-destructive'>Couldn&apos;t load the default buy-in: {error.message}</p>
+        <button type='button' onClick={() => void mutate('bar_settings')} className='min-h-11 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -34,6 +44,7 @@ export function DefaultBuyInSetting() {
         <Input
           id='default-buy-in'
           type='number'
+          inputMode='decimal'
           min='0'
           step='5'
           value={value}
@@ -47,7 +58,7 @@ export function DefaultBuyInSetting() {
       <p className='text-xs text-muted-foreground'>
         Pre-fills every player&apos;s buy-in when you start a session. You can still change it for any one night.
       </p>
-      <Button className='w-full h-10 text-xs tracking-widest uppercase' onClick={handleSave} disabled={!dirty || saving || isLoading}>
+      <Button className='w-full h-11 text-xs tracking-widest uppercase' onClick={handleSave} disabled={!dirty || saving || isLoading}>
         <Check aria-hidden='true' />
         {saving ? 'Saving…' : 'Save Buy-In'}
       </Button>

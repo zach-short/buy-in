@@ -27,7 +27,7 @@ export function ResultsTabs({ active, showBar }: { active: ResultsTab; showBar: 
           scroll={false}
           aria-current={tab === active ? 'page' : undefined}
           className={cn(
-            '-mb-px border-b-2 py-3 text-xs tracking-widest uppercase transition-colors',
+            '-mb-px flex min-h-11 items-center border-b-2 py-3 text-xs tracking-widest uppercase transition-colors',
             tab === active ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
           )}
         >
@@ -44,7 +44,7 @@ export function EmptyResults({ title, detail, href, action }: { title: string; d
     <div className='text-center py-24 space-y-3'>
       <p className='text-xs tracking-widest uppercase text-muted-foreground'>{title}</p>
       <p className='text-xs text-muted-foreground max-w-xs mx-auto'>{detail}</p>
-      <Link href={href} className='inline-block text-xs tracking-widest uppercase text-primary hover:text-foreground transition-colors'>
+      <Link href={href} className='inline-flex min-h-11 items-center px-2 text-xs tracking-widest uppercase text-primary hover:text-foreground transition-colors'>
         {action} ›
       </Link>
     </div>

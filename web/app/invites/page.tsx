@@ -8,6 +8,7 @@ import { formatDate } from '@pb/core';
 import { Check, X } from 'lucide-react';
 import { CreateInviteForm } from '@/components/invites/create-invite-form';
 import { InviteRow } from '@/components/invites/invite-row';
+import { DataState } from '@/components/shared/data-state';
 import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { useClaimRequests } from '@/hooks/use-claim-requests';
@@ -24,20 +25,20 @@ import { Button } from '@/components/ui/button';
 const SECTION_LABEL = 'text-xs tracking-widest uppercase text-muted-foreground mb-3';
 const STATE_TEXT = 'text-center text-muted-foreground text-xs tracking-widest uppercase py-8';
 
-interface ListStateProps<Row> {
+// D2 through the shared DataState, with a Retry: an installed PWA has no reload button.
+// `rows` is also undefined while the bar id is still loading.
+function ListState<Row>({ rows, error, empty, onRetry, children }: {
   rows: Row[] | undefined;
   error: Error | undefined;
   empty: string;
+  onRetry: () => void;
   children: (rows: Row[]) => ReactNode;
-}
-
-// D2: both lists render loading, error and empty through this one component, so neither can
-// ship with only two of them. `rows` is also undefined while the bar id is still loading.
-function ListState<Row>({ rows, error, empty, children }: ListStateProps<Row>) {
-  if (error) return <p className='text-center text-xs text-destructive py-8'>{error.message}</p>;
-  if (!rows) return <p className={STATE_TEXT}>Loading…</p>;
-  if (!rows.length) return <p className={STATE_TEXT}>{empty}</p>;
-  return <div className='space-y-2'>{children(rows)}</div>;
+}) {
+  return (
+    <DataState rows={rows} error={error} onRetry={onRetry} empty={<p className={STATE_TEXT}>{empty}</p>}>
+      {(loaded) => <div className='space-y-2'>{children(loaded)}</div>}
+    </DataState>
+  );
 }
 
 // The row may not show the raw link, so a share sheet and a clipboard that both fail (a
@@ -84,11 +85,11 @@ function ClaimRow({ claim, deciding, onDecide }: ClaimRowProps) {
       <div className='flex items-center justify-between gap-3'>
         <span className='text-xs text-muted-foreground'>Asked {formatDate(claim.createdAt)}</span>
         <div className='flex gap-2 shrink-0'>
-          <Button variant='outline' size='sm' className='text-xs tracking-widest uppercase' onClick={() => onDecide(false)} disabled={deciding}>
+          <Button variant='outline' size='sm' className='h-11 text-xs tracking-widest uppercase' onClick={() => onDecide(false)} disabled={deciding}>
             <X aria-hidden='true' />
             Reject
           </Button>
-          <Button size='sm' className='text-xs tracking-widest uppercase' onClick={() => onDecide(true)} disabled={deciding}>
+          <Button size='sm' className='h-11 text-xs tracking-widest uppercase' onClick={() => onDecide(true)} disabled={deciding}>
             <Check aria-hidden='true' />
             {deciding ? 'Saving…' : 'Approve'}
           </Button>
@@ -99,13 +100,16 @@ function ClaimRow({ claim, deciding, onDecide }: ClaimRowProps) {
 }
 
 export default function InvitesPage() {
-  const { data: barId, error: barError } = useSWR('bar_id', fetchBarId);
+  const { data: barId, error: barError, mutate: mutateBar } = useSWR('bar_id', fetchBarId);
   const invites = useSWR(barId ? (['bar_invite_links', barId] as const) : null, ([, id]) => fetchStandingInvites(id));
   const joins = useSWR(barId ? (['players_joined', barId] as const) : null, ([, id]) => fetchRecentJoins(id));
-  const claims = useClaimRequests(barId);
+  const { confirm, confirmDialog } = useConfirm();
+  const claims = useClaimRequests(barId, confirm);
   const [creating, setCreating] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
-  const { confirm, confirmDialog } = useConfirm();
+  // A failed bar read fails every list; retrying it re-keys them all.
+  const retry = (list: { mutate: () => unknown }) => () => void (barError ? mutateBar() : list.mutate());
+  const waiting = (claims.pending.data?.length ?? 0) > 0;
 
   async function handleCreate(invite: NewInvite): Promise<boolean> {
     if (!barId) return false;
@@ -143,6 +147,22 @@ export default function InvitesPage() {
     }
   }
 
+  const claimsSection = (
+    <section className='mb-10'>
+      <p className={SECTION_LABEL}>Waiting For You</p>
+      <ListState rows={claims.pending.data} error={barError ?? claims.pending.error} empty='No one is waiting' onRetry={retry(claims.pending)}>
+        {(rows) => rows.map((claim) => (
+          <ClaimRow
+            key={claim.id}
+            claim={claim}
+            deciding={claims.deciding === claim.id}
+            onDecide={(approve) => void claims.decide(claim, approve)}
+          />
+        ))}
+      </ListState>
+    </section>
+  );
+
   return (
     <PageMain>
       {confirmDialog}
@@ -152,25 +172,16 @@ export default function InvitesPage() {
         actions={<BackAction fallback='/account' />}
       />
 
+      {/* Someone waiting is the one thing here that needs the host now, so it leads. */}
+      {waiting && claimsSection}
+
       <CreateInviteForm disabled={!barId} creating={creating} onCreate={handleCreate} />
 
-      <section className='mb-10'>
-        <p className={SECTION_LABEL}>Waiting For You</p>
-        <ListState rows={claims.pending.data} error={barError ?? claims.pending.error} empty='No one is waiting'>
-          {(rows) => rows.map((claim) => (
-            <ClaimRow
-              key={claim.id}
-              claim={claim}
-              deciding={claims.deciding === claim.id}
-              onDecide={(approve) => void claims.decide(claim, approve)}
-            />
-          ))}
-        </ListState>
-      </section>
+      {!waiting && claimsSection}
 
       <section className='mb-10'>
         <p className={SECTION_LABEL}>Invites</p>
-        <ListState rows={invites.data} error={barError ?? invites.error} empty='No invites yet'>
+        <ListState rows={invites.data} error={barError ?? invites.error} empty='No invites yet' onRetry={retry(invites)}>
           {(rows) => rows.map((invite) => (
             <InviteRow
               key={invite.token}
@@ -186,7 +197,7 @@ export default function InvitesPage() {
 
       <section>
         <p className={SECTION_LABEL}>Recently Joined</p>
-        <ListState rows={joins.data} error={barError ?? joins.error} empty='Nobody has joined yet'>
+        <ListState rows={joins.data} error={barError ?? joins.error} empty='Nobody has joined yet' onRetry={retry(joins)}>
           {(rows) => rows.map((player) => <JoinRow key={player.id} player={player} />)}
         </ListState>
       </section>

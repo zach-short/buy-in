@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Cinzel } from 'next/font/google';
 
 import { formatCents, type MenuItem } from '@pb/core';
@@ -10,7 +11,20 @@ const cinzel = Cinzel({ weight: ['400', '600'], subsets: ['latin'], display: 'sw
 // Markup and styles are the pre-migration page's, unchanged (DESIGN.md §8.2); only the rows'
 // source moved, to get_menu (D14), and only available drinks are drawn, as canMake decided
 // before — now decided server-side (BD-3).
-export function MenuBoard({ items }: { items: readonly MenuItem[] }) {
+//
+// `status` keeps a slow or failed read from claiming the bar has nothing: before it, an empty
+// list stood in for "still loading" and "failed" too. `actions` is the host's row (share the
+// link, edit drinks); guests get none.
+type MenuStatus = 'loading' | 'error' | 'ready';
+
+interface MenuBoardProps {
+  items: readonly MenuItem[];
+  status?: MenuStatus;
+  onRetry?: () => void;
+  actions?: ReactNode;
+}
+
+export function MenuBoard({ items, status = 'ready', onRetry, actions }: MenuBoardProps) {
   const available = items.filter((d) => d.available);
 
   return (
@@ -64,6 +78,7 @@ export function MenuBoard({ items }: { items: readonly MenuItem[] }) {
 
         .menu-dots {
           flex: 1;
+          min-width: 1rem;
           border-bottom: 1px dotted #c9a84c44;
           margin: 0 0.5rem 4px;
         }
@@ -74,7 +89,8 @@ export function MenuBoard({ items }: { items: readonly MenuItem[] }) {
           font-weight: 400;
           letter-spacing: 0.12em;
           text-transform: uppercase;
-          white-space: nowrap;
+          min-width: 0;
+          overflow-wrap: anywhere;
         }
 
         .menu-price {
@@ -85,10 +101,30 @@ export function MenuBoard({ items }: { items: readonly MenuItem[] }) {
           white-space: nowrap;
         }
 
+        .menu-note {
+          color: #c9a84ccc;
+          font-size: 0.9rem;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          text-align: center;
+        }
+
+        .menu-retry {
+          margin-top: 1rem;
+          min-height: 44px;
+          padding: 0 1.25rem;
+          border: 1px solid #c9a84c99;
+          border-radius: 6px;
+          color: #c9a84c;
+          font-size: 0.8rem;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+        }
+
         .menu-footer {
           margin-top: 3rem;
-          color: #c9a84c44;
-          font-size: 0.6rem;
+          color: #c9a84ccc;
+          font-size: 0.75rem;
           letter-spacing: 0.3em;
           text-transform: uppercase;
           text-align: center;
@@ -110,14 +146,24 @@ export function MenuBoard({ items }: { items: readonly MenuItem[] }) {
           ))}
         </ul>
 
-        {available.length === 0 && (
-          <p style={{ color: '#c9a84c55', fontSize: '0.8rem', letterSpacing: '0.2em' }}>
-            NO DRINKS AVAILABLE
-          </p>
-        )}
+        <MenuNote status={status} empty={available.length === 0} onRetry={onRetry} />
 
         <p className='menu-footer'>Tonight&apos;s Selection</p>
+        {actions}
       </div>
     </>
   );
+}
+
+function MenuNote({ status, empty, onRetry }: { status: MenuStatus; empty: boolean; onRetry?: () => void }) {
+  if (status === 'loading') return <p className='menu-note' role='status'>Loading…</p>;
+  if (status === 'error') {
+    return (
+      <div role='alert' style={{ textAlign: 'center' }}>
+        <p className='menu-note'>Couldn&apos;t load the menu</p>
+        {onRetry && <button type='button' className='menu-retry' onClick={onRetry}>Retry</button>}
+      </div>
+    );
+  }
+  return empty ? <p className='menu-note'>No drinks available</p> : null;
 }

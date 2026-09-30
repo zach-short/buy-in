@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { centsToDollars, filterResults, type PokerResult, type SourceFilter } from '@pb/core';
 import { Plus } from 'lucide-react';
 import { DataState } from '@/components/shared/data-state';
+import { groupByMonth } from '@/components/results/month-groups';
 import { EmptyResults } from '@/components/results/results-tabs';
 import { PokerResultRow, signedAmount, toneClass } from '@/components/results/poker-result-row';
 import { SourceFilterBar, parseSourceFilter } from '@/components/results/source-filter';
@@ -75,9 +76,14 @@ function SessionList({ rows }: { rows: readonly PokerResult[] }) {
   return (
     <div className='border border-border rounded-md p-5'>
       <p className='text-xs tracking-widest uppercase text-muted-foreground mb-2'>Sessions</p>
-      <ul className='divide-y divide-border'>
-        {newestFirst.map((row) => <PokerResultRow key={`${row.source}:${row.id}`} row={row} />)}
-      </ul>
+      {groupByMonth(newestFirst, (row) => row.playedOn).map((month) => (
+        <section key={month.key} aria-label={month.label} className='mt-4 first-of-type:mt-2'>
+          <h3 className='text-[11px] tracking-widest uppercase text-muted-foreground/80'>{month.label}</h3>
+          <ul className='divide-y divide-border'>
+            {month.rows.map((row) => <PokerResultRow key={`${row.source}:${row.id}`} row={row} />)}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }

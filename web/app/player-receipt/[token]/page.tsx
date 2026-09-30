@@ -7,6 +7,7 @@ import {
   describeNet, formatCents, formatDate, formatTime, isSettled, renderVenmoNote, venmoTxnFor, venmoUrls,
   type NetKind, type SharedTab,
 } from '@pb/core';
+import { NO_PAY_METHOD } from '@/components/portal/pay-panel';
 import { paidLine } from '@/components/settle/net-copy';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { sharedBalanceCents, sharedNightNet } from '@/lib/ledger';
@@ -65,10 +66,18 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
   const { token } = use(params);
 
   // A portal-scoped link (D15); the token alone decides whose history this is (§9.1 #7).
-  const { data: tab, error } = useSWR(['shared_tab', token, 'portal'], ([, t]) => fetchSharedTab(t, 'portal'));
+  const { data: tab, error, mutate } = useSWR(['shared_tab', token, 'portal'], ([, t]) => fetchSharedTab(t, 'portal'));
 
   if (error) {
-    return <StatusScreen kind='error' title='Invalid link' message='This link may be outdated. Ask for a new one.' />;
+    return (
+      <StatusScreen
+        kind='error'
+        title='Invalid link'
+        message='This link may be outdated. Ask for a new one.'
+        action={{ label: 'Try again', onClick: () => void mutate() }}
+        secondaryAction={{ label: 'Go to Buy-In', href: '/' }}
+      />
+    );
   }
 
   if (!tab) return <StatusScreen kind='loading' />;
@@ -82,6 +91,8 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
   // (owner, 2026-09-27; 0003).
   const handle = tab.bar.venmo_handle;
   const note = renderVenmoNote(tab.bar.venmo_note_template, { amountCents: balanceCents });
+  // This page offers Venmo only, but a Cash App handle is still a way to pay, so it is not "none".
+  const noPayMethod = balanceCents > 0 && !handle && !tab.bar.cashapp_handle;
 
   function handleVenmo() {
     if (!handle) return;
@@ -101,7 +112,7 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
         }
         .pr-header { margin-bottom: 1.5rem; }
         .pr-venue {
-          font-size: 0.65rem;
+          font-size: 0.6875rem;
           letter-spacing: 0.3em;
           text-transform: uppercase;
           color: var(--muted-foreground);
@@ -125,7 +136,7 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
           gap: 1rem;
         }
         .pr-balance-label {
-          font-size: 0.6rem;
+          font-size: 0.6875rem;
           letter-spacing: 0.25em;
           text-transform: uppercase;
           color: var(--muted-foreground);
@@ -137,7 +148,7 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
           line-height: 1;
         }
         .pr-balance-sub {
-          font-size: 0.6rem;
+          font-size: 0.6875rem;
           letter-spacing: 0.15em;
           text-transform: uppercase;
           color: var(--muted-foreground);
@@ -148,12 +159,13 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
           align-items: center;
           justify-content: center;
           gap: 0.5rem;
+          min-height: 44px;
           padding: 0.7rem 1rem;
           background: #3D95CE;
           color: #fff;
           border: none;
           border-radius: 4px;
-          font-size: 0.7rem;
+          font-size: 0.8rem;
           font-weight: 700;
           letter-spacing: 0.08em;
           text-transform: uppercase;
@@ -163,7 +175,7 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
           font-family: inherit;
         }
         .pr-section-label {
-          font-size: 0.6rem;
+          font-size: 0.6875rem;
           letter-spacing: 0.25em;
           text-transform: uppercase;
           color: var(--muted-foreground);
@@ -183,9 +195,9 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
           border-bottom: 1px solid var(--border);
         }
         .pr-session-name { font-size: 0.8rem; font-weight: 700; }
-        .pr-session-date { font-size: 0.65rem; color: var(--muted-foreground); margin-top: 0.1rem; }
+        .pr-session-date { font-size: 0.6875rem; color: var(--muted-foreground); margin-top: 0.1rem; }
         .pr-session-net { font-size: 0.8rem; font-weight: 700; text-align: right; }
-        .pr-session-net-label { font-size: 0.6rem; color: var(--muted-foreground); text-align: right; margin-top: 0.1rem; }
+        .pr-session-net-label { font-size: 0.6875rem; color: var(--muted-foreground); text-align: right; margin-top: 0.1rem; }
         .pr-session-body { padding: 0.6rem 1rem; }
         .pr-row {
           display: flex;
@@ -197,7 +209,7 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
           color: var(--muted-foreground);
         }
         .pr-row-name { flex: 1; }
-        .pr-row-time { font-size: 0.6rem; color: var(--muted-foreground); margin-left: 0.3rem; opacity: 0.7; }
+        .pr-row-time { font-size: 0.6875rem; color: var(--muted-foreground); margin-left: 0.3rem; opacity: 0.7; }
         .pr-row-amount { font-weight: 700; white-space: nowrap; }
         .pr-cashout { color: #22c55e; }
         .pr-total-row {
@@ -209,6 +221,11 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
           margin-top: 0.35rem;
           border-top: 1px dashed var(--border);
           color: var(--foreground);
+        }
+        .pr-no-pay {
+          font-size: 0.75rem;
+          color: var(--muted-foreground);
+          margin-bottom: 1rem;
         }
         .pr-empty {
           text-align: center;
@@ -247,6 +264,8 @@ export default function PlayerReceiptPage({ params }: { params: Promise<{ token:
             </button>
           )}
         </div>
+
+        {noPayMethod && <p className='pr-no-pay'>{NO_PAY_METHOD}</p>}
 
         <p className='pr-section-label'>Session History</p>
 

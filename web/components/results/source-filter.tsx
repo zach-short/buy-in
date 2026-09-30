@@ -34,7 +34,7 @@ export function SourceFilterBar({ active }: { active: SourceFilter }) {
           scroll={false}
           aria-current={source === active ? 'page' : undefined}
           className={cn(
-            'flex-1 rounded py-2 text-center text-xs tracking-widest uppercase transition-colors',
+            'flex flex-1 min-h-11 items-center justify-center rounded text-center text-xs tracking-widest uppercase transition-colors',
             source === active ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground',
           )}
         >

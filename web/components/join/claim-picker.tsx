@@ -62,7 +62,11 @@ function NameList({ claim }: { claim: ClaimFlow }) {
           onClick={() => void claim.pick(p.id)}
         >
           <span>{p.name}</span>
-          {p.hasPendingRequest && <span className='text-xs text-muted-foreground'>Someone asked</span>}
+          {claim.requestingId === p.id ? (
+            <span className='text-xs text-muted-foreground'>Requesting…</span>
+          ) : (
+            p.hasPendingRequest && <span className='text-xs text-muted-foreground'>Someone asked</span>
+          )}
         </Button>
       ))}
     </div>
@@ -97,12 +101,13 @@ export function ClaimPicker({ claim }: { claim: ClaimFlow }) {
           Your host didn&apos;t confirm you as {claim.rejectedName}. Pick again, or join as someone new.
         </p>
       )}
+      <NameList claim={claim} />
+      <ErrorLine text={claim.error} />
+      {/* After the list: most people arriving by link are already on it, so their name comes first. */}
       <Button variant='outline' className={ACTION} onClick={claim.chooseNew} disabled={claim.requesting}>
         <UserPlus aria-hidden='true' />
         I&apos;m not on this list
       </Button>
-      <NameList claim={claim} />
-      <ErrorLine text={claim.error} />
     </div>
   );
 }

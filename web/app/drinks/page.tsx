@@ -39,7 +39,7 @@ export default function DrinksPage() {
       <PageHeader
         title='Drinks'
         actions={
-          <HeaderAction onClick={() => { setShowAdd((v) => !v); setExpandedId(null); }}>
+          <HeaderAction tone={showAdd ? 'default' : 'primary'} onClick={() => { setShowAdd((v) => !v); setExpandedId(null); }}>
             {showAdd ? 'Cancel' : '+ Add'}
           </HeaderAction>
         }
@@ -59,6 +59,8 @@ export default function DrinksPage() {
       )}
 
       <Input
+        type='search'
+        aria-label='Search drinks'
         placeholder='Search drinks…'
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -121,10 +123,12 @@ function DrinkRow({ drink, inventory, open, onToggle, children }: {
   const loss = isLossMaking(drink.price_cents, costCents);
   const margin = marginLabel(drink.price_cents, costCents);
   return (
-    <div className={`border border-border rounded-md${available ? '' : ' opacity-40'}`}>
+    <div className='border border-border rounded-md'>
       <button className='w-full flex items-center justify-between px-4 py-4 min-h-[60px]' onClick={onToggle}>
         <div className='text-left'>
-          <p className='text-sm'>{drink.name}</p>
+          <p className={`text-sm${available ? '' : ' text-muted-foreground'}`}>{drink.name}</p>
+          {/* canMakeDrink says only whether, not which ingredient, so the reason stays general. */}
+          {!available && <p className='text-xs text-destructive mt-0.5'>Out of stock · hidden from the menu</p>}
           <p className='text-xs text-muted-foreground mt-0.5'>
             ${formatCents(drink.price_cents)} sell · ${formatCents(costCents)} cost
             {margin && !loss && <> · {margin}</>}

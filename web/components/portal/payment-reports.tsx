@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { formatCents, formatDate } from '@pb/core';
 import { Send, X } from 'lucide-react';
@@ -34,6 +34,15 @@ export function ReportPaymentForm({ defaultCents, api, onClose }: ReportFormProp
   const [note, setNote] = useState('');
   const cents = parseMoneyInput(amount);
   const problem = amountProblem(cents);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // The form opens below the balance card, often off the bottom of a phone screen: bring it up
+  // and put the cursor in the amount, so the tap that opened it visibly did something.
+  useEffect(() => {
+    const form = formRef.current;
+    form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    form?.querySelector('input')?.focus({ preventScroll: true });
+  }, []);
 
   async function submit() {
     if (cents === null || problem) return;
@@ -42,6 +51,7 @@ export function ReportPaymentForm({ defaultCents, api, onClose }: ReportFormProp
 
   return (
     <form
+      ref={formRef}
       className='mx-6 mb-8 border border-border rounded-md p-4 space-y-3'
       onSubmit={(e) => {
         e.preventDefault();
@@ -77,13 +87,14 @@ export function ReportPaymentForm({ defaultCents, api, onClose }: ReportFormProp
 const STATUS_LABEL: Readonly<Record<PaymentReportStatus, string>> = {
   pending: 'Pending',
   confirmed: 'Confirmed',
-  dismissed: 'Dismissed',
+  dismissed: 'Not accepted',
 };
 
 const STATUS_CLASS: Readonly<Record<PaymentReportStatus, string>> = {
   pending: 'text-muted-foreground',
   confirmed: 'text-green-500',
-  dismissed: 'text-destructive',
+  // Muted, not red: a report the host did not accept is a question for the host, not an error.
+  dismissed: 'text-muted-foreground',
 };
 
 export function PaymentReportList({ reports }: { reports: PaymentReport[] }) {
@@ -99,6 +110,7 @@ export function PaymentReportList({ reports }: { reports: PaymentReport[] }) {
               <span className='block text-xs text-muted-foreground truncate'>
                 {formatDate(r.createdAt)}{r.note ? ` · ${r.note}` : ''}
               </span>
+              {r.status === 'dismissed' && <span className='block text-xs text-muted-foreground'>Ask your host</span>}
             </span>
             <span className={`text-xs tracking-widest uppercase shrink-0 ${STATUS_CLASS[r.status]}`}>{STATUS_LABEL[r.status]}</span>
           </div>

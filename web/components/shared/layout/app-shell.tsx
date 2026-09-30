@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { HostOnly } from '@/components/shared/host-only';
+import { StatusScreen } from '@/components/shared/status-screen';
 import { useAuthUser } from '@/hooks/use-auth-user';
 import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
 import { cn } from '@/lib/utils';
@@ -121,6 +122,6 @@ function Guarded({ pathname, signedIn, isStaff, children }: {
   children: ReactNode;
 }) {
   if (!signedIn || !isHostOnly(pathname)) return children;
-  if (isStaff === undefined) return null;
+  if (isStaff === undefined) return <StatusScreen kind='loading' />;
   return isStaff ? children : <HostOnly />;
 }

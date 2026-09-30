@@ -7,7 +7,8 @@ import { usePlayerAccount } from '@/hooks/use-player-account';
 import type { PlayerRow } from '@/lib/supabase/queries';
 
 const LABEL = 'text-xs tracking-widest uppercase text-muted-foreground';
-const SELECT = 'flex-1 min-w-0 h-11 rounded-md border border-input bg-transparent px-3 text-sm';
+// text-base on phones: iOS zooms the page on focus of any field under 16px.
+const SELECT = 'flex-1 min-w-0 h-11 rounded-md border border-input bg-transparent px-3 text-base md:text-sm';
 const ACTION = 'h-11 text-xs tracking-widest uppercase shrink-0';
 
 interface PickProps {

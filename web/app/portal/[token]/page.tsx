@@ -19,7 +19,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
   // A portal-scoped link (D15): the whole history, and the token alone decides whose (§9.1
   // #7) — the old route's [playerId] segment is gone, so nothing on this page can trust a URL
   // over the RPC.
-  const { data: tab, error } = useSWR(['shared_tab', token, 'portal'], ([, t]) => fetchSharedTab(t, 'portal'));
+  const { data: tab, error, mutate } = useSWR(['shared_tab', token, 'portal'], ([, t]) => fetchSharedTab(t, 'portal'));
   // The menu block reads the same get_menu the public /menu does (§9.1 #3), never raw stock.
   const { data: menu = [] } = useSWR(tab ? ['menu', tab.bar.id] : null, ([, barId]) => fetchMenu(barId));
   const reports = usePaymentReports(token);
@@ -27,7 +27,15 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
   const [reportCents, setReportCents] = useState<number | null>(null);
 
   if (error) {
-    return <StatusScreen kind='error' title='Invalid link' message='This link may be outdated. Ask your host for a new link.' />;
+    return (
+      <StatusScreen
+        kind='error'
+        title='Invalid link'
+        message='This link may be outdated. Ask your host for a new link.'
+        action={{ label: 'Try again', onClick: () => void mutate() }}
+        secondaryAction={{ label: 'Go to Buy-In', href: '/' }}
+      />
+    );
   }
 
   if (!tab) return <StatusScreen kind='loading' />;
@@ -113,7 +121,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
                 <button
                   type='button'
                   onClick={() => setReportCents(balanceCents)}
-                  className='mt-4 text-xs tracking-widest uppercase text-muted-foreground underline underline-offset-4 hover:text-foreground'
+                  className='mt-4 py-3 text-sm tracking-widest uppercase text-muted-foreground underline underline-offset-4 hover:text-foreground'
                 >
                   I already sent a payment
                 </button>

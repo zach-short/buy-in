@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { formatCents } from '@pb/core';
 
+import { Button } from '@/components/ui/button';
 import { MoneyInput } from '@/components/ui/money-input';
 import { useDefaultBuyIn } from '@/hooks/use-default-buy-in';
 import type { BuyInRow, CashoutRow, PlayerRow } from '@/lib/supabase/queries';
@@ -19,7 +20,9 @@ interface PlayerMoneyPanelProps {
   money: ReturnType<typeof usePlayerMoney>;
 }
 
-const LINK = 'h-11 px-2 text-xs tracking-widest uppercase text-muted-foreground transition-colors';
+// Real bordered buttons at a full tap height: these are the money actions a host reaches for
+// all night, so they must not read as captions. Gold border (default) marks the one that saves.
+const ACTION = 'h-11 px-3 text-xs tracking-widest uppercase';
 
 function entriesFor({ player, buyIns, cashout, money }: PlayerMoneyPanelProps): MoneyEntry[] {
   const rows: MoneyEntry[] = buyIns.map((row, i) => ({
@@ -74,9 +77,9 @@ export function PlayerMoneyPanel(props: PlayerMoneyPanelProps) {
           )}
         </div>
         {mode === 'idle' && (
-          <div className='flex gap-1'>
-            {!cashout && <button type='button' onClick={() => open('cashout')} className={`${LINK} hover:text-green-500`}>Cash Out</button>}
-            <button type='button' onClick={() => open('rebuy')} className={`${LINK} hover:text-primary`}>+ Re-buy</button>
+          <div className='flex shrink-0 gap-2'>
+            {!cashout && <Button variant='outline' onClick={() => open('cashout')} className={ACTION}>Cash Out</Button>}
+            <Button variant='outline' onClick={() => open('rebuy')} className={ACTION}>+ Re-buy</Button>
           </div>
         )}
       </div>
@@ -95,14 +98,14 @@ export function PlayerMoneyPanel(props: PlayerMoneyPanelProps) {
             disabled={busy}
           />
           {mode === 'cashout' && (
-            <button type='button' onClick={() => submit('0')} disabled={busy} className={`${LINK} border border-border rounded-md`}>
+            <Button variant='outline' onClick={() => submit('0')} disabled={busy} className={ACTION}>
               Busted — $0
-            </button>
+            </Button>
           )}
-          <button type='button' onClick={() => submit()} disabled={busy} className={`${LINK} text-primary disabled:opacity-40`}>
+          <Button onClick={() => submit()} disabled={busy} className={ACTION}>
             {mode === 'rebuy' ? 'Add' : 'Confirm'}
-          </button>
-          <button type='button' onClick={() => setMode('idle')} disabled={busy} className={LINK}>Cancel</button>
+          </Button>
+          <Button variant='outline' onClick={() => setMode('idle')} disabled={busy} className={`${ACTION} text-muted-foreground`}>Cancel</Button>
         </div>
       )}
 

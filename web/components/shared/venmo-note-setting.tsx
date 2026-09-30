@@ -1,5 +1,6 @@
 'use client';
 
+import { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 
 import { DEFAULT_VENMO_NOTE, VENMO_NOTE_TEMPLATE_MAX_LENGTH, renderVenmoNote } from '@pb/core';
@@ -15,6 +16,7 @@ const PREVIEW_VARS = { amountCents: 4250, sessionName: 'Friday Night' };
 
 export function VenmoNoteSetting() {
   const { value, setValue, isLoading, error, dirty, saving, save } = useVenmoNoteTemplate();
+  const { mutate } = useSWRConfig();
 
   async function handleSave() {
     try {
@@ -26,7 +28,15 @@ export function VenmoNoteSetting() {
   }
 
   if (error) {
-    return <p className='text-xs text-destructive mb-6'>Couldn&apos;t load the Venmo note: {error.message}</p>;
+    // The app's SWRConfig does not retry on error; this is the host's only way back without a reload.
+    return (
+      <div className='mb-6' role='alert'>
+        <p className='text-xs text-destructive'>Couldn&apos;t load the Venmo note: {error.message}</p>
+        <button type='button' onClick={() => void mutate('bar_settings')} className='min-h-11 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -50,7 +60,7 @@ export function VenmoNoteSetting() {
       <p className='text-xs text-muted-foreground'>
         Preview: <span className='text-foreground'>{renderVenmoNote(value, PREVIEW_VARS)}</span>
       </p>
-      <Button className='w-full h-10 text-xs tracking-widest uppercase' onClick={handleSave} disabled={!dirty || saving || isLoading}>
+      <Button className='w-full h-11 text-xs tracking-widest uppercase' onClick={handleSave} disabled={!dirty || saving || isLoading}>
         <Check aria-hidden='true' />
         {saving ? 'Saving…' : 'Save Note'}
       </Button>

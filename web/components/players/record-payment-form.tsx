@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { toast } from 'sonner';
 import { formatCents } from '@pb/core';
 import { Check, X } from 'lucide-react';
@@ -38,7 +38,8 @@ export function RecordPaymentForm({ player, mode, balanceCents, onRecorded, onCl
   const amountCents = parseMoneyInput(amount);
   const valid = amountCents !== null && amountCents > 0;
 
-  async function save() {
+  async function save(e: FormEvent) {
+    e.preventDefault();
     if (!valid || saving) return;
     setSaving(true);
     try {
@@ -54,13 +55,15 @@ export function RecordPaymentForm({ player, mode, balanceCents, onRecorded, onCl
   }
 
   return (
-    <div className='border border-border rounded-md p-4 mb-8 space-y-3'>
+    <form onSubmit={(e) => void save(e)} className='border border-border rounded-md p-4 mb-8 space-y-3'>
       <p className='text-xs tracking-widest uppercase text-muted-foreground'>
         {mode === 'received' ? 'Record Payment Received' : 'Record Payout Sent'}
       </p>
       <MoneyInput
         value={amount}
         onValueChange={setAmount}
+        onKeyDown={blockEnter}
+        enterKeyHint='next'
         autoFocus
         placeholder='0.00'
         aria-label='Amount'
@@ -81,12 +84,15 @@ export function RecordPaymentForm({ player, mode, balanceCents, onRecorded, onCl
       <Input
         value={note}
         onChange={(e) => setNote(e.target.value)}
+        onKeyDown={blockEnter}
+        enterKeyHint='done'
         className='h-11'
         placeholder='Note (optional)'
         aria-label='Note'
       />
       <div className='flex gap-2'>
         <Button
+          type='button'
           variant='outline'
           className='flex-1 h-11 text-xs tracking-widest uppercase'
           onClick={onClose}
@@ -96,14 +102,20 @@ export function RecordPaymentForm({ player, mode, balanceCents, onRecorded, onCl
           Cancel
         </Button>
         <Button
+          type='submit'
           className='flex-1 h-11 text-xs tracking-widest uppercase'
-          onClick={save}
           disabled={saving || !valid}
         >
           <Check aria-hidden='true' />
           {saving ? 'Saving…' : 'Save'}
         </Button>
       </div>
-    </div>
+    </form>
   );
+}
+
+// The amount is pre-filled with the full debt and focused, so an Enter from the keyboard would
+// write a payment nobody confirmed. Only the Save button records one.
+function blockEnter(e: KeyboardEvent<HTMLInputElement>) {
+  if (e.key === 'Enter') e.preventDefault();
 }

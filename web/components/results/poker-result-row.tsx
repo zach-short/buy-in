@@ -30,7 +30,7 @@ export function resultDetail(row: PokerResult): string {
 
 function LoggedTag() {
   return (
-    <span className='shrink-0 rounded border border-border px-1.5 py-px text-[10px] tracking-widest uppercase text-muted-foreground'>
+    <span className='shrink-0 rounded border border-border px-1.5 py-px text-[11px] tracking-widest uppercase text-muted-foreground'>
       Logged
     </span>
   );

@@ -61,7 +61,9 @@ export function SessionTopBar({ name, playedOn, subscribed, onEnd }: SessionTopB
           <h1 className='text-base font-semibold tracking-widest uppercase text-primary truncate'>{name}</h1>
           <p className='text-xs text-muted-foreground mt-0.5'>{formatElapsed(playedOn, now)}</p>
         </div>
-        <Button variant='destructive' size='sm' className='shrink-0 h-11 text-xs tracking-widest uppercase' onClick={onEnd}>
+        {/* Grey, not red: it only opens the cash-out screen, which has its own confirm, so it
+            should not be the loudest thing on a screen the host uses all night. */}
+        <Button variant='outline' size='sm' className='shrink-0 h-11 text-xs tracking-widest uppercase text-muted-foreground' onClick={onEnd}>
           <CircleStop aria-hidden='true' />
           End Session
         </Button>

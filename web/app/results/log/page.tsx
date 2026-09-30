@@ -7,6 +7,7 @@ import { POKER_TYPE, eventType, type EventType } from '@pb/core';
 import { EventTypePicker } from '@/components/results/event-type-picker';
 import { LogEventForm } from '@/components/results/log-event-form';
 import { LogSessionForm } from '@/components/results/log-session-form';
+import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -29,7 +30,12 @@ export default function LogEventPage({ searchParams }: { searchParams: SearchPar
 
   return (
     <PageMain>
-      <PageHeader title='Log an event' />
+      {/* A pinned href, not history: opened from a link, router.back() would leave the app
+          (app/results/page.tsx). The log button sits on both tabs; the form picked says which. */}
+      <PageHeader
+        title='Log an event'
+        actions={<BackAction href={slug === POKER_TYPE ? '/results?tab=poker' : '/results?tab=everything'} />}
+      />
       <div className='space-y-6'>
         {/* replace, not push: Back leaves the page rather than stepping through every type tried. */}
         <EventTypePicker value={slug} onChange={(next) => router.replace(hrefFor(next), { scroll: false })} />

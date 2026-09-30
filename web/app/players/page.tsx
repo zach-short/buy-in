@@ -14,7 +14,6 @@ import { isPlayerArchived } from '@/lib/supabase/player-admin';
 import {
   fetchBarBuyIns, fetchBarCashouts, fetchBarOrders, fetchBarPayments, fetchPlayers, type PlayerRow,
 } from '@/lib/supabase/queries';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { AddPlayerForm } from './_list/add-player-form';
@@ -78,15 +77,17 @@ export default function PlayersPage() {
       <PageHeader
         title='Players'
         subtitle={totalOwedCents > 0 ? `$${formatCents(totalOwedCents)} outstanding` : undefined}
-        actions={<HeaderAction onClick={() => { setAdding(true); }}>+ Add</HeaderAction>}
+        actions={<HeaderAction tone='primary' onClick={() => { setAdding(true); }}>+ Add</HeaderAction>}
       />
 
-      <Button asChild variant='outline' className='w-full h-11 text-xs tracking-widest uppercase mb-4'>
-        <Link href='/invites'>
-          <Link2 aria-hidden='true' />
-          Send Invite Link
-        </Link>
-      </Button>
+      {/* A quiet link, not a full-width button: it must not outrank "+ Add" above it. */}
+      <Link
+        href='/invites'
+        className='mb-4 flex w-fit min-h-11 items-center gap-2 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
+      >
+        <Link2 aria-hidden='true' className='size-4' />
+        Send Invite Link
+      </Link>
 
       {adding && (
         <AddPlayerForm
@@ -185,7 +186,7 @@ function PlayerRowButton({ row, onOpen }: { row: PlayerListRow<PlayerRow>; onOpe
           {isSettled(balanceCents) ? (
             <span className='text-xs tracking-widest uppercase text-muted-foreground'>Even</span>
           ) : balanceCents > 0 ? (
-            <span className='text-sm font-semibold text-destructive tabular-nums'>${formatCents(balanceCents)} owes you</span>
+            <span className='text-sm font-semibold text-destructive tabular-nums'>Owes you ${formatCents(balanceCents)}</span>
           ) : (
             <span className='text-sm font-semibold text-green-500 tabular-nums'>You owe ${formatCents(Math.abs(balanceCents))}</span>
           )}

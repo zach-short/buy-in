@@ -62,7 +62,7 @@ export function InstallCard() {
         {title}
       </p>
       {promptInstall ? (
-        <Button className='w-full h-10 text-xs tracking-widest uppercase' onClick={promptInstall}>
+        <Button className='w-full h-11 text-xs tracking-widest uppercase' onClick={promptInstall}>
           <Download aria-hidden='true' />
           Install Buy-In
         </Button>

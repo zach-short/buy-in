@@ -77,7 +77,7 @@ function TableList({ records, payInfo, onAnswer }: { records: TableWithGame[]; p
         <button
           type='button'
           onClick={() => setAll(true)}
-          className='mt-4 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
+          className='mt-4 min-h-11 px-2 -mx-2 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
         >
           Show all {records.length}
         </button>
@@ -109,7 +109,7 @@ function HostTableCard({ onDismiss }: { onDismiss: () => void }) {
         type='button'
         aria-label='Dismiss'
         onClick={onDismiss}
-        className='absolute right-3 top-1/2 -translate-y-1/2 rounded-sm p-1 text-primary-foreground/70 hover:text-primary-foreground transition-colors'
+        className='absolute right-0.5 top-1/2 -translate-y-1/2 size-11 flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground transition-colors'
       >
         <X aria-hidden='true' className='size-4' />
       </button>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { CalendarPlus, Check, Share2 } from 'lucide-react';
 
+import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { announceShare } from '@/app/schedule/announce-share';
 import { useScheduleGame, type ScheduleGameForm } from '@/hooks/use-schedule-game';
@@ -17,7 +18,7 @@ export default function ScheduleGamePage() {
 
   return (
     <PageMain>
-      <PageHeader title='Schedule Game' />
+      <PageHeader title='Schedule Game' actions={<BackAction href='/schedule' />} />
 
       {form.inviteUrl ? <InviteReady form={form} url={form.inviteUrl} /> : <ScheduleForm form={form} />}
     </PageMain>

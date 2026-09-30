@@ -9,6 +9,7 @@ import { Plus } from 'lucide-react';
 import { DataState } from '@/components/shared/data-state';
 import { EverythingRow } from '@/components/results/everything-row';
 import { EverythingTotals, TypeBreakdown } from '@/components/results/everything-summary';
+import { groupByMonth } from '@/components/results/month-groups';
 import { EmptyResults } from '@/components/results/results-tabs';
 import { toneClass } from '@/components/results/poker-result-row';
 import { TypeFilterBar, parseTypeFilter } from '@/components/results/type-filter';
@@ -61,9 +62,14 @@ function EntryList({ rows }: { rows: readonly Row[] }) {
   return (
     <div className='border border-border rounded-md p-5'>
       <p className='text-xs tracking-widest uppercase text-muted-foreground mb-2'>Entries</p>
-      <ul className='divide-y divide-border'>
-        {[...rows].reverse().map((row) => <EverythingRow key={row.key} row={row} />)}
-      </ul>
+      {groupByMonth([...rows].reverse(), (row) => row.playedOn).map((month) => (
+        <section key={month.key} aria-label={month.label} className='mt-4 first-of-type:mt-2'>
+          <h3 className='text-[11px] tracking-widest uppercase text-muted-foreground/80'>{month.label}</h3>
+          <ul className='divide-y divide-border'>
+            {month.rows.map((row) => <EverythingRow key={row.key} row={row} />)}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }

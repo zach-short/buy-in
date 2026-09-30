@@ -12,8 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 const SECONDARY =
-  'flex-1 h-10 rounded border border-border text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40';
-const LINK = 'text-[10px] tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40';
+  'flex-1 h-11 rounded border border-border text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40';
+// min-h-11 is the tap target; the words stay quiet so Start Game keeps the weight.
+const LINK = 'min-h-11 px-2 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40';
 
 const GROUPS: { status: RsvpStatus; label: string }[] = [
   { status: 'yes', label: 'Going' },
@@ -54,7 +55,7 @@ export function GameCard({ game, starting, locked, onStart, onCancel, onEdited }
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
             title={rsvps.error?.message}
-            className='shrink-0 text-[10px] tracking-widest uppercase px-2 py-0.5 rounded border mt-0.5 border-primary text-primary'
+            className='shrink-0 inline-flex min-h-11 items-center text-xs tracking-widest uppercase px-3 rounded border border-primary text-primary'
           >
             {headcount(rsvps.data, rsvps.error)} {open ? '▴' : '▾'}
           </button>
@@ -65,14 +66,14 @@ export function GameCard({ game, starting, locked, onStart, onCancel, onEdited }
 
       <div className='flex gap-3'>
         <InviteButton invite={invite} />
-        <Button onClick={onStart} disabled={locked} className='flex-1 h-10 text-xs tracking-widest uppercase'>
+        <Button onClick={onStart} disabled={locked} className='flex-1 h-11 text-xs tracking-widest uppercase'>
           <Play aria-hidden='true' />
           {starting ? 'Starting…' : 'Start Game'}
         </Button>
       </div>
 
       {!editing && (
-        <div className='flex justify-end gap-5'>
+        <div className='flex justify-end gap-2 -mr-2'>
           <button onClick={() => setEditing(true)} disabled={locked} className={LINK}>Edit</button>
           <button onClick={onCancel} disabled={locked} className={`${LINK} hover:text-destructive`}>Cancel Game</button>
         </div>
@@ -99,7 +100,7 @@ function Roster({ rsvps, error, onRetry }: RosterProps) {
   if (!rsvps && error) {
     return (
       <p className='text-xs text-destructive'>
-        {error.message} <button onClick={onRetry} className='underline text-muted-foreground'>Retry</button>
+        {error.message} <button onClick={onRetry} className='px-1 py-3 underline text-muted-foreground'>Retry</button>
       </p>
     );
   }
@@ -124,7 +125,7 @@ function RosterGroup({ label, rsvps }: { label: string; rsvps: GameRsvp[] }) {
 
   return (
     <div>
-      <p className='text-[10px] tracking-widest uppercase text-muted-foreground mb-1'>
+      <p className='text-xs tracking-widest uppercase text-muted-foreground mb-1'>
         {label} · {rsvps.length}
       </p>
       <p className='text-sm break-words'>{names.join(', ')}</p>
@@ -164,7 +165,7 @@ function EditGame({ game, onDone }: { game: ScheduledGameRow; onDone: (saved: bo
         <button type='button' onClick={() => onDone(false)} disabled={form.saving} className={SECONDARY}>
           Discard
         </button>
-        <Button type='submit' disabled={!form.canSave} className='flex-1 h-10 text-xs tracking-widest uppercase'>
+        <Button type='submit' disabled={!form.canSave} className='flex-1 h-11 text-xs tracking-widest uppercase'>
           <Check aria-hidden='true' />
           {form.saving ? 'Saving…' : 'Save'}
         </Button>

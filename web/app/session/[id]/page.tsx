@@ -6,6 +6,7 @@ import { formatCents } from '@pb/core';
 import { useBarFeatures } from '@/hooks/use-bar-features';
 import { useConfirm } from '@/hooks/use-confirm';
 import { sumCents } from '@/lib/ledger';
+import { cn } from '@/lib/utils';
 import { DrinkPickerModal } from '@/components/drink-picker-modal';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { AddPlayerPanel } from '@/components/session/add-player-panel';
@@ -72,6 +73,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         title='Couldn’t load this session'
         message={live.loadError.message}
         action={{ label: 'Retry', onClick: live.retryLoad }}
+        secondaryAction={{ label: 'All sessions', href: '/sessions' }}
       />
     );
   }
@@ -107,7 +109,14 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   }
 
   return (
-    <main className='min-h-screen w-full flex flex-col max-w-3xl mx-auto'>
+    // The bottom padding keeps the drink button off the last row and the tab-checked note; this
+    // route has no nav bar, so the home-indicator inset is ours to clear either way.
+    <main
+      className={cn(
+        'min-h-screen w-full flex flex-col max-w-3xl mx-auto',
+        drinksOn ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : 'pb-[calc(1.5rem+env(safe-area-inset-bottom))]',
+      )}
+    >
       <SessionTopBar
         name={session.name}
         playedOn={session.played_on}
@@ -166,7 +175,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           aria-label={selected ? `Add a drink for ${selected.name}` : 'Add a drink'}
           onClick={openPicker}
           disabled={!selected}
-          className='fixed bottom-6 right-6 size-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform z-40 text-2xl font-light disabled:opacity-40'
+          className='fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-6 size-14 rounded-full border border-primary/60 bg-background text-primary flex items-center justify-center shadow-lg active:scale-95 transition-transform z-40 text-2xl font-light disabled:opacity-40'
         >
           <span aria-hidden='true'>+</span>
         </button>

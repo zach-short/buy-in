@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ExternalLink, Send } from 'lucide-react';
+import { ExternalLink, RotateCcw, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useConfirmationWatch } from '@/hooks/use-confirmation-watch';
@@ -92,18 +92,30 @@ function ConfirmEmail() {
           <p role='status' className='text-xs text-muted-foreground tracking-wide'>
             Waiting for you to confirm…
           </p>
+          <p className='text-xs text-muted-foreground tracking-wide'>Not there? Check spam.</p>
         </div>
 
         {email && <OpenMail email={email} />}
 
         {email && <ResendButton resend={resend} />}
 
-        <p className='text-center text-xs text-muted-foreground tracking-wide'>
-          Wrong address?{' '}
-          <Link href='/login' className='text-primary underline-offset-4 hover:underline'>
-            Start over
-          </Link>
-        </p>
+        {email ? (
+          <p className='text-center text-xs text-muted-foreground tracking-wide'>
+            Wrong address?{' '}
+            <Link href='/login' className='inline-flex h-11 items-center text-primary underline-offset-4 hover:underline'>
+              Start over
+            </Link>
+          </p>
+        ) : (
+          // With no address in the URL there is nothing to open or resend, so starting over is the
+          // only way on, and it gets a whole button.
+          <Button asChild variant='outline' className='w-full h-11 tracking-widest uppercase text-xs'>
+            <Link href='/login'>
+              <RotateCcw aria-hidden='true' />
+              Start over
+            </Link>
+          </Button>
+        )}
       </div>
     </main>
   );

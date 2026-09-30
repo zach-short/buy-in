@@ -41,7 +41,7 @@ function Blocked({ state }: { state: DeleteAccountState }) {
           You own {barsWithHistory.join(', ')}, which has game history. That history can&apos;t be deleted from here.
         </p>
       )}
-      <Button variant='outline' className='w-full h-10 text-xs tracking-widest uppercase' onClick={state.cancel}><X aria-hidden='true' /> Close</Button>
+      <Button variant='outline' className='w-full h-11 text-xs tracking-widest uppercase' onClick={state.cancel}><X aria-hidden='true' /> Close</Button>
     </div>
   );
 }
@@ -56,8 +56,8 @@ function OwedWarning({ state }: { state: DeleteAccountState }) {
         If you delete your account you can no longer collect this here. Continue anyway?
       </p>
       <div className='flex gap-2'>
-        <Button variant='outline' className='flex-1 h-10 text-xs tracking-widest uppercase' onClick={state.cancel}><X aria-hidden='true' /> Cancel</Button>
-        <Button variant='destructive' className='flex-1 h-10 text-xs tracking-widest uppercase' onClick={state.continueAnyway}><ArrowRight aria-hidden='true' /> Continue</Button>
+        <Button variant='outline' className='flex-1 h-11 text-xs tracking-widest uppercase' onClick={state.cancel}><X aria-hidden='true' /> Cancel</Button>
+        <Button variant='destructive' className='flex-1 h-11 text-xs tracking-widest uppercase' onClick={state.continueAnyway}><ArrowRight aria-hidden='true' /> Continue</Button>
       </div>
     </div>
   );
@@ -81,8 +81,8 @@ function ConfirmEmail({ state }: { state: DeleteAccountState }) {
         className='h-11'
       />
       <div className='flex gap-2'>
-        <Button variant='outline' className='flex-1 h-10 text-xs tracking-widest uppercase' onClick={state.cancel} disabled={deleting}><X aria-hidden='true' /> Cancel</Button>
-        <Button variant='destructive' className='flex-1 h-10 text-xs tracking-widest uppercase' onClick={state.remove} disabled={!state.matches || deleting}>
+        <Button variant='outline' className='flex-1 h-11 text-xs tracking-widest uppercase' onClick={state.cancel} disabled={deleting}><X aria-hidden='true' /> Cancel</Button>
+        <Button variant='destructive' className='flex-1 h-11 text-xs tracking-widest uppercase' onClick={state.remove} disabled={!state.matches || deleting}>
           <Trash2 aria-hidden='true' />
           {deleting ? 'Deleting…' : 'Delete account'}
         </Button>
@@ -109,7 +109,7 @@ export function DeleteAccountSetting() {
           <p className='text-xs text-muted-foreground'>
             Permanently deletes your account. Your name and history stay on any host&apos;s books so their totals still add up.
           </p>
-          <Button variant='destructive' className='w-full h-10 text-xs tracking-widest uppercase' onClick={state.open} disabled={state.step === 'loading'}>
+          <Button variant='destructive' className='w-full h-11 text-xs tracking-widest uppercase' onClick={state.open} disabled={state.step === 'loading'}>
             <Trash2 aria-hidden='true' />
             {state.step === 'loading' ? 'Checking…' : 'Delete account'}
           </Button>

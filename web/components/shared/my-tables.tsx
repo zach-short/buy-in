@@ -34,7 +34,7 @@ function TableRow({ table, busy, onLeave }: TableRowProps) {
       </div>
       <Button
         variant='outline'
-        className='h-9 shrink-0 text-xs tracking-widest uppercase'
+        className='h-11 shrink-0 text-xs tracking-widest uppercase'
         disabled={blocked || busy}
         onClick={() => onLeave(table)}
       >

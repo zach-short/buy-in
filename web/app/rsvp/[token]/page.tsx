@@ -67,10 +67,11 @@ function SignInPrompt({ token }: { token: string }) {
         <InviteLine />
         <p className='text-center text-xs text-muted-foreground'>Sign in or create an account to RSVP.</p>
       </div>
-      <div className='space-y-3'>
+      <div className='space-y-2'>
         <Button asChild className='w-full h-11 tracking-widest uppercase text-xs'>
-          <Link href={`/login?redirect=${redirect}`}><ArrowRight aria-hidden='true' /> Continue</Link>
+          <Link href={`/login?redirect=${redirect}`}><ArrowRight aria-hidden='true' /> Sign in to RSVP</Link>
         </Button>
+        <p className='text-center text-xs text-muted-foreground'>Takes about a minute</p>
       </div>
     </div>
   );
@@ -165,6 +166,7 @@ function RsvpChoices({ token, intro, initial, calendar }: RsvpChoicesProps) {
         <div role='status' className='text-center space-y-1'>
           <p className='text-sm text-primary'>{confirmation}</p>
           <p className='text-xs text-muted-foreground'>Plans change? Pick another answer anytime.</p>
+          <Link href='/' className='inline-flex min-h-11 items-center px-4 text-xs tracking-widest uppercase text-muted-foreground/70 hover:text-foreground transition-colors'>Go to Buy-In</Link>
         </div>
       )}
       {calendar && state.saved === 'yes' && <CalendarLink event={calendar} />}
@@ -192,6 +194,7 @@ function InvalidInvite({ message }: { message: string }) {
     <div role='alert' className='text-center space-y-2'>
       <p className='text-sm font-medium text-destructive'>Invalid link</p>
       <p className='text-xs text-muted-foreground'>{message}</p>
+      <Link href='/' className='inline-flex min-h-11 items-center px-4 text-xs tracking-widest uppercase text-muted-foreground/70 hover:text-foreground transition-colors'>Go to Buy-In</Link>
     </div>
   );
 }

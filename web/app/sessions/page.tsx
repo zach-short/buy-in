@@ -8,8 +8,9 @@ import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { formatDate } from '@pb/core';
+import { groupByMonth } from '@/components/results/month-groups';
 import { DataState } from '@/components/shared/data-state';
-import { PageHeader, PageMain } from '@/components/shared/layout/page';
+import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
 import { fetchPlayers, fetchSessions, type SessionWithPlayers } from '@/lib/supabase/queries';
@@ -69,7 +70,11 @@ export default function SessionsPage() {
 
   return (
     <PageMain>
-      <PageHeader title='Sessions' subtitle={sessions ? `${sessions.length} total` : undefined} />
+      <PageHeader
+        title='Sessions'
+        subtitle={sessions ? `${sessions.length} total` : undefined}
+        actions={<HeaderAction tone='primary' onClick={() => router.push('/session/new')}>New</HeaderAction>}
+      />
 
       <DataState rows={sessions} error={error} onRetry={() => void mutate()} empty={<NoSessions />}>
         {(rows) => {
@@ -80,16 +85,26 @@ export default function SessionsPage() {
               {visible.length === 0 && (
                 <p className='text-center text-muted-foreground text-xs tracking-widest uppercase py-12'>No {filter} sessions</p>
               )}
-              <div className='space-y-3'>
-                {visible.map((session) => (
-                  <SessionRow
-                    key={session.id}
-                    session={session}
-                    names={session.player_ids.map((id) => playerMap.get(id)).filter((n): n is string => !!n)}
-                    deleting={deletingId === session.id}
-                    onOpen={() => handleClick(session)}
-                    onDelete={() => void requestDelete(session)}
-                  />
+              {/* fetchSessions returns newest first, so each month is one run of rows. */}
+              <div className='space-y-8'>
+                {groupByMonth(visible, (s) => s.played_on).map((month) => (
+                  <section key={month.key} aria-labelledby={`month-${month.key}`}>
+                    <h2 id={`month-${month.key}`} className='text-xs tracking-widest uppercase text-muted-foreground mb-3'>
+                      {month.label}
+                    </h2>
+                    <div className='space-y-3'>
+                      {month.rows.map((session) => (
+                        <SessionRow
+                          key={session.id}
+                          session={session}
+                          names={session.player_ids.map((id) => playerMap.get(id)).filter((n): n is string => !!n)}
+                          deleting={deletingId === session.id}
+                          onOpen={() => handleClick(session)}
+                          onDelete={() => void requestDelete(session)}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             </>
@@ -145,7 +160,7 @@ function SessionRow({ session, names, deleting, onOpen, onDelete }: SessionRowPr
             )}
           </div>
           <span
-            className={`shrink-0 text-[10px] tracking-widest uppercase px-2 py-0.5 rounded border mt-0.5 ${
+            className={`shrink-0 text-[11px] tracking-widest uppercase px-2 py-0.5 rounded border mt-0.5 ${
               session.status === 'active'
                 ? 'border-primary text-primary'
                 : 'border-border text-muted-foreground'

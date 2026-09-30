@@ -5,6 +5,7 @@ import useSWR from 'swr';
 
 import { eventType, typeLabel } from '@pb/core';
 import { LogEventForm } from '@/components/results/log-event-form';
+import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { fetchLoggedEvent } from '@/lib/supabase/logged-events';
@@ -35,7 +36,7 @@ export default function EditLoggedEventPage({ params }: { params: Promise<{ id: 
   // Owner's pick, plain register, 2026-09-29 (PLAN.md phase 2 step 6).
   return (
     <PageMain>
-      <PageHeader title='Edit event' subtitle={type.label} />
+      <PageHeader title='Edit event' subtitle={type.label} actions={<BackAction href={EVERYTHING_TAB} />} />
       <LogEventForm key={row.id} type={type} existing={row} />
     </PageMain>
   );

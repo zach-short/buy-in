@@ -58,7 +58,7 @@ export function PlayerStrip({ players, showEmptyTabs, selectedId, addOpen, onSel
           >
             <span className='text-xs font-medium truncate max-w-[88px]'>{player.name}</span>
             {showTab && <span className='text-xs tabular-nums'>${formatCents(tabCents)}</span>}
-            <span className='text-[10px] tabular-nums text-muted-foreground'>In ${formatCents(buyInCents)}</span>
+            <span className='text-[11px] tabular-nums text-muted-foreground'>In ${formatCents(buyInCents)}</span>
             {(paid || out) && (
               <span className='flex gap-1 text-[9px] tracking-widest uppercase'>
                 {out && <span className='text-foreground'>Out</span>}

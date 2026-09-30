@@ -4,6 +4,7 @@ import { use } from 'react';
 import useSWR from 'swr';
 
 import { LogSessionForm } from '@/components/results/log-session-form';
+import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { fetchLoggedSession } from '@/lib/supabase/logged-sessions';
@@ -24,7 +25,7 @@ export default function EditLoggedSessionPage({ params }: { params: Promise<{ id
 
   return (
     <PageMain>
-      <PageHeader title='Edit session' />
+      <PageHeader title='Edit session' actions={<BackAction href='/results?tab=poker' />} />
       <LogSessionForm key={row.id} existing={row} />
     </PageMain>
   );

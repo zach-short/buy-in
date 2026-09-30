@@ -33,7 +33,7 @@ export function PotDecision({ entries, remainingCents, houseAckCents, onAssign, 
           aria-label='Player'
           value={assignee}
           onChange={(e) => setAssignee(e.target.value)}
-          className='h-11 min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-sm'
+          className='h-11 min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-base md:text-sm'
         >
           {entries.map((e) => <option key={e.playerId} value={e.playerId}>{e.name}</option>)}
         </select>

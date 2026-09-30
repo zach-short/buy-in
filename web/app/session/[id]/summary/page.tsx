@@ -95,6 +95,7 @@ export default function SummaryPage({
         kind='error'
         title='Could not load this session'
         action={{ label: 'Try again', onClick: () => queries.forEach((q) => void q.mutate()) }}
+        secondaryAction={{ label: 'All sessions', href: '/sessions' }}
       />
     );
   }
@@ -135,7 +136,8 @@ export default function SummaryPage({
               <p className='text-xl font-semibold'>${formatCents(totalCogsCents)}</p>
             </div>
             <div>
-              <p className='text-xs text-muted-foreground mb-1'>Profit</p>
+              {/* The same figure the results bar tab calls "Night profit"; one name for both. */}
+              <p className='text-xs text-muted-foreground mb-1'>Night profit</p>
               <p
                 className={`text-xl font-semibold ${totalProfitCents >= 0 ? 'text-primary' : 'text-destructive'}`}
               >
@@ -151,7 +153,8 @@ export default function SummaryPage({
           {textIndex === null && (
             <button
               onClick={startTexting}
-              className='w-full flex items-center justify-center gap-2 py-3 border border-border rounded text-xs tracking-widest uppercase text-muted-foreground hover:border-primary hover:text-primary transition-colors'
+              type='button'
+              className='w-full flex items-center justify-center gap-2 h-11 border border-border rounded text-xs tracking-widest uppercase text-muted-foreground hover:border-primary hover:text-primary transition-colors'
             >
               <MessageCircle size={14} />
               Text Receipts ({playersWithPhone.length})
@@ -180,17 +183,19 @@ export default function SummaryPage({
               <div className='flex gap-2'>
                 <button
                   onClick={skip}
-                  className='flex-1 py-2.5 border border-border rounded text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
+                  type='button'
+                  className='flex-1 h-11 border border-border rounded text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'
                 >
                   Skip
                 </button>
-                <button
+                <Button
                   onClick={() => openText(current)}
-                  className='flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded text-xs tracking-widest uppercase font-semibold'
+                  type='button'
+                  className='flex-1 h-11 text-xs tracking-widest uppercase font-semibold'
                 >
-                  <MessageCircle size={13} />
+                  <MessageCircle aria-hidden='true' />
                   Text {current.name}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -225,7 +230,7 @@ export default function SummaryPage({
                   </span>
                   <Link
                     href={`/session/${id}/player/${player.id}`}
-                    className='text-[10px] tracking-widest uppercase text-muted-foreground hover:text-primary transition-colors border border-border hover:border-primary/50 rounded px-2 py-1'
+                    className='inline-flex min-h-11 items-center text-xs tracking-widest uppercase text-muted-foreground hover:text-primary transition-colors border border-border hover:border-primary/50 rounded px-3'
                   >
                     Receipt
                   </Link>

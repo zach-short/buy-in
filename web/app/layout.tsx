@@ -13,6 +13,9 @@ import { THEME_COLORS } from '@/lib/theme-colors';
 
 const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '500', '600'], display: 'swap', variable: '--font-cinzel' });
 
+// Clears the mobile bottom nav (3.5rem bar + --nav-inset, see app-shell.tsx) plus a gap, so a toast never covers the tabs.
+const TOAST_OFFSET = 'calc(3.5rem + var(--nav-inset) + 0.75rem)';
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteEnv.origin),
   title: { default: 'Buy-In', template: '%s — Buy-In' },
@@ -52,7 +55,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <AppShell>{children}</AppShell>
           </SWRProvider>
         </ThemeProvider>
-        <Toaster theme='dark' position='bottom-center' richColors />
+        <Toaster theme='dark' position='bottom-center' offset={TOAST_OFFSET} mobileOffset={TOAST_OFFSET} richColors />
       </body>
     </html>
   );

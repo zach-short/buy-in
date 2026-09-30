@@ -17,7 +17,7 @@ interface OrderListProps {
 export function OrderList({ orders, paid, onUndo, onTogglePaid }: OrderListProps) {
   return (
     <>
-      <div className='flex-1 px-6 py-4 pb-32'>
+      <div className='flex-1 px-6 py-4'>
         {orders.length === 0 ? (
           <p className='text-center text-muted-foreground text-xs tracking-widest uppercase py-12'>No orders yet</p>
         ) : (
@@ -63,7 +63,7 @@ export function OrderList({ orders, paid, onUndo, onTogglePaid }: OrderListProps
           >
             {paid ? '✓ Tab checked — undo' : 'Mark tab checked'}
           </button>
-          <p className='text-[10px] text-center text-muted-foreground'>
+          <p className='text-xs text-center text-muted-foreground'>
             A note only — money is recorded in Settle up.
           </p>
         </div>

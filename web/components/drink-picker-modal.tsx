@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { formatCents } from '@pb/core';
 import { canMakeDrink } from '@/lib/recipes';
 import { isDrinkArchived } from '@/lib/supabase/drink-stock';
@@ -38,85 +39,89 @@ function menuOrder(drinks: readonly DrinkWithIngredients[], inventory: readonly 
 }
 
 // Stays open after a pour — a round is several drinks — and counts what was actually saved.
+// The caller mounts this only while open, so the Root is always open and closing unmounts it;
+// Radix then returns focus to whatever opened it. Radix also owns Escape, backdrop dismiss,
+// the focus trap and the scroll lock.
 export function DrinkPickerModal({ drinks, inventory, orders, playerName, lastDrinkId, onPour, onClose }: Props) {
   const [added, setAdded] = useState(0);
   const menu = useMemo(() => menuOrder(drinks, inventory, orders), [drinks, inventory, orders]);
   const sameAgain = menu.find((entry) => entry.drink.id === lastDrinkId);
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
 
   async function pour(drink: DrinkWithIngredients) {
     if (await onPour(drink)) setAdded((n) => n + 1);
   }
 
   return (
-    <div className='fixed inset-0 z-50 flex flex-col justify-end'>
-      <div className='absolute inset-0 bg-black/70' onClick={onClose} />
-
-      <div className='relative bg-card rounded-t-xl max-h-[85vh] flex flex-col' role='dialog' aria-modal='true' aria-label={`Drinks for ${playerName}`}>
-        <div className='flex items-center justify-between gap-3 px-6 py-3 border-b border-border shrink-0'>
-          <div className='min-w-0'>
-            <h2 className='text-xs tracking-widest uppercase text-primary font-medium truncate'>Drinks for {playerName}</h2>
-            <p className='text-xs text-muted-foreground tabular-nums' aria-live='polite'>
-              {added > 0 ? `Added ${added}` : 'Tap to pour'}
-            </p>
-          </div>
-          <button
-            type='button'
-            onClick={onClose}
-            className='h-11 shrink-0 px-4 rounded border border-border text-xs tracking-widest uppercase hover:border-foreground/30 transition-colors'
-          >
-            Done
-          </button>
-        </div>
-
-        <div className='overflow-y-auto p-4 space-y-3'>
-          {sameAgain && (
+    <DialogPrimitive.Root open onOpenChange={(open) => !open && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className='fixed inset-0 z-50 bg-black/70' />
+        <DialogPrimitive.Content
+          // The title names the sheet; there is no separate description to point at.
+          aria-describedby={undefined}
+          className='fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-xl max-h-[85dvh] flex flex-col outline-none'
+        >
+          <div className='flex items-center justify-between gap-3 px-6 py-3 border-b border-border shrink-0'>
+            <div className='min-w-0'>
+              <DialogPrimitive.Title className='text-xs tracking-widest uppercase text-primary font-medium truncate'>Drinks for {playerName}</DialogPrimitive.Title>
+              <p className='text-xs text-muted-foreground tabular-nums' aria-live='polite'>
+                {added > 0 ? `Added ${added}` : 'Tap to pour'}
+              </p>
+            </div>
             <button
               type='button'
-              aria-label={`Same again: ${sameAgain.drink.name}, $${formatCents(sameAgain.drink.price_cents)}`}
-              onClick={() => pour(sameAgain.drink)}
-              className='w-full min-h-11 rounded border border-primary/60 px-4 py-3 text-left flex items-center justify-between gap-3 hover:border-primary active:scale-[0.98] transition'
+              onClick={onClose}
+              className='h-11 shrink-0 px-4 rounded border border-border text-xs tracking-widest uppercase hover:border-foreground/30 transition-colors'
             >
-              <span className='text-sm'>
-                <span className='text-xs tracking-widest uppercase text-primary mr-2'>Same again</span>
-                {sameAgain.drink.name}
-              </span>
-              <span className='text-sm font-semibold tabular-nums text-primary'>${formatCents(sameAgain.drink.price_cents)}</span>
+              Done
             </button>
-          )}
-          {menu.length === 0 && (
-            <p className='text-center text-muted-foreground text-xs tracking-widest uppercase py-8'>No drinks on the menu</p>
-          )}
-          <div className='grid grid-cols-2 gap-2'>
-            {menu.map(({ drink, available }) => (
-              <button
-                key={drink.id}
-                type='button'
-                aria-label={`${drink.name}, $${formatCents(drink.price_cents)}${available ? '' : ', out of stock, pour anyway'}`}
-                onClick={() => pour(drink)}
-                className={cn(
-                  'rounded border p-4 text-left transition-colors min-h-[72px] flex flex-col justify-between active:scale-95',
-                  available
-                    ? 'bg-secondary hover:bg-secondary/70 border-border'
-                    : 'border-dashed border-border text-muted-foreground',
-                )}
-              >
-                <span className='text-sm leading-snug'>{drink.name}</span>
-                <span className='flex items-baseline justify-between gap-2 mt-1'>
-                  <span className={cn('text-sm font-semibold tabular-nums', available ? 'text-primary' : 'text-muted-foreground')}>
-                    ${formatCents(drink.price_cents)}
-                  </span>
-                  {!available && <span className='text-[10px] tracking-widest uppercase'>Out · Pour anyway</span>}
-                </span>
-              </button>
-            ))}
           </div>
-        </div>
-      </div>
-    </div>
+
+          {/* Safe-area padding keeps the last row of drinks clear of the iOS home indicator. */}
+          <div className='overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-3'>
+            {sameAgain && (
+              <button
+                type='button'
+                aria-label={`Same again: ${sameAgain.drink.name}, $${formatCents(sameAgain.drink.price_cents)}`}
+                onClick={() => pour(sameAgain.drink)}
+                className='w-full min-h-11 rounded border border-primary/60 px-4 py-3 text-left flex items-center justify-between gap-3 hover:border-primary active:scale-[0.98] transition'
+              >
+                <span className='text-sm'>
+                  <span className='text-xs tracking-widest uppercase text-primary mr-2'>Same again</span>
+                  {sameAgain.drink.name}
+                </span>
+                <span className='text-sm font-semibold tabular-nums text-primary'>${formatCents(sameAgain.drink.price_cents)}</span>
+              </button>
+            )}
+            {menu.length === 0 && (
+              <p className='text-center text-muted-foreground text-xs tracking-widest uppercase py-8'>No drinks on the menu</p>
+            )}
+            <div className='grid grid-cols-2 gap-2'>
+              {menu.map(({ drink, available }) => (
+                <button
+                  key={drink.id}
+                  type='button'
+                  aria-label={`${drink.name}, $${formatCents(drink.price_cents)}${available ? '' : ', out of stock, pour anyway'}`}
+                  onClick={() => pour(drink)}
+                  className={cn(
+                    'rounded border p-4 text-left transition-colors min-h-[72px] flex flex-col justify-between active:scale-95',
+                    available
+                      ? 'bg-secondary hover:bg-secondary/70 border-border'
+                      : 'border-dashed border-border text-muted-foreground',
+                  )}
+                >
+                  <span className='text-sm leading-snug'>{drink.name}</span>
+                  <span className='flex items-baseline justify-between gap-2 mt-1'>
+                    <span className={cn('text-sm font-semibold tabular-nums', available ? 'text-primary' : 'text-muted-foreground')}>
+                      ${formatCents(drink.price_cents)}
+                    </span>
+                    {!available && <span className='text-[10px] tracking-widest uppercase'>Out · Pour anyway</span>}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

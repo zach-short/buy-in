@@ -45,6 +45,8 @@ export default function JoinPage({ searchParams }: { searchParams: SearchParams 
           autoComplete='off'
           autoCapitalize='characters'
           spellCheck={false}
+          autoFocus
+          enterKeyHint='go'
           className='h-11 font-mono tracking-widest'
         />
         {entry.error ? (

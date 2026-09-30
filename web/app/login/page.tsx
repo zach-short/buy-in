@@ -1,12 +1,14 @@
 'use client';
 
-import { Suspense, type ReactNode } from 'react';
+import { Suspense, useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowRight, LogIn, Mail } from 'lucide-react';
 
 import { GoogleButton } from '@/components/auth/google-button';
 import { PasswordInput } from '@/components/auth/password-input';
 import { LegalLinks } from '@/components/legal/legal-links';
+import { StatusScreen } from '@/components/shared/status-screen';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLogin, type LoginFlow } from '@/hooks/use-login';
@@ -18,7 +20,7 @@ const PRIMARY = 'w-full h-11 tracking-widest uppercase text-xs';
 // requires a Suspense boundary around it (https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout).
 export default function LoginPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<StatusScreen kind='loading' />}>
       <Login />
     </Suspense>
   );
@@ -30,9 +32,11 @@ function Login() {
   const entry = flow.step === 'start' || flow.step === 'email';
 
   return (
-    <main className='relative min-h-dvh flex flex-col items-center justify-center px-6'>
+    <main className='min-h-dvh flex flex-col items-center justify-center px-6 py-12'>
       <div className='w-full max-w-xs'>
-        <h1 className='pb-8 text-center text-2xl font-semibold tracking-widest uppercase text-primary'>Buy-In</h1>
+        <h1 className='pb-8 text-center text-2xl font-semibold tracking-widest uppercase text-primary'>
+          <Link href='/'>Buy-In</Link>
+        </h1>
         {confirmed && (
           <FadeAway gone={flow.step !== 'start'}>
             <p className='pb-8 text-center text-xs text-muted-foreground tracking-wide'>
@@ -44,7 +48,8 @@ function Login() {
         {flow.step === 'password' && <PasswordStep flow={flow} />}
         {flow.step === 'create' && <CreateStep flow={flow} />}
       </div>
-      <LegalLinks className='absolute bottom-6' />
+      {/* In the flow, not pinned to the bottom, so a tall form on a short screen cannot run under it. */}
+      <LegalLinks className='mt-8' />
     </main>
   );
 }
@@ -85,7 +90,21 @@ function EntryStep({ flow }: { flow: LoginFlow }) {
           Continue with Email
         </Button>
       )}
+      <InviteCodeLink />
     </div>
+  );
+}
+
+// A player holding only a code has no account to sign in to yet; /join sends them back here
+// with the code kept once they need one.
+function InviteCodeLink() {
+  return (
+    <p className='pt-6 text-center text-xs text-muted-foreground tracking-wide'>
+      Have an invite code?{' '}
+      <Link href='/join' className='text-primary underline-offset-4 hover:underline'>
+        Join a table
+      </Link>
+    </p>
   );
 }
 
@@ -96,7 +115,7 @@ function ErrorLine({ error }: { error: string }) {
 
 function BackButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <Button type='button' variant='ghost' onClick={onClick} className='w-full text-xs text-muted-foreground'>
+    <Button type='button' variant='ghost' onClick={onClick} className='w-full h-11 text-xs text-muted-foreground'>
       <ArrowLeft aria-hidden='true' />
       {label}
     </Button>
@@ -112,6 +131,10 @@ function EmailStep({ flow }: { flow: LoginFlow }) {
         value={flow.email}
         onChange={(e) => flow.setEmail(e.target.value)}
         autoComplete='email'
+        inputMode='email'
+        autoCapitalize='none'
+        autoCorrect='off'
+        spellCheck={false}
         autoFocus
         required
         className='h-11'
@@ -150,6 +173,9 @@ function PasswordStep({ flow }: { flow: LoginFlow }) {
 }
 
 function CreateStep({ flow }: { flow: LoginFlow }) {
+  // Flagged only once the field is left, so it does not go red on every keystroke while typing.
+  const [confirmLeft, setConfirmLeft] = useState(false);
+  const mismatch = confirmLeft && flow.confirmPassword !== flow.password;
   return (
     <form onSubmit={flow.signUp} className='space-y-3'>
       <p className='text-sm text-center break-all'>{flow.email.trim()}</p>
@@ -167,14 +193,16 @@ function CreateStep({ flow }: { flow: LoginFlow }) {
         placeholder='Confirm password'
         value={flow.confirmPassword}
         onChange={(e) => flow.setConfirmPassword(e.target.value)}
+        onBlur={() => setConfirmLeft(true)}
         autoComplete='new-password'
         required
+        aria-invalid={mismatch}
         className='h-11'
       />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.busy}>
         <ArrowRight aria-hidden='true' />
-        {flow.busy ? 'Creating account…' : 'Continue'}
+        {flow.busy ? 'Creating account…' : 'Create account'}
       </Button>
       <BackButton label='Use a different email' onClick={() => flow.goTo('email')} />
     </form>

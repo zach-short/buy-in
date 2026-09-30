@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 
 import { useBarFeatures } from '@/hooks/use-bar-features';
@@ -15,6 +16,7 @@ function ordersWarning(count: number): string {
 export function HostFeaturesSetting() {
   const { settings, isLoading, error, setServesDrinks, setTracksInventory, countOrders } = useBarFeatures();
   const { confirm, confirmDialog } = useConfirm();
+  const { mutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);
 
   async function run(write: () => Promise<void>) {
@@ -51,7 +53,15 @@ export function HostFeaturesSetting() {
   }
 
   if (error) {
-    return <p className='text-xs text-destructive mb-6'>Couldn&apos;t load your drinks settings: {error.message}</p>;
+    // The app's SWRConfig does not retry on error; this is the host's only way back without a reload.
+    return (
+      <div className='mb-6' role='alert'>
+        <p className='text-xs text-destructive'>Couldn&apos;t load your drinks settings: {error.message}</p>
+        <button type='button' onClick={() => void mutate('bar_settings')} className='min-h-11 text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors'>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

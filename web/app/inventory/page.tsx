@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { Check, Pencil } from 'lucide-react';
+import { Check, Pencil, X } from 'lucide-react';
 import { DataState } from '@/components/shared/data-state';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { HeaderAction, PageHeader, PageMain } from '@/components/shared/layout/page';
 import { parseMoneyInput } from '@/components/ui/money-input';
 import { updateInventoryItem, type InventoryItemDetails } from '@/lib/supabase/inventory';
@@ -20,9 +22,10 @@ function QtyEditor({ item, onSave }: { item: InventoryRow; onSave: (qty: number)
   const [value, setValue] = useState(String(item.qty_on_hand));
   const [saving, setSaving] = useState(false);
 
-  async function save() {
+  async function save(e: FormEvent) {
+    e.preventDefault();
     const qty = parseQty(value);
-    if (qty === null || Number.isNaN(qty)) return;
+    if (qty === null || Number.isNaN(qty) || saving) return;
     setSaving(true);
     await onSave(qty);
     setSaving(false);
@@ -32,8 +35,10 @@ function QtyEditor({ item, onSave }: { item: InventoryRow; onSave: (qty: number)
   if (!editing) {
     return (
       <button
+        type='button'
         onClick={() => { setValue(String(item.qty_on_hand)); setEditing(true); }}
-        className='text-right min-w-[56px] min-h-[40px] px-2 rounded hover:bg-secondary transition-colors tabular-nums text-sm'
+        aria-label={`Set ${item.name} on hand, now ${formatQty(item.qty_on_hand)} ${item.unit}`}
+        className='text-right min-w-[56px] min-h-11 px-2 rounded hover:bg-secondary transition-colors tabular-nums text-sm'
       >
         {formatQty(item.qty_on_hand)} {item.unit}
       </button>
@@ -41,16 +46,46 @@ function QtyEditor({ item, onSave }: { item: InventoryRow; onSave: (qty: number)
   }
 
   return (
-    <div className='flex items-center gap-1' onKeyDown={(e) => e.key === 'Enter' && save()}>
-      <QtyField placeholder='Qty' value={value} onChange={setValue} className='h-9 w-20 text-right text-sm' />
+    <form
+      onSubmit={(e) => void save(e)}
+      onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }}
+      className='flex items-center gap-1'
+    >
+      <QtyField placeholder='Qty' value={value} onChange={setValue} className='h-11 w-20 text-right text-base md:text-sm' />
       <button
-        onClick={save}
+        type='submit'
         disabled={saving}
         aria-label='Save quantity'
-        className='size-9 flex items-center justify-center rounded bg-primary text-primary-foreground'
+        className='size-11 flex items-center justify-center rounded border border-primary/60 text-foreground'
       >
         <Check className='size-4' />
       </button>
+      <button
+        type='button'
+        onClick={() => setEditing(false)}
+        disabled={saving}
+        aria-label='Cancel'
+        className='size-11 flex items-center justify-center rounded border border-border text-muted-foreground hover:text-foreground'
+      >
+        <X className='size-4' />
+      </button>
+    </form>
+  );
+}
+
+function matching(rows: InventoryRow[], search: string): InventoryRow[] {
+  const q = search.trim().toLowerCase();
+  return q ? rows.filter((item) => item.name.toLowerCase().includes(q)) : rows;
+}
+
+// Sticks above the phone's bottom nav (3.5rem + --nav-inset, the same sum app-shell.tsx pads
+// with), so Save stays in reach at the end of a long list instead of sitting above it.
+function RestockBar({ saving, onSave }: { saving: boolean; onSave: () => void }) {
+  return (
+    <div className='sticky bottom-[calc(3.5rem+var(--nav-inset))] md:bottom-0 z-30 -mx-6 px-6 py-3 border-t border-border bg-background/95 backdrop-blur'>
+      <Button className='w-full h-11 tracking-widest uppercase text-xs' onClick={onSave} disabled={saving}>
+        {saving ? 'Saving…' : 'Save restock'}
+      </Button>
     </div>
   );
 }
@@ -87,6 +122,7 @@ export default function InventoryPage() {
   const items = data ?? [];
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const restock = useRestock(items, mutate);
 
   async function updateQty(item: InventoryRow, qty: number) {
@@ -149,7 +185,7 @@ export default function InventoryPage() {
               <HeaderAction onClick={toggleRestock}>{restock.active ? 'Cancel' : 'Restock'}</HeaderAction>
             )}
             {!restock.active && (
-              <HeaderAction onClick={() => setShowAdd((v) => !v)}>{showAdd ? 'Cancel' : '+ Add'}</HeaderAction>
+              <HeaderAction tone={showAdd ? 'default' : 'primary'} onClick={() => setShowAdd((v) => !v)}>{showAdd ? 'Cancel' : '+ Add'}</HeaderAction>
             )}
           </>
         }
@@ -172,20 +208,22 @@ export default function InventoryPage() {
             {!restock.active && <RunningLow items={rows} />}
 
             {restock.active && (
-              <div className='mb-8 space-y-3'>
-                <p className='text-xs text-muted-foreground'>Enter what arrived; it is added to what is on hand.</p>
-                <button
-                  type='button'
-                  onClick={restock.save}
-                  disabled={restock.saving}
-                  className='w-full h-11 rounded-md bg-primary text-primary-foreground tracking-widest uppercase text-xs disabled:opacity-50'
-                >
-                  {restock.saving ? 'Saving…' : 'Save restock'}
-                </button>
-              </div>
+              <p className='mb-8 text-xs text-muted-foreground'>Enter what arrived; it is added to what is on hand.</p>
             )}
 
-            {groupByCategory(rows).map(([cat, catItems]) => (
+            <Input
+              type='search'
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder='Search stock…'
+              aria-label='Search stock'
+              className='h-11 mb-6'
+            />
+            {matching(rows, search).length === 0 && (
+              <p className='text-center text-xs tracking-widest uppercase py-12 text-muted-foreground'>No matching items</p>
+            )}
+
+            {groupByCategory(matching(rows, search)).map(([cat, catItems]) => (
               <div key={cat} className='mb-8'>
                 <p className='text-xs tracking-widest uppercase text-muted-foreground mb-3'>{cat}</p>
                 <div className='border border-border rounded-md divide-y divide-border'>
@@ -203,7 +241,7 @@ export default function InventoryPage() {
                     <div key={item.id} className='flex items-center justify-between gap-2 px-4 py-3 min-h-[52px]'>
                       <div className='flex items-center gap-2 min-w-0'>
                         {item.qty_on_hand <= item.reorder_threshold && (
-                          <span className='text-destructive text-xs shrink-0'>!</span>
+                          <span className='text-destructive text-[10px] tracking-widest uppercase shrink-0'>Low</span>
                         )}
                         <span className='text-sm truncate'>{item.name}</span>
                       </div>
@@ -214,7 +252,7 @@ export default function InventoryPage() {
                             placeholder='received'
                             value={restock.draft[item.id] ?? ''}
                             onChange={(v) => restock.setReceived(item.id, v)}
-                            className='h-9 w-24 text-right text-sm'
+                            className='h-11 w-24 text-right text-base md:text-sm'
                           />
                           <span className='text-xs text-muted-foreground w-10 truncate'>{item.unit}</span>
                         </div>
@@ -225,7 +263,7 @@ export default function InventoryPage() {
                             type='button'
                             onClick={() => { setShowAdd(false); setEditingId(item.id); }}
                             aria-label={`Edit ${item.name}`}
-                            className='size-9 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors'
+                            className='size-11 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors'
                           >
                             <Pencil className='size-3.5' />
                           </button>
@@ -236,6 +274,8 @@ export default function InventoryPage() {
                 </div>
               </div>
             ))}
+
+            {restock.active && <RestockBar saving={restock.saving} onSave={() => void restock.save()} />}
           </>
         )}
       </DataState>

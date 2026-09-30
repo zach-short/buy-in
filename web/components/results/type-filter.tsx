@@ -31,7 +31,7 @@ export function TypeFilterBar({ chips, active }: { chips: readonly TypeOption[];
           scroll={false}
           aria-current={slug === active ? 'page' : undefined}
           className={cn(
-            'flex h-9 items-center rounded-full border px-3 text-xs tracking-widest uppercase transition-colors',
+            'flex h-11 items-center rounded-full border px-4 text-xs tracking-widest uppercase transition-colors',
             slug === active ? 'border-primary bg-muted text-foreground' : 'border-border text-muted-foreground hover:text-foreground',
           )}
         >

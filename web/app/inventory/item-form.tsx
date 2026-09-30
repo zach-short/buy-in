@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Check, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,9 @@ export function ItemForm({ title, initial, showQty, onSubmit, onCancel, classNam
   const offered: readonly string[] = CATEGORIES;
   const categories = offered.includes(initial.category) ? offered : [...offered, initial.category];
 
-  async function submit() {
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (saving || !form.name.trim() || !form.unit.trim()) return;
     setSaving(true);
     const saved = await onSubmit(form);
     setSaving(false);
@@ -59,18 +61,27 @@ export function ItemForm({ title, initial, showQty, onSubmit, onCancel, classNam
   }
 
   return (
-    <div className={cn('border border-border rounded-md p-4 space-y-3', className)}>
+    <form onSubmit={(e) => void submit(e)} className={cn('border border-border rounded-md p-4 space-y-3', className)}>
       <p className='text-xs tracking-widest uppercase text-muted-foreground mb-1'>{title}</p>
-      <Input placeholder='Name' value={form.name} onChange={(e) => set('name')(e.target.value)} className='h-11' />
+      <Input
+        placeholder='Name'
+        aria-label='Name'
+        autoCapitalize='words'
+        autoComplete='off'
+        value={form.name}
+        onChange={(e) => set('name')(e.target.value)}
+        className='h-11'
+      />
       <div className='grid grid-cols-2 gap-2'>
         <select
           value={form.category}
           onChange={(e) => set('category')(e.target.value)}
-          className='h-11 rounded-md border border-input bg-transparent px-3 text-sm'
+          aria-label='Category'
+          className='h-11 rounded-md border border-input bg-transparent px-3 text-base md:text-sm'
         >
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <Input placeholder='Unit (oz, each…)' value={form.unit} onChange={(e) => set('unit')(e.target.value)} className='h-11' />
+        <Input placeholder='Unit (oz, each…)' aria-label='Unit' autoComplete='off' value={form.unit} onChange={(e) => set('unit')(e.target.value)} className='h-11' />
       </div>
       <div className={showQty ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-2 gap-2'}>
         {showQty && <QtyField placeholder='Qty' value={form.qtyOnHand} onChange={set('qtyOnHand')} />}
@@ -79,17 +90,17 @@ export function ItemForm({ title, initial, showQty, onSubmit, onCancel, classNam
       </div>
       <div className='flex gap-2'>
         {onCancel && (
-          <Button variant='outline' className='flex-1 h-11 tracking-widest uppercase text-xs' onClick={onCancel} disabled={saving}>
+          <Button type='button' variant='outline' className='flex-1 h-11 tracking-widest uppercase text-xs' onClick={onCancel} disabled={saving}>
             <X aria-hidden='true' />
             Cancel
           </Button>
         )}
-        <Button className='flex-1 h-11 tracking-widest uppercase text-xs' onClick={submit} disabled={saving || !form.name.trim() || !form.unit.trim()}>
+        <Button type='submit' className='flex-1 h-11 tracking-widest uppercase text-xs' disabled={saving || !form.name.trim() || !form.unit.trim()}>
           <Check aria-hidden='true' />
           {saving ? 'Saving…' : 'Save'}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }
 

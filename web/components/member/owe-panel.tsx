@@ -47,7 +47,7 @@ function OweBody({ record, pay }: { record: TableRecord; pay: TablePayInfo | und
         <button
           type='button'
           onClick={() => setPaidCents(record.balanceCents)}
-          className='text-xs tracking-widest uppercase text-muted-foreground underline underline-offset-4 hover:text-foreground'
+          className='min-h-11 text-xs tracking-widest uppercase text-muted-foreground underline underline-offset-4 hover:text-foreground'
         >
           I already paid
         </button>

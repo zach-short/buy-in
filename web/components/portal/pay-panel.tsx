@@ -10,7 +10,13 @@ import { openVenmo } from '@/lib/venmo';
 // partial payment is the player's choice, but never more than the balance — an overpayment
 // would turn into money the host owes back, which is not something a pay button should do.
 
-const PAY_BUTTON = 'w-full flex items-center justify-center gap-2 py-3 rounded text-sm font-bold text-white disabled:opacity-50';
+const PAY_BUTTON = 'w-full flex items-center justify-center gap-2 py-3 rounded text-sm font-bold disabled:opacity-50';
+// White on Venmo blue passes; white on Cash App green is about 1.9:1, so that one takes dark text.
+const VENMO_BUTTON = `${PAY_BUTTON} text-white`;
+const CASHAPP_BUTTON = `${PAY_BUTTON} text-black`;
+
+/** What a player who owes sees when the host has set up neither Venmo nor Cash App. */
+export const NO_PAY_METHOD = 'Your host has not added a payment method. Ask them how to pay.';
 
 // The documented form is `cash.app/$cashtag/<amount>`. Cash App's own docs now steer people to
 // in-app "share link" requests and say little about the amount segment; the cashtag page still
@@ -39,7 +45,7 @@ export function PayPanel({ bar, balanceCents, onPay }: PayPanelProps) {
   const problem = amountProblem(cents, balanceCents);
   const payCents = problem ? null : cents;
   const { venmo_handle: venmo, cashapp_handle: cashapp } = bar;
-  if (!venmo && !cashapp) return null;
+  if (!venmo && !cashapp) return <p className='mt-5 text-xs text-muted-foreground'>{NO_PAY_METHOD}</p>;
 
   function payVenmo(handle: string, amountCents: number) {
     // The host's template (0003, owner 2026-09-27), rendered for the amount actually sent.
@@ -60,7 +66,7 @@ export function PayPanel({ bar, balanceCents, onPay }: PayPanelProps) {
           type='button'
           disabled={payCents === null}
           onClick={() => payCents !== null && payVenmo(venmo, payCents)}
-          className={PAY_BUTTON}
+          className={VENMO_BUTTON}
           style={{ background: '#3D95CE' }}
         >
           <svg width='16' height='16' viewBox='0 0 24 24' fill='white' aria-hidden='true'>
@@ -71,7 +77,7 @@ export function PayPanel({ bar, balanceCents, onPay }: PayPanelProps) {
       )}
       {cashapp && (
         payCents === null ? (
-          <button type='button' disabled className={PAY_BUTTON} style={{ background: '#00D64F' }}>Pay on Cash App</button>
+          <button type='button' disabled className={CASHAPP_BUTTON} style={{ background: '#00D64F' }}>Pay on Cash App</button>
         ) : (
           // A new tab, so this page — and the report form it opens — is still here on return.
           <a
@@ -79,7 +85,7 @@ export function PayPanel({ bar, balanceCents, onPay }: PayPanelProps) {
             target='_blank'
             rel='noopener noreferrer'
             onClick={() => onPay(payCents)}
-            className={PAY_BUTTON}
+            className={CASHAPP_BUTTON}
             style={{ background: '#00D64F' }}
           >
             Pay ${formatCents(payCents)} on Cash App

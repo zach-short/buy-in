@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowRight, BarChart3, CalendarDays, Smartphone, Users } from 'lucide-react';
+import { ArrowRight, BarChart3, CalendarDays, LogIn, Smartphone, Users } from 'lucide-react';
 
 import { LegalLinks } from '@/components/legal/legal-links';
 import { Button } from '@/components/ui/button';
@@ -37,15 +37,20 @@ function Backdrop() {
   );
 }
 
+// Sticky, so a returning player can sign in from anywhere down the page; the hero keeps
+// "Get started" for someone new. It sticks below the status bar: AppShell's z-50 mask covers the
+// top safe-area inset, and would hide most of the bar, Sign in included, in the installed PWA.
 function Nav() {
   return (
-    <header className='mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6'>
-      <span className='font-display text-sm font-semibold tracking-widest uppercase text-primary'>Buy-In</span>
-      <nav className='flex items-center gap-6'>
-        <Button asChild size='sm' className='text-xs tracking-widest uppercase'>
-          <Link href='/login'><ArrowRight aria-hidden='true' /> Get started</Link>
-        </Button>
-      </nav>
+    <header className='sticky top-[env(safe-area-inset-top)] z-40 border-b border-border bg-background/90 backdrop-blur'>
+      <div className='mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6'>
+        <span className='font-display text-sm font-semibold tracking-widest uppercase text-primary'>Buy-In</span>
+        <nav className='flex items-center gap-6'>
+          <Button asChild size='sm' className='h-11 text-xs tracking-widest uppercase'>
+            <Link href='/login'><LogIn aria-hidden='true' /> Sign in</Link>
+          </Button>
+        </nav>
+      </div>
     </header>
   );
 }
@@ -76,6 +81,12 @@ function Hero() {
           Track buy-ins, pour from a real menu, and settle up with one tap per player when the game breaks.
         </p>
         <Actions />
+        <p className='text-xs text-muted-foreground'>
+          Have an invite code?{' '}
+          <Link href='/join' className='text-primary underline-offset-4 hover:underline'>
+            Join a table
+          </Link>
+        </p>
         <p className='max-w-[52ch] text-xs leading-relaxed text-muted-foreground'>
           Buy-In never holds the money. Payments go straight between you and your players, through Venmo.
         </p>

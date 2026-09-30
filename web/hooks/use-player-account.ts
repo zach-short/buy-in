@@ -23,8 +23,8 @@ export function usePlayerAccount(player: PlayerRow, onChanged: () => Promise<unk
   const router = useRouter();
   const [busy, setBusy] = useState<Action | null>(null);
 
-  async function run(action: Action, prompt: string, write: () => Promise<void>, done: string, confirmLabel = 'Continue') {
-    if (!(await confirm({ title: 'Are you sure?', description: prompt, confirmLabel, destructive: action === 'kick' }))) return false;
+  async function run(action: Action, title: string, prompt: string, write: () => Promise<void>, done: string, confirmLabel = 'Continue') {
+    if (!(await confirm({ title, description: prompt, confirmLabel, destructive: action === 'kick' }))) return false;
     setBusy(action);
     try {
       await write();
@@ -39,17 +39,19 @@ export function usePlayerAccount(player: PlayerRow, onChanged: () => Promise<unk
     }
   }
 
-  const unlink = () => run('unlink',
+  // Each confirm is titled by its action, so the dialog says what the tap does before its body
+  // does. The titles are provisional (R7); the descriptions below are the owner's.
+  const unlink = () => run('unlink', `Unlink ${player.name}?`,
     `Unlink ${player.name} from their account? They stop seeing this balance until it is linked again.`,
     () => unlinkPlayer(player.id), 'Unlinked');
 
-  const swap = (other: PlayerRow) => run('swap',
+  const swap = (other: PlayerRow) => run('swap', `Swap ${player.name} and ${other.name}?`,
     `Swap the accounts on ${player.name} and ${other.name}? Each person will then see the other's balance.`,
     () => swapPlayerAccounts(player.id, other.id), 'Accounts swapped');
 
   // The row this page shows is deleted on success, so the page follows the account to its new row.
   async function move(target: PlayerRow) {
-    const moved = await run('move',
+    const moved = await run('move', `Move to ${target.name}?`,
       `Move this account to ${target.name} and delete ${player.name}? Only works if ${player.name} has no history.`,
       () => reassignPlayerAccount(player.id, target.id), `Moved to ${target.name}`);
     if (moved) router.replace(`/players/${target.id}`);
@@ -57,7 +59,7 @@ export function usePlayerAccount(player: PlayerRow, onChanged: () => Promise<unk
 
   // Copy is the owner's (R7, the terse set, 2026-09-29). The replaced invites are the part a host
   // would not guess: every link and code they already sent stops working (0028 rotate_table_invites).
-  const kick = () => run('kick',
+  const kick = () => run('kick', `Kick ${player.name}?`,
     `Kick ${player.name}? They lose access to this table. Their history stays.`,
     () => kickPlayer(player.id), `${player.name} kicked. Your invites were replaced — share the new ones.`, 'Kick');
 

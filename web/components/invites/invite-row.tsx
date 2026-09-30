@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { useInviteCode } from '@/hooks/use-invite-code';
 import type { StandingInvite } from '@/lib/supabase/standing-invites';
 
-const SMALL = 'text-xs tracking-widest uppercase';
+// h-11 over size='sm''s h-8: a 44px tap target, the rest of the small size kept.
+const SMALL = 'h-11 text-xs tracking-widest uppercase';
 
 // Copy is the owner's (R7, the terse set, 2026-09-29).
 const TITLE: Record<InviteKind, string> = { link: 'Invite link', code: 'Invite code', both: 'Link + code' };
@@ -86,7 +87,7 @@ function CodeLine({ invite, onChanged }: { invite: StandingInvite; onChanged: ()
           autoCapitalize='characters'
           spellCheck={false}
           autoFocus
-          className='h-9 font-mono uppercase tracking-widest'
+          className='h-11 font-mono uppercase tracking-widest'
         />
         <Button type='submit' size='sm' className={SMALL} disabled={code.busy !== null}>
           {code.busy === 'save' ? 'Saving…' : 'Save'}

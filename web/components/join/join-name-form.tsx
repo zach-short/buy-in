@@ -28,6 +28,10 @@ export function JoinNameForm({ flow, token }: { flow: JoinFlow; token: string })
         value={flow.name}
         onChange={(e) => flow.setName(e.target.value)}
         autoComplete='name'
+        autoCapitalize='words'
+        enterKeyHint='go'
+        autoFocus
+        required
         className='h-11'
       />
       {flow.error && (
