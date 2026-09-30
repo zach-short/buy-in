@@ -1,6 +1,6 @@
 # Invite codes, and kicking a player — SCOPE
 
-**Status: `BUILT` 2026-09-29, uncommitted — `0028` on production (HANDOFF step 73); `0029` (review fixes) on production (steps 74, 75, commit `8558b82`); `0030` (chosen lifetimes) written, harness-proved and **unapplied**, `/join` codes and the kick button built and walked on the local stack (step 76, `PASSOFF.md` item 31). The web build must not ship before `0030` is applied.** Opened by an Opus 5.5 session (Default tier; no model was named for the ask). §6 holds what the owner has answered so far; §7 is what is still open.
+**Status: `BUILT` 2026-09-29, commit `bb8349a` — `0028` on production (HANDOFF step 73); `0029` (review fixes) on production (steps 74, 75, commit `8558b82`); `0030` (chosen lifetimes) on production (steps 76, 77); `/join` codes and the kick button built and walked on the local stack (step 76, `PASSOFF.md` item 31). Owed: the phone walk (HANDOFF 76's runtime entries) and the owner's calls on BD-9 and "Code never expires".** Opened by an Opus 5.5 session (Default tier; no model was named for the ask). §6 holds what the owner has answered so far; §7 is what is still open.
 
 Owner's asks, 2026-09-29, in order:
 1. "make the invite link also generate an invite code. 4 digits that does the same thing and if possible a code that the user can change."
