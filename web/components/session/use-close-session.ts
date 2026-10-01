@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { centsToDollars, formatCents } from '@pb/core';
+import { cashoutsChangedSince, centsToDollars, formatCents, refillCashouts } from '@pb/core';
 
 import { parseMoneyInput } from '@/components/ui/money-input';
 import type { ConfirmOptions } from '@/hooks/use-confirm';
@@ -20,25 +20,33 @@ import type { LiveSession } from './use-live-session';
 
 type Confirm = (options: ConfirmOptions) => Promise<boolean>;
 
+// `?view=cashout` marks the cash-out screen's history entry on the session page.
+const VIEW_PARAM = 'view';
+const CASHOUT_VIEW = 'cashout';
+
 const OFFLINE = 'No connection — nothing was closed';
 const WRITTEN_NOT_CLOSED = "Cash-outs saved — couldn't mark the night closed. Try again.";
 
 /** playerId → cents, as the database had them when the host last saw them. */
 type CashoutSnapshot = Record<string, number>;
 
+/** A cash-out the last close failed to write: the cents it tried, and the "Name: reason" line shown. */
+interface UnsavedCashout {
+  playerId: string;
+  cents: number;
+  line: string;
+}
+
 function snapshotOf(rows: readonly CashoutRow[]): CashoutSnapshot {
   return Object.fromEntries(rows.map((c) => [c.player_id, c.amount_cents]));
 }
 
-/** Players whose cash-out appeared, vanished or changed amount since the snapshot. */
-function changedSince(snapshot: CashoutSnapshot, rows: readonly CashoutRow[]): string[] {
-  const now = snapshotOf(rows);
-  const ids = new Set([...Object.keys(snapshot), ...Object.keys(now)]);
-  return [...ids].filter((id) => snapshot[id] !== now[id]);
-}
-
 function toInput(cents: number): string {
   return String(centsToDollars(cents));
+}
+
+function typedCents(amounts: Readonly<Record<string, string>>): Record<string, number | null> {
+  return Object.fromEntries(Object.entries(amounts).map(([id, value]) => [id, parseMoneyInput(value)]));
 }
 
 /**
@@ -59,10 +67,28 @@ export function useCloseSession(
   // pot: change any amount and the acknowledgement no longer applies.
   const [houseAckCents, setHouseAckCents] = useState<number | null>(null);
   const [closing, setClosing] = useState(false);
-  const [failures, setFailures] = useState<string[]>([]);
+  const [unsaved, setUnsaved] = useState<UnsavedCashout[]>([]);
   // What the cash-outs were when this screen was filled in. Closing re-reads them and refuses
   // if another device corrected one meanwhile, rather than overwriting that correction.
   const [snapshot, setSnapshot] = useState<CashoutSnapshot>({});
+
+  // Cash-out is a history entry on this page rather than a route of its own, because the typed
+  // amounts live in this hook and a route change would drop them. So the device back gesture
+  // and the browser Back return to the table with every amount intact.
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  // Whether End Session has filled the screen on this visit to the page.
+  const [filled, setFilled] = useState(false);
+  const wantsCashout = searchParams.get(VIEW_PARAM) === CASHOUT_VIEW;
+  const active = session?.status === 'active';
+
+  // A reload (or an opened link) on the cash-out entry mounts with nothing filled, and showing
+  // the screen then would show blanks where the database has cash-outs. So that entry becomes
+  // the table's, and End Session fills the screen again. A reload never closes the night: only
+  // the Close Session button calls close().
+  useEffect(() => {
+    if (wantsCashout && !filled && active) window.history.replaceState(null, '', pathname);
+  }, [wantsCashout, filled, active, pathname]);
 
   const entries: CashoutEntry[] = seated.map((p) => ({ playerId: p.id, name: p.name, cents: parseMoneyInput(amounts[p.id] ?? '') }));
   const totalInCents = sumCents(live.buyIns, (b) => b.amount_cents);
@@ -72,13 +98,38 @@ export function useCloseSession(
   const potSettled = remainingCents === 0 || houseAckCents === remainingCents;
   const rosterReady = !!session && live.ledgerLoaded && seated.length === session.player_ids.length;
 
+  // Runs on every End Session, not only the first, so Back then End Session again keeps what
+  // the host typed (refillCashouts has the rule, and what happens to a player seated or a
+  // cash-out written elsewhere between the two visits). The house acknowledgement and the
+  // not-saved list are kept too: the acknowledgement lapses by itself if the refill moves the
+  // pot (potSettled compares it to the pot). A not-saved line goes once the database holds the
+  // amount it failed to write, whether the host re-entered it on the table or the write landed
+  // though its reply was lost. Every other line stays until the next close, so a host who comes
+  // back without fixing anything still sees what did not save.
   function prefill() {
-    const next: Record<string, string> = {};
-    for (const c of live.cashouts) next[c.player_id] = toInput(c.amount_cents);
-    setAmounts(next);
-    setSnapshot(snapshotOf(live.cashouts));
-    setHouseAckCents(null);
-    setFailures([]);
+    const current = snapshotOf(live.cashouts);
+    const { follow, snapshot: next } = refillCashouts(snapshot, typedCents(amounts), current);
+    const nextAmounts = { ...amounts };
+    for (const id of follow) nextAmounts[id] = Object.hasOwn(current, id) ? toInput(current[id]) : '';
+    setAmounts(nextAmounts);
+    setSnapshot(next);
+    setUnsaved((prev) => prev.filter((u) => !Object.hasOwn(current, u.playerId) || current[u.playerId] !== u.cents));
+  }
+
+  function openCashout() {
+    // The page keeps the cash-out screen up while a close is writing (page.tsx), so End Session
+    // is out of reach then. The guard stays in case another path ever calls this: refilling
+    // would change amounts under a close that is writing them.
+    if (!closing) prefill();
+    setFilled(true);
+    window.history.pushState(null, '', `?${VIEW_PARAM}=${CASHOUT_VIEW}`);
+  }
+
+  // The on-screen Back goes through history like the gesture, so the two never disagree. The
+  // cash-out entry only shows once openCashout has pushed it on top of the table's (a reload
+  // lands on the table, above), so one step back is always the table.
+  function backToTable() {
+    window.history.back();
   }
 
   function setAmount(playerId: string, value: string) {
@@ -112,7 +163,7 @@ export function useCloseSession(
       toast.error('Buy-ins changed on another device — check the pot and close again');
       return null;
     }
-    const changed = changedSince(snapshot, latestCashouts);
+    const changed = cashoutsChangedSince(snapshot, snapshotOf(latestCashouts));
     if (changed.length) {
       takeCashouts(latestCashouts, changed);
       const names = seated.filter((p) => changed.includes(p.id)).map((p) => p.name);
@@ -150,20 +201,21 @@ export function useCloseSession(
     if (write.kind === 'update') await updateCashoutAmount(write.id, write.cents);
   }
 
-  /** Writes every cash-out, one at a time; returns "Name: reason" for each that failed. */
-  async function writeCashouts(sessionId: string, barId: string, existing: readonly CashoutRow[]): Promise<string[]> {
+  /** Writes every cash-out, one at a time; returns each that failed, with its "Name: reason" line. */
+  async function writeCashouts(sessionId: string, barId: string, existing: readonly CashoutRow[]): Promise<UnsavedCashout[]> {
     const plan = planCashoutWrites(entries, existing);
     // This screen's own successful writes become the baseline, so a retry after a partial
     // failure is not mistaken for another device's change.
     const baseline = snapshotOf(existing);
-    const failed: string[] = [];
+    const failed: UnsavedCashout[] = [];
     for (const write of plan) {
+      if (write.kind === 'keep') continue;
       try {
         await runWrite(sessionId, barId, write);
-        if (write.kind !== 'keep') baseline[write.playerId] = write.cents;
+        baseline[write.playerId] = write.cents;
       } catch (e) {
         const name = seated.find((p) => p.id === write.playerId)?.name ?? 'A player';
-        failed.push(`${name}: ${writeFailureMessage(e, 'no connection')}`);
+        failed.push({ playerId: write.playerId, cents: write.cents, line: `${name}: ${writeFailureMessage(e, 'no connection')}` });
       }
     }
     setSnapshot(baseline);
@@ -188,29 +240,36 @@ export function useCloseSession(
     }
     setClosing(true);
     let written = false;
+    let leaving = false;
     try {
       if (!(await confirmSummary())) return;
       const existing = await freshCashouts(session.id);
       if (!existing) return;
       const failed = await writeCashouts(session.id, session.bar_id, existing);
-      setFailures(failed);
+      setUnsaved(failed);
       if (failed.length) {
         toast.error(`${failed.length} cash-out${failed.length === 1 ? '' : 's'} not saved — the session is still open. Try again.`);
         return;
       }
       written = true;
       await closeSession(session.id);
+      leaving = true;
       router.push(`/session/${session.id}/summary`);
     } catch (e) {
       toast.error(written ? WRITTEN_NOT_CLOSED : writeFailureMessage(e, OFFLINE));
     } finally {
       void live.mutateCashouts();
-      setClosing(false);
+      // A closed night stays on the locked screen until the summary has loaded, which takes
+      // seconds on slow wifi. Unlocking would hand a host who swiped back the table's controls on
+      // a finished ledger, until the night reads as closed. If that navigation never lands, the
+      // night reading as closed sends the page to the summary anyway (page.tsx).
+      if (!leaving) setClosing(false);
     }
   }
 
   return {
-    amounts, setAmount, prefill, assignRemainder, close, closing, failures,
+    showingCashout: wantsCashout && filled, openCashout, backToTable,
+    amounts, setAmount, assignRemainder, close, closing, failures: unsaved.map((u) => u.line),
     entries, totalInCents, outCents, remainingCents, missing, potSettled,
     houseAckCents, setHouseAckCents,
   };

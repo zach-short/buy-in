@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 import { HostOnly } from '@/components/shared/host-only';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { useAuthUser } from '@/hooks/use-auth-user';
-import { useIsBarStaff } from '@/hooks/use-is-bar-staff';
+import { readLastStaffAnswer, useIsBarStaff } from '@/hooks/use-is-bar-staff';
 import { cn } from '@/lib/utils';
 import { MEMBER_NAV_ITEMS, NAV_ITEMS, type NavItem, isActive, isHostOnly, showsNav } from './nav-items';
 
@@ -81,11 +81,16 @@ function BottomBar({ items, pathname }: { items: readonly NavItem[]; pathname: s
 // reader at a time; both are hidden by CSS, not unmounted, to avoid a hydration flash on resize.
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { status } = useAuthUser();
+  const { status, user } = useAuthUser();
   const isStaff = useIsBarStaff();
   const shown = showsNav(pathname) && status !== 'unauthenticated';
-  // H1: until the staff read returns, neither nav — a member must never see the host's.
-  const items = isStaff === undefined ? null : isStaff ? NAV_ITEMS : MEMBER_NAV_ITEMS;
+  // H1 (docs/incomplete/member-home/SCOPE.md:153) drew neither nav until the staff read
+  // returned. Superseded 2026-09-30 (owner, PASSOFF item 33): while the read is in flight the
+  // nav draws from this device's last answer for this account, and the live answer replaces it
+  // when it lands. A device with no remembered answer still draws neither. `user` is null on
+  // the server and through hydration, so storage is only read after both, and the markup matches.
+  const navIsStaff = isStaff ?? (user ? readLastStaffAnswer(user.id) : undefined);
+  const items = navIsStaff === undefined ? null : navIsStaff ? NAV_ITEMS : MEMBER_NAV_ITEMS;
 
   return (
     <div
@@ -113,7 +118,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 // H3: a host-only screen must not mount for a member — its fetchBarId would throw before any
-// guard inside it ran — so it waits for the staff read. Signed out, the proxy has already sent
+// guard inside it ran — so it waits for the live staff read, never the remembered answer the
+// nav may draw from (owner, 2026-09-30: a remembered answer never decides whether a host page
+// renders). Signed out, the proxy has already sent
 // the visitor to /login, and nothing here stands in its way.
 function Guarded({ pathname, signedIn, isStaff, children }: {
   pathname: string;

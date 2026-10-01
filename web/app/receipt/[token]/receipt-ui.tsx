@@ -7,6 +7,7 @@ import { formatCents, formatDate, formatTime, renderVenmoNote, VENMO_NOTE_PREFIX
 import { NO_PAY_METHOD } from '@/components/portal/pay-panel';
 import { netParts, paidLine } from '@/components/settle/net-copy';
 import { StatusScreen } from '@/components/shared/status-screen';
+import { courierPrime } from '@/lib/fonts';
 import { sharedNightNet } from '@/lib/ledger';
 import { fetchSharedTab } from '@/lib/supabase/public';
 import { openVenmo } from '@/lib/venmo';
@@ -62,8 +63,6 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-
         .receipt-wrap {
           min-height: 100dvh;
           display: flex;
@@ -81,7 +80,6 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
           border: 1px solid var(--border);
           border-radius: 4px;
           padding: 2rem 1.75rem;
-          font-family: 'Courier Prime', 'Courier New', monospace;
         }
 
         .r-venue {
@@ -217,7 +215,7 @@ export default function PublicReceiptPage({ params }: { params: Promise<{ token:
       `}</style>
 
       <div className='receipt-wrap'>
-        <div className='receipt-card'>
+        <div className={`receipt-card ${courierPrime.className}`}>
           <p className='r-venue'>Buy-In</p>
           <p className='r-name'>{player.name}</p>
           <p className='r-date'>

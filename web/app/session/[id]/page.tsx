@@ -45,7 +45,6 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [pickedPlayerId, setPickedPlayerId] = useState<string | null>(null);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [showCashout, setShowCashout] = useState(false);
   // Falls back to player_ids[0] — see the ordering note on withPlayerIds in
   // lib/supabase/queries.ts — until the host picks, or if the pick has left the table.
   const picked = pickedPlayerId && session?.player_ids.includes(pickedPlayerId) ? pickedPlayerId : null;
@@ -82,10 +81,17 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   }
   if (!session || closed) return <StatusScreen kind='loading' />;
 
-  if (showCashout) {
+  // Cash-out is this page's history entry `?view=cashout` (useCloseSession), so Back and the
+  // device back gesture both return here with the typed amounts kept. While a close is writing,
+  // this screen (every input disabled) stays up whatever the history entry says: the gesture
+  // cannot be blocked, and the table's controls would race the close. An edit there lands and
+  // is then overwritten by the write the close already planned, and a re-buy leaves a pot the
+  // host never balanced. Once the close ends the history entry decides again, so a close that
+  // failed while the table's entry is current shows the table, with its toast.
+  if (close.showingCashout || close.closing) {
     return (
       <>
-        <CashOutScreen close={close} buyInCents={buyInCents} tabCents={tabCents} onBack={() => setShowCashout(false)} />
+        <CashOutScreen close={close} buyInCents={buyInCents} tabCents={tabCents} onBack={close.backToTable} />
         {confirmDialog}
       </>
     );
@@ -121,7 +127,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         name={session.name}
         playedOn={session.played_on}
         subscribed={live.subscribed}
-        onEnd={() => { close.prefill(); setShowCashout(true); }}
+        onEnd={close.openCashout}
       />
 
       <PlayerStrip

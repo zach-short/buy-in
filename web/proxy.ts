@@ -20,6 +20,17 @@ import { passThrough, redirectTo, updateSession } from '@/lib/supabase/middlewar
 //
 // 2026-09-29: /sitemap.xml and /robots.txt added (owner request) — search crawlers carry no
 // session, and a 307 to /login would hide both from Google Search Console. Static, no data.
+//
+// 2026-09-30: /auth/confirm added (PASSOFF item 34, owner: forgot password emails a reset link)
+// — whoever forgot a password is signed out, and the route is what signs the link in.
+// /reset-password is not public: it needs the session /auth/confirm sets, so a signed-out
+// visitor is sent to /login like any other private page.
+// 2026-09-30, PASSOFF item 37: /auth/confirm is a page with one button now, and the button's
+// server action posts to /auth/confirm itself, so this one exact path covers the GET and the POST.
+//
+// 2026-09-30: /player-receipt left the list (PASSOFF item 35). It is a next.config.ts redirect to
+// /portal now, and config redirects run before this proxy (Next.js 16 proxy guide, "Execution
+// order"), so a signed-out visitor is redirected to the public /portal/[token], never here.
 function isPublicPath(pathname: string): boolean {
   return (
     pathname === '/' ||
@@ -32,13 +43,13 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/signup' ||
     pathname === '/confirm-email' ||
     pathname === '/auth/callback' ||
+    pathname === '/auth/confirm' ||
     pathname === '/join' ||
     pathname.startsWith('/join/') ||
     pathname.startsWith('/rsvp/') ||
     pathname.startsWith('/menu') ||
     pathname.startsWith('/receipt') ||
-    pathname.startsWith('/portal') ||
-    pathname.startsWith('/player-receipt')
+    pathname.startsWith('/portal')
   );
 }
 

@@ -33,6 +33,15 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  // /player-receipt/[token] was a second copy of /portal/[token] over the same portal-scoped token,
+  // and the two drifted. Links already texted keep working forever (owner, 2026-09-30), so the old
+  // path stays as a redirect, never a page. Config redirects run before proxy.ts (Next.js 16
+  // proxy guide, "Execution order"): a signed-out visitor is redirected, not sent to /login, which
+  // is why /player-receipt is no longer in proxy.ts's public list. permanent (308) because the page
+  // is gone for good; a browser caches it, so reversing means one visit per device to clear.
+  async redirects() {
+    return [{ source: '/player-receipt/:token', destination: '/portal/:token', permanent: true }];
+  },
 };
 
 export default withPWA(nextConfig);

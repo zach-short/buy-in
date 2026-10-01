@@ -248,6 +248,15 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# The reset email links to /auth/confirm with a token hash. The page there
+# (web/app/auth/confirm/page.tsx) only shows a button, so a mail scanner's GET cannot spend the
+# token; the button's POST (web/app/auth/confirm/verify-recovery.ts) verifies it server-side, so
+# the link works in a browser other than the one that asked (PASSOFF items 34 and 37, 2026-09-30).
+# Production's copy is the dashboard's Reset Password template, set by hand.
+[auth.email.template.recovery]
+subject = "Reset your Buy-In password"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

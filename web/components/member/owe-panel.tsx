@@ -42,7 +42,7 @@ function OweBody({ record, pay }: { record: TableRecord; pay: TablePayInfo | und
       <p className='text-sm'>
         You owe <span className='font-medium tabular-nums text-destructive'>${formatCents(record.balanceCents)}</span> here
       </p>
-      {pay && <PayPanel key={record.balanceCents} bar={payBar(record, pay)} balanceCents={record.balanceCents} onPay={setPaidCents} />}
+      {pay && <PayPanel bar={payBar(record, pay)} balanceCents={record.balanceCents} onPay={setPaidCents} />}
       {paidCents === null ? (
         <button
           type='button'

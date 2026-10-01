@@ -14,6 +14,7 @@ import { isPlayerArchived } from '@/lib/supabase/player-admin';
 import {
   fetchBarBuyIns, fetchBarCashouts, fetchBarOrders, fetchBarPayments, fetchPlayers, type PlayerRow,
 } from '@/lib/supabase/queries';
+import { BALANCE_READ } from '@/lib/swr-options';
 import { Input } from '@/components/ui/input';
 
 import { AddPlayerForm } from './_list/add-player-form';
@@ -34,10 +35,12 @@ export default function PlayersPage() {
   // bar_id filter below usually costs no extra request.
   const bar = useSWR('bar_settings', fetchBarSettings);
   const barId = bar.data?.barId;
-  const orders   = useSWR(barId ? ['orders', barId] : null, ([, id]) => fetchBarOrders(id));
-  const buyIns   = useSWR(barId ? ['buy_ins', barId] : null, ([, id]) => fetchBarBuyIns(id));
-  const cashouts = useSWR(barId ? ['cashouts', barId] : null, ([, id]) => fetchBarCashouts(id));
-  const payments = useSWR(barId ? ['payments', barId] : null, ([, id]) => fetchBarPayments(id));
+  // A failed refetch cannot blank the list: DataState keeps rows already on screen, and nothing
+  // typed here (search, the add form) is seeded from these four.
+  const orders   = useSWR(barId ? ['orders', barId] : null, ([, id]) => fetchBarOrders(id), BALANCE_READ);
+  const buyIns   = useSWR(barId ? ['buy_ins', barId] : null, ([, id]) => fetchBarBuyIns(id), BALANCE_READ);
+  const cashouts = useSWR(barId ? ['cashouts', barId] : null, ([, id]) => fetchBarCashouts(id), BALANCE_READ);
+  const payments = useSWR(barId ? ['payments', barId] : null, ([, id]) => fetchBarPayments(id), BALANCE_READ);
   const ledgerQueries = [bar, orders, buyIns, cashouts, payments];
   const ledgerError: Error | undefined = ledgerQueries.find((q) => q.error)?.error;
 

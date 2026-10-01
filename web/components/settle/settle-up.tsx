@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 
@@ -129,6 +129,12 @@ function SettleRow({ player, sessionId, night, hasPayments, confirm, onRecorded 
   );
 }
 
+// An Enter held down in the amount field repeats onto Record once focus lands there, and a
+// button clicks on each Enter keydown; only a fresh press may record.
+function ignoreHeldEnter(e: KeyboardEvent<HTMLButtonElement>) {
+  if (e.key === 'Enter' && e.repeat) e.preventDefault();
+}
+
 /** `Drinks $8.00 · Buy-ins $20.00 · Cash-out $16.00 · Paid $5.00` — the parts the net adds up from. */
 function breakdown(night: NightNet, hasPayments: boolean): string {
   const parts = [
@@ -163,7 +169,17 @@ function RecordPaymentForm({ player, sessionId, net, confirm, onDone }: RecordPa
   const full = formatCents(net.amountCents);
   const [amount, setAmount] = useState(full);
   const [saving, setSaving] = useState(false);
+  const recordRef = useRef<HTMLButtonElement>(null);
   const owes = net.kind === 'owes';
+
+  // Enter never records a payment (owner, 2026-09-30; the rule record-payment-form.tsx keeps on
+  // the player page): the amount is prefilled with the full net, so one stray Enter would write
+  // it. Enter moves to Record instead, and a second, deliberate press there records.
+  function focusRecord(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    recordRef.current?.focus();
+  }
 
   async function save() {
     const cents = parseMoneyInput(amount);
@@ -198,7 +214,14 @@ function RecordPaymentForm({ player, sessionId, net, confirm, onDone }: RecordPa
   return (
     <div className='space-y-2 pt-1'>
       <p className='text-xs text-muted-foreground'>{owes ? `${player.name} paid you` : `You paid ${player.name}`}</p>
-      <MoneyInput value={amount} onValueChange={setAmount} disabled={saving} aria-label='Payment amount' />
+      <MoneyInput
+        value={amount}
+        onValueChange={setAmount}
+        onKeyDown={focusRecord}
+        enterKeyHint='next'
+        disabled={saving}
+        aria-label='Payment amount'
+      />
       <div className='flex flex-wrap gap-2'>
         <button type='button' className={ACTION_CLASS} disabled={saving} onClick={() => setAmount(full)}>
           Full ${full}
@@ -208,7 +231,14 @@ function RecordPaymentForm({ player, sessionId, net, confirm, onDone }: RecordPa
             <X aria-hidden='true' />
             Cancel
           </Button>
-          <Button size='sm' className='h-11' disabled={saving} onClick={() => void save()}>
+          <Button
+            ref={recordRef}
+            size='sm'
+            className='h-11'
+            disabled={saving}
+            onClick={() => void save()}
+            onKeyDown={ignoreHeldEnter}
+          >
             <Check aria-hidden='true' />
             {saving ? 'Saving…' : 'Record'}
           </Button>

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { formatCents, leaveTableVerdict } from '@pb/core';
 import type { ConfirmApi } from '@/hooks/use-confirm';
 import { fetchMyTables, leaveTable, type MyTable } from '@/lib/supabase/tables';
+import { BALANCE_READ } from '@/lib/swr-options';
 
 // Provisional copy in the plain register (R7): the owner picks the wording of both prompts.
 function confirmText(table: MyTable): string {
@@ -19,7 +20,10 @@ function confirmText(table: MyTable): string {
 /** The Account screen's list of tables, and the one action on each. `confirm` comes from the page's `useConfirm`. */
 export function useMyTables(confirm: ConfirmApi['confirm']) {
   const { mutate } = useSWRConfig();
-  const tables = useSWR('my_tables', fetchMyTables);
+  // Leave's verdict is decided from the balance, and nothing typed on Account is seeded from
+  // this list, so it refetches on focus. Corrected 2026-09-30 (item 38): member Home's read of
+  // the same key refetches on focus too (use-table-records.ts); it did not before.
+  const tables = useSWR('my_tables', fetchMyTables, BALANCE_READ);
   const [leaving, setLeaving] = useState<string | null>(null);
 
   async function leave(table: MyTable) {

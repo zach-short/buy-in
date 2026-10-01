@@ -3,7 +3,7 @@
 import { Suspense, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ArrowLeft, ArrowRight, LogIn, Mail } from 'lucide-react';
+import { ArrowLeft, ArrowRight, KeyRound, LogIn, Mail, Send } from 'lucide-react';
 
 import { GoogleButton } from '@/components/auth/google-button';
 import { PasswordInput } from '@/components/auth/password-input';
@@ -47,6 +47,8 @@ function Login() {
         {entry && <EntryStep flow={flow} />}
         {flow.step === 'password' && <PasswordStep flow={flow} />}
         {flow.step === 'create' && <CreateStep flow={flow} />}
+        {flow.step === 'reset' && <ResetStep flow={flow} />}
+        {flow.step === 'reset-sent' && <ResetSentStep flow={flow} />}
       </div>
       {/* In the flow, not pinned to the bottom, so a tall form on a short screen cannot run under it. */}
       <LegalLinks className='mt-8' />
@@ -122,23 +124,29 @@ function BackButton({ label, onClick }: { label: string; onClick: () => void }) 
   );
 }
 
+function EmailInput({ flow }: { flow: LoginFlow }) {
+  return (
+    <Input
+      type='email'
+      placeholder='Email'
+      value={flow.email}
+      onChange={(e) => flow.setEmail(e.target.value)}
+      autoComplete='email'
+      inputMode='email'
+      autoCapitalize='none'
+      autoCorrect='off'
+      spellCheck={false}
+      autoFocus
+      required
+      className='h-11'
+    />
+  );
+}
+
 function EmailStep({ flow }: { flow: LoginFlow }) {
   return (
     <form onSubmit={flow.checkEmail} className='auth-rise space-y-3'>
-      <Input
-        type='email'
-        placeholder='Email'
-        value={flow.email}
-        onChange={(e) => flow.setEmail(e.target.value)}
-        autoComplete='email'
-        inputMode='email'
-        autoCapitalize='none'
-        autoCorrect='off'
-        spellCheck={false}
-        autoFocus
-        required
-        className='h-11'
-      />
+      <EmailInput flow={flow} />
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.busy || !flow.email.trim()}>
         <ArrowRight aria-hidden='true' />
@@ -165,10 +173,54 @@ function PasswordStep({ flow }: { flow: LoginFlow }) {
       <ErrorLine error={flow.error} />
       <Button type='submit' className={PRIMARY} disabled={flow.busy}>
         <LogIn aria-hidden='true' />
-        {flow.busy ? 'Signing in…' : 'Sign in'}
+        {flow.busy && !flow.sendingReset ? 'Signing in…' : 'Sign in'}
+      </Button>
+      <Button
+        type='button'
+        variant='ghost'
+        onClick={flow.sendReset}
+        disabled={flow.busy}
+        className='w-full h-11 text-xs text-muted-foreground'
+      >
+        <KeyRound aria-hidden='true' />
+        {flow.sendingReset ? 'Sending…' : 'Forgot password?'}
       </Button>
       <BackButton label='Use a different email' onClick={() => flow.goTo('email')} />
     </form>
+  );
+}
+
+// Where /auth/confirm sends a reset link that was already used or has expired. The link carries
+// no address, so it is asked for again.
+function ResetStep({ flow }: { flow: LoginFlow }) {
+  return (
+    <form onSubmit={flow.sendReset} className='space-y-3'>
+      <p role='alert' className='text-sm text-center'>That reset link has expired or was already used.</p>
+      <p className='text-xs text-center text-muted-foreground tracking-wide'>Enter your email for a new one.</p>
+      <EmailInput flow={flow} />
+      <ErrorLine error={flow.error} />
+      <Button type='submit' className={PRIMARY} disabled={flow.busy || !flow.email.trim()}>
+        <Send aria-hidden='true' />
+        {flow.sendingReset ? 'Sending…' : 'Email me a new link'}
+      </Button>
+      <BackButton label='Back to sign in' onClick={() => flow.goTo('start')} />
+    </form>
+  );
+}
+
+// The same words whether or not the address has an account, so this screen cannot be used to
+// find out who has one.
+function ResetSentStep({ flow }: { flow: LoginFlow }) {
+  return (
+    <div className='space-y-3 text-center'>
+      <p className='text-xs text-muted-foreground tracking-widest uppercase'>Check your email</p>
+      <p className='text-sm break-all'>{flow.email.trim()}</p>
+      <p role='status' className='text-sm'>
+        If this address has a Buy-In account, a link to set a new password is on its way.
+      </p>
+      <p className='text-xs text-muted-foreground tracking-wide'>Not there? Check spam.</p>
+      <BackButton label='Back to sign in' onClick={() => flow.goTo('email')} />
+    </div>
   );
 }
 

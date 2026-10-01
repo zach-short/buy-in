@@ -3,9 +3,7 @@ import { toast } from 'sonner';
 import type { ConfirmApi } from '@/hooks/use-confirm';
 import { copyText, shareOrCopy, smsHref } from '@/lib/share';
 import type { PlayerRow } from '@/lib/supabase/queries';
-import {
-  playerReceiptUrl, portalUrl, replacePortalToken, shareToken,
-} from '@/lib/supabase/share-links';
+import { portalUrl, replacePortalToken, shareToken } from '@/lib/supabase/share-links';
 
 type LinkPlayer = Pick<PlayerRow, 'id' | 'bar_id' | 'name' | 'phone'>;
 
@@ -21,7 +19,7 @@ function reportShare(result: Awaited<ReturnType<typeof shareOrCopy>>, copied: st
   else if (result === 'failed') toast.error("Couldn't share or copy the link");
 }
 
-/** The links a host sends one player: the portal (their whole balance) and its receipt view. */
+/** The one link a host sends a player: their portal, copied, texted or shared. */
 export function usePlayerLinks(player: LinkPlayer | undefined, confirm: ConfirmApi['confirm']): PlayerLinksApi {
   async function copyPortalLink(replace: boolean) {
     if (!player) return;
@@ -45,14 +43,15 @@ export function usePlayerLinks(player: LinkPlayer | undefined, confirm: ConfirmA
   async function requestReceipt() {
     if (!player?.phone) return;
     try {
-      const url = playerReceiptUrl(await shareToken(player, null));
+      const url = portalUrl(await shareToken(player, null));
       window.location.href = smsHref(player.phone, url);
     } catch (e) {
       toast.error((e as Error).message);
     }
   }
 
-  // The portal, not the receipt: it is the page with the pay buttons and the "I sent it" report.
+  // The portal is the page with the pay buttons and the "I sent it" report. requestReceipt sends
+  // the same link (owner, 2026-09-30: /player-receipt redirects there) with no balance check.
   async function remind(balanceCents: number) {
     if (!player || balanceCents <= 0) return;
     try {

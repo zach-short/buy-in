@@ -10,8 +10,10 @@ import { PayPanel } from '@/components/portal/pay-panel';
 import { PaymentReportList, ReportPaymentForm } from '@/components/portal/payment-reports';
 import { usePaymentReports } from '@/components/portal/use-payment-reports';
 import { StatusScreen } from '@/components/shared/status-screen';
+import { cinzel } from '@/lib/fonts';
 import { sharedBalanceCents } from '@/lib/ledger';
 import { fetchMenu, fetchSharedTab } from '@/lib/supabase/public';
+import { BALANCE_READ } from '@/lib/swr-options';
 
 export default function PortalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -19,14 +21,25 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
   // A portal-scoped link (D15): the whole history, and the token alone decides whose (§9.1
   // #7) — the old route's [playerId] segment is gone, so nothing on this page can trust a URL
   // over the RPC.
-  const { data: tab, error, mutate } = useSWR(['shared_tab', token, 'portal'], ([, t]) => fetchSharedTab(t, 'portal'));
+  // Refetches on focus (lib/swr-options.ts), so a player back from Venmo sees the balance the
+  // host has since recorded. Item 33 left this off because `error` was checked before `tab`, so
+  // one failed refetch swapped the page for "Invalid link" and unmounted the report form; the
+  // owner reversed that on 2026-09-30, and the error check below now runs only with no tab.
+  const { data: tab, error, mutate } = useSWR(
+    ['shared_tab', token, 'portal'],
+    ([, t]) => fetchSharedTab(t, 'portal'),
+    BALANCE_READ,
+  );
   // The menu block reads the same get_menu the public /menu does (§9.1 #3), never raw stock.
   const { data: menu = [] } = useSWR(tab ? ['menu', tab.bar.id] : null, ([, barId]) => fetchMenu(barId));
   const reports = usePaymentReports(token);
   // The amount the report form opens with; null is closed.
   const [reportCents, setReportCents] = useState<number | null>(null);
 
-  if (error) {
+  // A tab already on screen wins over a failed refresh (DataState's rule, data-state.tsx): SWR
+  // keeps `data` when a revalidation throws, so the player keeps the page and any open report
+  // form. A link revoked while open keeps showing until a reload (owner, 2026-09-30).
+  if (error && !tab) {
     return (
       <StatusScreen
         kind='error'
@@ -52,11 +65,9 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&display=swap');
         .portal-menu-root {
           background: #000;
           padding: 2rem 1.5rem 3rem;
-          font-family: 'Cinzel', serif;
         }
         .portal-menu-title {
           color: #c9a84c;
@@ -116,7 +127,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
           )}
           {balance.kind === 'owes' && (
             <>
-              <PayPanel key={balanceCents} bar={tab.bar} balanceCents={balanceCents} onPay={setReportCents} />
+              <PayPanel bar={tab.bar} balanceCents={balanceCents} onPay={setReportCents} />
               {reportCents === null && (
                 <button
                   type='button'
@@ -138,7 +149,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
         <NightHistory tab={tab} />
 
         {available.length > 0 && (
-          <div className='portal-menu-root mx-6 rounded-md'>
+          <div className={`portal-menu-root mx-6 rounded-md ${cinzel.className}`}>
             <p className='portal-menu-title'>Tonight&apos;s Menu</p>
             <hr className='portal-menu-rule' />
             {available.map((drink) => (

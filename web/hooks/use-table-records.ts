@@ -8,6 +8,7 @@ import { fetchMyUpcomingGames, rsvpMyGame } from '@/lib/supabase/member-games';
 import { fetchMyPerformance } from '@/lib/supabase/performance';
 import { fetchMyTablePayInfo, type TablePayInfo } from '@/lib/supabase/table-pay-info';
 import { fetchMyTables } from '@/lib/supabase/tables';
+import { BALANCE_READ } from '@/lib/swr-options';
 
 const GAMES_KEY = 'get_my_upcoming_games';
 
@@ -31,10 +32,15 @@ function withAnswer(games: NextGameLike[] | undefined, gameId: string, status: R
  * read, so leaving a table or a new cashout reaches Home without a refetch of its own.
  */
 export function useTableRecords(): TableRecordsState {
-  const tables = useSWR('my_tables', fetchMyTables);
+  // The owe line's balance refetches on focus (lib/swr-options.ts), as Account's read of this key
+  // does (use-my-tables.ts). Item 33 left it off because the owe panel keyed PayPanel by the
+  // balance, so a refetch reseeded an amount the member had typed; the owner reversed that on
+  // 2026-09-30, and PayPanel now follows the balance only until they type (pay-panel.tsx).
+  const tables = useSWR('my_tables', fetchMyTables, BALANCE_READ);
   const played = useSWR('get_my_performance', fetchMyPerformance);
   const games = useSWR(GAMES_KEY, fetchMyUpcomingGames);
-  const pay = useSWR('get_my_table_pay_info', fetchMyTablePayInfo, { shouldRetryOnError: false });
+  // The host's handles only: nothing typed is keyed or seeded from them, so a refetch is safe.
+  const pay = useSWR('get_my_table_pay_info', fetchMyTablePayInfo, { ...BALANCE_READ, shouldRetryOnError: false });
   const records = tables.data && played.data && games.data
     ? withNextGames(tableRecords(tables.data, played.data), games.data)
     : undefined;

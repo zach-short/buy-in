@@ -10,7 +10,8 @@ import type { PlayerRow } from '@/lib/supabase/queries';
 // in player_share_links; RLS lets only staff read or write one (0001, share_links_staff).
 //
 // A session id scopes a link to one night's receipt; null scopes it to the player's whole
-// history, which both /portal and /player-receipt render (D15).
+// history, which /portal renders (D15). /player-receipt rendered it too until 2026-09-30 and
+// now redirects to /portal, so a portal-scoped token has one page.
 //
 // Sending reuses the player's live link for the same scope, so texting a receipt twice
 // sends one link, not two. Replacing a portal link is the explicit action that revokes —
@@ -71,8 +72,4 @@ export function receiptUrl(token: string): string {
 
 export function portalUrl(token: string): string {
   return `${window.location.origin}/portal/${token}`;
-}
-
-export function playerReceiptUrl(token: string): string {
-  return `${window.location.origin}/player-receipt/${token}`;
 }

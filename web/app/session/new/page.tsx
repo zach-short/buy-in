@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { CalendarCheck, History, Play, Plus } from 'lucide-react';
+import { startBuyIns } from '@pb/core';
 
 import { BackAction } from '@/components/shared/layout/back-action';
 import { PageHeader, PageMain } from '@/components/shared/layout/page';
@@ -90,15 +91,19 @@ export default function NewSessionPage() {
   }
 
   async function startSession() {
-    if (!name.trim() || selected.length === 0) return;
+    if (starting || !name.trim() || selected.length === 0) return;
+    const plan = startBuyIns(selected.map((s) => ({ playerId: s.player.id, cents: parseMoneyInput(s.buyIn) })));
+    // Start and Enter in the name field both land here, so a blank buy-in blocks both. The row
+    // already says why; focusing it puts the keyboard where the missing amount goes.
+    if (plan.kind === 'blank') {
+      focusBlankBuyIn();
+      return;
+    }
     setStarting(true);
     try {
-      // One transaction (0002 start_session): a zero or blank buy-in writes no row, as the
-      // Go-era `parseFloat(s.buyIn) > 0` filter did.
-      const sessionId = await writeStartSession(
-        name.trim(),
-        selected.map((s) => ({ playerId: s.player.id, buyInCents: parseMoneyInput(s.buyIn) ?? 0 })),
-      );
+      // One transaction (0002 start_session): a typed 0 seats the player and writes no buy-in
+      // row, as the Go-era `parseFloat(s.buyIn) > 0` filter did.
+      const sessionId = await writeStartSession(name.trim(), plan.buyIns);
       router.push(`/session/${sessionId}`);
     } catch (e) {
       toast.error((e as Error).message);
@@ -179,27 +184,37 @@ export default function NewSessionPage() {
               Players ({selected.length})
             </h2>
             <div className='border border-border rounded-md divide-y divide-border'>
-              {selected.map(({ player, buyIn }) => (
-                <div key={player.id} className='flex items-center gap-3 pl-4 pr-1 py-2'>
-                  <span className='flex-1 text-sm font-medium truncate'>{player.name}</span>
-                  <MoneyInput
-                    value={buyIn}
-                    onValueChange={(value) => updateBuyIn(player.id, value)}
-                    onKeyDown={blockEnter}
-                    aria-label={`${player.name}'s buy-in`}
-                    containerClassName='w-24 shrink-0'
-                    className='text-right pr-2'
-                  />
-                  <button
-                    type='button'
-                    onClick={() => removePlayer(player.id)}
-                    aria-label={`Remove ${player.name}`}
-                    className='size-11 flex items-center justify-center shrink-0 rounded text-muted-foreground hover:text-destructive transition-colors text-lg leading-none'
-                  >
-                    <span aria-hidden='true'>×</span>
-                  </button>
-                </div>
-              ))}
+              {selected.map(({ player, buyIn }) => {
+                const blank = parseMoneyInput(buyIn) === null;
+                const hintId = `buy-in-blank-${player.id}`;
+                return (
+                  <div key={player.id} className='pl-4 pr-1 py-2'>
+                    <div className='flex items-center gap-3'>
+                      <span className='flex-1 text-sm font-medium truncate'>{player.name}</span>
+                      <MoneyInput
+                        value={buyIn}
+                        onValueChange={(value) => updateBuyIn(player.id, value)}
+                        onKeyDown={blockEnter}
+                        aria-label={`${player.name}'s buy-in`}
+                        aria-invalid={blank || undefined}
+                        aria-describedby={blank ? hintId : undefined}
+                        data-buy-in-blank={blank || undefined}
+                        containerClassName='w-24 shrink-0'
+                        className='text-right pr-2'
+                      />
+                      <button
+                        type='button'
+                        onClick={() => removePlayer(player.id)}
+                        aria-label={`Remove ${player.name}`}
+                        className='size-11 flex items-center justify-center shrink-0 rounded text-muted-foreground hover:text-destructive transition-colors text-lg leading-none'
+                      >
+                        <span aria-hidden='true'>×</span>
+                      </button>
+                    </div>
+                    {blank && <p id={hintId} className='text-xs text-destructive pb-1'>Enter a buy-in, or 0 for none</p>}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
@@ -297,4 +312,8 @@ export default function NewSessionPage() {
 // A buy-in field inside the form: Enter would otherwise submit and start the night mid-edit.
 function blockEnter(e: KeyboardEvent<HTMLInputElement>) {
   if (e.key === 'Enter') e.preventDefault();
+}
+
+function focusBlankBuyIn() {
+  document.querySelector<HTMLInputElement>('[data-buy-in-blank]')?.focus();
 }

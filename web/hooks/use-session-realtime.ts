@@ -16,8 +16,9 @@ import { fetchSession } from '@/lib/supabase/queries';
 // The poll map (DESIGN.md H11 — which surfaces subscribe and which poll), as of 2026-09-29:
 // - /session/[id] subscribes through this hook; its session-scoped keys poll every
 //   SESSION_FALLBACK_POLL_MS only while the channel is not SUBSCRIBED.
-// - /portal, /player-receipt and /receipt neither subscribe nor poll. They are anonymous, and
-//   anon has no select policy, so Postgres Changes would deliver them nothing (0001_init.sql:862-864).
+// - /portal and /receipt neither subscribe nor poll (/player-receipt is a redirect to /portal,
+//   next.config.ts). They are anonymous, and anon has no select policy, so Postgres Changes
+//   would deliver them nothing (0001_init.sql:862-864).
 // - /players, /sessions, /stats and /inventory are unchanged: SWR, no subscription, no poll.
 
 type SwrKey = string | [string, string];

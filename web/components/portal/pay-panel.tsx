@@ -40,7 +40,13 @@ interface PayPanelProps {
 }
 
 export function PayPanel({ bar, balanceCents, onPay }: PayPanelProps) {
-  const [amount, setAmount] = useState(() => formatCents(balanceCents));
+  // null until the player types. Until then the field is the balance and follows it when a focus
+  // refresh moves it; after that it keeps what they typed, so a refresh never swaps the amount
+  // under their thumb (owner, 2026-09-30). The buttons read the same `amount`, so Venmo and
+  // Cash App always pay the figure on screen. Replaces the `key={balanceCents}` remount callers
+  // used before 2026-09-30, which reseeded a typed amount on every balance change.
+  const [typed, setTyped] = useState<string | null>(null);
+  const amount = typed ?? formatCents(balanceCents);
   const cents = parseMoneyInput(amount);
   const problem = amountProblem(cents, balanceCents);
   const payCents = problem ? null : cents;
@@ -59,7 +65,7 @@ export function PayPanel({ bar, balanceCents, onPay }: PayPanelProps) {
       <label htmlFor='portal-pay-amount' className='block text-xs tracking-widest uppercase text-muted-foreground'>
         Amount to pay
       </label>
-      <MoneyInput id='portal-pay-amount' value={amount} onValueChange={setAmount} aria-invalid={problem !== null} />
+      <MoneyInput id='portal-pay-amount' value={amount} onValueChange={setTyped} aria-invalid={problem !== null} />
       {problem && <p className='text-xs text-destructive'>{problem}</p>}
       {venmo && (
         <button

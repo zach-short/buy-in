@@ -8,6 +8,7 @@ import { sendReceipt } from '@/components/settle/send-receipt';
 import { BackAction } from '@/components/shared/layout/back-action';
 import { StatusScreen } from '@/components/shared/status-screen';
 import { useGoBack } from '@/hooks/use-go-back';
+import { courierPrime } from '@/lib/fonts';
 import { nightNetFromRows } from '@/lib/ledger';
 import {
   fetchPlayerPayments, fetchPlayers, fetchSessionBuyIns, fetchSessionCashouts, fetchSessionOrders, fetchSessions,
@@ -22,29 +23,43 @@ export default function PlayerReceiptPage({
   const { id, playerId } = use(params);
   const goBack = useGoBack('/sessions');
 
-  const { data: sessions = [], isLoading: sessionsLoading } = useSWR('sessions', fetchSessions);
+  const sessionsRead = useSWR('sessions', fetchSessions);
+  const sessions = sessionsRead.data ?? [];
   const session = sessions.find((s) => s.id === id);
 
-  const { data: players = [], isLoading: playersLoading } = useSWR('players', fetchPlayers);
+  const playersRead = useSWR('players', fetchPlayers);
+  const players = playersRead.data ?? [];
   const player = players.find((p) => p.id === playerId);
 
-  const { data: orders = [] } = useSWR(
+  const ordersRead = useSWR(
     ['orders', id],
     ([, sessionId]) => fetchSessionOrders(sessionId),
   );
-  const { data: buyIns = [] } = useSWR(
+  const buyInsRead = useSWR(
     ['buy_ins', id],
     ([, sessionId]) => fetchSessionBuyIns(sessionId),
   );
-  const { data: cashouts = [] } = useSWR(
+  const cashoutsRead = useSWR(
     ['cashouts', id],
     ([, sessionId]) => fetchSessionCashouts(sessionId),
   );
   // The player page's key. Only payments settle-up tagged with this night count on its receipt.
-  const { data: payments = [] } = useSWR(
+  const paymentsRead = useSWR(
     ['payments', playerId],
     ([, pid]) => fetchPlayerPayments(pid),
   );
+  const orders = ordersRead.data ?? [];
+  const buyIns = buyInsRead.data ?? [];
+  const cashouts = cashoutsRead.data ?? [];
+  const payments = paymentsRead.data ?? [];
+
+  // Every read the receipt is drawn from. Until all have data the net would be summed over
+  // empty lists, a $0 and "No activity" that look like a real answer; and a failed read would
+  // leave it that way. So loading and failure show their own screens, and Try again re-runs
+  // only the reads that failed.
+  const reads = [sessionsRead, playersRead, ordersRead, buyInsRead, cashoutsRead, paymentsRead];
+  const failed = reads.filter((read) => read.error !== undefined);
+  const waiting = reads.some((read) => read.data === undefined);
 
   const playerOrders = orders
     .filter((o) => o.player_id === playerId)
@@ -66,7 +81,18 @@ export default function PlayerReceiptPage({
     window.print();
   }
 
-  if (sessionsLoading || playersLoading) return <StatusScreen kind='loading' />;
+  if (failed.length) {
+    return (
+      <StatusScreen
+        kind='error'
+        title='Couldn’t load this receipt'
+        message={errorMessage(failed[0].error)}
+        action={{ label: 'Try again', onClick: () => failed.forEach((read) => void read.mutate()) }}
+        secondaryAction={{ label: 'Back', onClick: goBack }}
+      />
+    );
+  }
+  if (waiting) return <StatusScreen kind='loading' />;
   if (!session || !player) {
     return <StatusScreen kind='error' title='Receipt not found' action={{ label: 'Back', onClick: goBack }} />;
   }
@@ -74,8 +100,6 @@ export default function PlayerReceiptPage({
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-
         .receipt-page {
           min-height: 100dvh;
           display: flex;
@@ -100,7 +124,6 @@ export default function PlayerReceiptPage({
           border: 1px solid var(--border);
           border-radius: 4px;
           padding: 2rem 1.75rem;
-          font-family: 'Courier Prime', 'Courier New', monospace;
         }
 
         .receipt-venue {
@@ -241,7 +264,7 @@ export default function PlayerReceiptPage({
           <BackAction fallback='/sessions' />
         </div>
 
-        <div className='receipt-card'>
+        <div className={`receipt-card ${courierPrime.className}`}>
           <p className='receipt-venue'>Buy-In</p>
           <p className='receipt-title'>{player.name}</p>
           <p className='receipt-date'>
@@ -316,4 +339,8 @@ export default function PlayerReceiptPage({
       </div>
     </>
   );
+}
+
+function errorMessage(error: unknown): string | undefined {
+  return error instanceof Error ? error.message : undefined;
 }

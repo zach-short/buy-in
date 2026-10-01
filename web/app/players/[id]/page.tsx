@@ -19,6 +19,7 @@ import {
   fetchPlayers,
   fetchSessions,
 } from '@/lib/supabase/queries';
+import { BALANCE_READ } from '@/lib/swr-options';
 import { useConfirm } from '@/hooks/use-confirm';
 import { PlayerAccountPanel } from '@/components/players/player-account-panel';
 import { BalanceLabel } from '@/components/players/balance-label';
@@ -53,16 +54,21 @@ export default function PlayerDetailPage({
   const { data: sessions = [] } = useSWR('sessions', fetchSessions);
   // Only this player's rows: the balance and the history read nothing else, and
   // orders_player_idx / payments_player_idx serve these where the whole bar's lists did not.
-  const { data: orders, error: ordersError, mutate: mutateOrders } = useSWR(['orders', id], ([, playerId]) => fetchPlayerOrders(playerId));
-  const { data: buyIns, error: buyInsError, mutate: mutateBuyIns } = useSWR(['buy_ins', id], ([, playerId]) => fetchPlayerBuyIns(playerId));
-  const { data: cashouts, error: cashoutsError, mutate: mutateCashouts } = useSWR(['cashouts', id], ([, playerId]) => fetchPlayerCashouts(playerId));
+  // A focus refetch leaves an open record-payment form alone: its amount is seeded once, by
+  // useState, and SWR keeps the old rows through a failed refetch, so the form never unmounts.
+  const { data: orders, error: ordersError, mutate: mutateOrders } = useSWR(['orders', id], ([, playerId]) => fetchPlayerOrders(playerId), BALANCE_READ);
+  const { data: buyIns, error: buyInsError, mutate: mutateBuyIns } = useSWR(['buy_ins', id], ([, playerId]) => fetchPlayerBuyIns(playerId), BALANCE_READ);
+  const { data: cashouts, error: cashoutsError, mutate: mutateCashouts } = useSWR(['cashouts', id], ([, playerId]) => fetchPlayerCashouts(playerId), BALANCE_READ);
   const { data: payments, error: paymentsError, mutate: mutatePayments } = useSWR(
     ['payments', id],
     ([, playerId]) => fetchPlayerPayments(playerId),
+    BALANCE_READ,
   );
   // The merge preview sums the survivor's balance from these (use-merge-player.ts), so they
   // stay whole-bar, on the keys merge revalidates. They gate only the roster panel, never
-  // this player's balance.
+  // this player's balance. No focus refetch: the preview's fourth list, the survivor's
+  // payments, is read in use-merge-player.ts without one, and a preview summed from three
+  // fresh lists and one stale list is worse than four equally old ones.
   const { data: barOrders } = useSWR('orders', fetchOrders);
   const { data: barBuyIns } = useSWR('buy_ins', fetchBuyIns);
   const { data: barCashouts } = useSWR('cashouts', fetchCashouts);
